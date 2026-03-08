@@ -1,0 +1,139 @@
+// Types for the MathViz Architect application
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface Size {
+  width: number;
+  height: number;
+}
+
+export interface CanvasObject {
+  id: string;
+  type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  opacity: number;
+  visible: boolean;
+  locked: boolean;
+  data: Record<string, unknown>;
+}
+
+export interface RectangleObject extends CanvasObject {
+  type: 'rectangle';
+  data: {
+    fill: string;
+    stroke: string;
+    strokeWidth: number;
+    cornerRadius: number;
+  };
+}
+
+export interface CircleObject extends CanvasObject {
+  type: 'circle';
+  data: {
+    fill: string;
+    stroke: string;
+    strokeWidth: number;
+  };
+}
+
+export interface TriangleObject extends CanvasObject {
+  type: 'triangle';
+  data: {
+    fill: string;
+    stroke: string;
+    strokeWidth: number;
+  };
+}
+
+export interface FractionObject extends CanvasObject {
+  type: 'fraction';
+  data: {
+    numerator: number;
+    denominator: number;
+    fill: string;
+    stroke: string;
+    strokeWidth: number;
+    showLabels: boolean;
+  };
+}
+
+export interface ChartObject extends CanvasObject {
+  type: 'chart';
+  data: {
+    chartType: 'bar' | 'pie' | 'line';
+    data: Array<{ label: string; value: number; color: string }>;
+    title: string;
+  };
+}
+
+export interface TextObject extends CanvasObject {
+  type: 'text';
+  data: {
+    text: string;
+    fontSize: number;
+    fontFamily: string;
+    fontWeight: string;
+    fill: string;
+    textAlign: 'left' | 'center' | 'right';
+  };
+}
+
+export interface ArrowObject extends CanvasObject {
+  type: 'arrow';
+  data: {
+    points: Point[];
+    stroke: string;
+    strokeWidth: number;
+    arrowHead: 'end' | 'both' | 'none';
+  };
+}
+
+export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | FractionObject | ChartObject | TextObject | ArrowObject | CanvasObject;
+
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  objects: AnyCanvasObject[];
+  canvasSize: Size;
+  backgroundColor: string;
+}
+
+export interface ToolCategory {
+  id: string;
+  name: string;
+  icon: string;
+  tools: Tool[];
+}
+
+export interface Tool {
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+  createObject: () => Partial<AnyCanvasObject>;
+}
+
+export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow';
+
+export interface AppState {
+  mode: AppMode;
+  selectedObjectIds: string[];
+  objects: AnyCanvasObject[];
+  projectPath: string | null;
+  projectName: string;
+  isDirty: boolean;
+  history: {
+    past: AnyCanvasObject[][];
+    present: AnyCanvasObject[];
+    future: AnyCanvasObject[][];
+  };
+}
