@@ -13,6 +13,9 @@ import { AnyCanvasObject, Project } from './lib/types';
 import { Template } from './lib/templates';
 import './types/electron.d.ts';
 
+// Register all interactive modules
+import '@/modules/index';
+
 function App() {
   const {
     state,
