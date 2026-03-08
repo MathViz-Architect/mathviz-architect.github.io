@@ -95,7 +95,19 @@ export interface ArrowObject extends CanvasObject {
   };
 }
 
-export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | FractionObject | ChartObject | TextObject | ArrowObject | CanvasObject;
+export interface LineObject extends CanvasObject {
+  type: 'line';
+  data: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    color: string;
+    strokeWidth: number;
+  };
+}
+
+export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | CanvasObject;
 
 export interface Project {
   id: string;
@@ -122,7 +134,7 @@ export interface Tool {
   createObject: () => Partial<AnyCanvasObject>;
 }
 
-export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow';
+export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser';
 
 export interface AppState {
   mode: AppMode;

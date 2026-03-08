@@ -77,6 +77,14 @@ export function useAppState() {
     });
   }, []);
 
+  // Select multiple objects at once (for marquee selection)
+  const selectMultiple = useCallback((ids: string[]) => {
+    setState((prev) => ({
+      ...prev,
+      selectedObjectIds: ids,
+    }));
+  }, []);
+
   // Set app mode
   const setMode = useCallback((mode: AppMode) => {
     setState((prev) => ({ ...prev, mode }));
@@ -214,5 +222,6 @@ export function useAppState() {
     setProjectName,
     markAsSaved,
     clearCanvas,
+    selectMultiple,
   };
 }

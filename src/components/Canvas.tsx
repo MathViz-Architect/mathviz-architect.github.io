@@ -7,8 +7,10 @@ interface CanvasProps {
   zoom: number;
   showGrid: boolean;
   onSelectObject: (id: string | null, multi?: boolean) => void;
+  onSelectMultiple: (ids: string[]) => void;
   onUpdateObject: (id: string, updates: Partial<AnyCanvasObject>) => void;
   onAddObject: (obj: AnyCanvasObject) => void;
+  onDeleteObject?: (id: string) => void;
   mode: string;
 }
 
@@ -18,8 +20,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   zoom,
   showGrid,
   onSelectObject,
+  onSelectMultiple,
   onUpdateObject,
   onAddObject,
+  onDeleteObject,
   mode,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -33,6 +37,67 @@ export const Canvas: React.FC<CanvasProps> = ({
   const [isDrawingArrow, setIsDrawingArrow] = useState(false);
   const [arrowStart, setArrowStart] = useState<Point | null>(null);
   const [arrowEnd, setArrowEnd] = useState<Point | null>(null);
+  const [isDrawingLine, setIsDrawingLine] = useState(false);
+  const [lineStart, setLineStart] = useState<Point | null>(null);
+  const [lineEnd, setLineEnd] = useState<Point | null>(null);
+  const [isErasing, setIsErasing] = useState(false);
+  const [isMarqueeSelecting, setIsMarqueeSelecting] = useState(false);
+  const [marqueeStart, setMarqueeStart] = useState<Point | null>(null);
+  const [marqueeEnd, setMarqueeEnd] = useState<Point | null>(null);
+
+  // Hit detection for eraser tool
+  const isPointInObject = (x: number, y: number, obj: AnyCanvasObject): boolean => {
+    if (obj.type === 'line') {
+      const data = obj.data as { x1: number; y1: number; x2: number; y2: number };
+      // Distance from point to line segment
+      const dx = data.x2 - data.x1;
+      const dy = data.y2 - data.y1;
+      const lengthSquared = dx * dx + dy * dy;
+      if (lengthSquared === 0) return Math.sqrt((x - data.x1) ** 2 + (y - data.y1) ** 2) < 10;
+
+      const t = Math.max(0, Math.min(1, ((x - data.x1) * dx + (y - data.y1) * dy) / lengthSquared));
+      const projX = data.x1 + t * dx;
+      const projY = data.y1 + t * dy;
+      const distance = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
+      return distance < 10;
+    }
+
+    if (obj.type === 'arrow') {
+      // Distance from point to arrow line segment
+      const x1 = obj.x;
+      const y1 = obj.y;
+      const x2 = obj.x + obj.width;
+      const y2 = obj.y + obj.height;
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const lengthSquared = dx * dx + dy * dy;
+      if (lengthSquared === 0) return Math.sqrt((x - x1) ** 2 + (y - y1) ** 2) < 10;
+
+      const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lengthSquared));
+      const projX = x1 + t * dx;
+      const projY = y1 + t * dy;
+      const distance = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
+      return distance < 10;
+    }
+
+    // For all other objects, use bounding box
+    return x >= obj.x && x <= obj.x + obj.width && y >= obj.y && y <= obj.y + obj.height;
+  };
+
+  // Handle eraser deletion
+  const handleEraserDelete = (x: number, y: number) => {
+    if (!onDeleteObject) return;
+
+    // Find object under cursor (check in reverse order to match rendering order)
+    for (let i = objects.length - 1; i >= 0; i--) {
+      const obj = objects[i];
+      if (obj.visible && !obj.locked && isPointInObject(x, y, obj)) {
+        onDeleteObject(obj.id);
+        break; // Delete only one object at a time
+      }
+    }
+  };
 
   // Handle resize
   useEffect(() => {
@@ -53,6 +118,8 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Handle mouse down on object
   const handleObjectMouseDown = (e: React.MouseEvent, objectId: string) => {
+    // In line drawing mode, let the event propagate to the SVG for drawing
+    if (mode === 'line') return;
     e.stopPropagation();
     const obj = objects.find((o) => o.id === objectId);
     if (obj?.locked) return;
@@ -63,10 +130,20 @@ export const Canvas: React.FC<CanvasProps> = ({
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
 
+    // Multi-select with Ctrl/Cmd or Shift
+    const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+
     setIsDragging(true);
     setDragStart({ x, y });
     setDragObjectId(objectId);
-    onSelectObject(objectId, e.shiftKey);
+
+    // If the object is already in the selection and no modifier key is held,
+    // do NOT reset selection — preserve all selected objects for multi-drag.
+    // Only reset if clicking an unselected object without modifier.
+    const alreadySelected = selectedObjectIds.includes(objectId);
+    if (!alreadySelected || isMultiSelect) {
+      onSelectObject(objectId, isMultiSelect);
+    }
   };
 
   // Handle mouse up for object dragging
@@ -113,7 +190,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Handle canvas click (deselect)
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && mode !== 'arrow') {
+    if (mode !== 'arrow' && mode !== 'line' && mode !== 'eraser') {
       onSelectObject(null);
     }
   };
@@ -133,6 +210,48 @@ export const Canvas: React.FC<CanvasProps> = ({
       setArrowEnd({ x, y });
       e.stopPropagation();
     }
+
+    // Line drawing mode
+    if (mode === 'line') {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const x = (e.clientX - rect.left) / zoom;
+      const y = (e.clientY - rect.top) / zoom;
+
+      setIsDrawingLine(true);
+      setLineStart({ x, y });
+      setLineEnd({ x, y });
+      e.stopPropagation();
+    }
+
+    // Eraser mode
+    if (mode === 'eraser') {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const x = (e.clientX - rect.left) / zoom;
+      const y = (e.clientY - rect.top) / zoom;
+
+      setIsErasing(true);
+      handleEraserDelete(x, y);
+      e.stopPropagation();
+    }
+
+    // Marquee selection in select mode (on empty canvas)
+    // Note: no e.target check here because clicks land on <svg>, not the wrapper div
+    if (mode === 'select') {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const x = (e.clientX - rect.left) / zoom;
+      const y = (e.clientY - rect.top) / zoom;
+
+      setIsMarqueeSelecting(true);
+      setMarqueeStart({ x, y });
+      setMarqueeEnd({ x, y });
+      e.stopPropagation();
+    }
   };
 
   // Handle canvas mouse move - unified for arrow drawing and object dragging
@@ -149,7 +268,43 @@ export const Canvas: React.FC<CanvasProps> = ({
       return;
     }
 
-    // Object dragging
+    // Line drawing
+    if (isDrawingLine && lineStart) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const x = (e.clientX - rect.left) / zoom;
+      const y = (e.clientY - rect.top) / zoom;
+
+      setLineEnd({ x, y });
+      return;
+    }
+
+    // Eraser mode - delete while dragging
+    if (isErasing) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const x = (e.clientX - rect.left) / zoom;
+      const y = (e.clientY - rect.top) / zoom;
+
+      handleEraserDelete(x, y);
+      return;
+    }
+
+    // Marquee selection
+    if (isMarqueeSelecting && marqueeStart) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const x = (e.clientX - rect.left) / zoom;
+      const y = (e.clientY - rect.top) / zoom;
+
+      setMarqueeEnd({ x, y });
+      return;
+    }
+
+    // Object dragging - move all selected objects together
     if (isDragging && dragStart && dragObjectId) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -160,12 +315,22 @@ export const Canvas: React.FC<CanvasProps> = ({
       const dx = x - dragStart.x;
       const dy = y - dragStart.y;
 
-      const obj = objects.find((o) => o.id === dragObjectId);
-      if (!obj) return;
+      // Move all selected objects
+      selectedObjectIds.forEach((id) => {
+        const obj = objects.find((o) => o.id === id);
+        if (!obj) return;
 
-      onUpdateObject(dragObjectId, {
-        x: obj.x + dx,
-        y: obj.y + dy,
+        if (obj.type === 'line') {
+          // Line stores coords in data.x1/y1/x2/y2 — update those too
+          const d = obj.data as { x1: number; y1: number; x2: number; y2: number; color: string; strokeWidth: number };
+          onUpdateObject(id, {
+            x: obj.x + dx,
+            y: obj.y + dy,
+            data: { ...d, x1: d.x1 + dx, y1: d.y1 + dy, x2: d.x2 + dx, y2: d.y2 + dy },
+          });
+        } else {
+          onUpdateObject(id, { x: obj.x + dx, y: obj.y + dy });
+        }
       });
 
       setDragStart({ x, y });
@@ -182,25 +347,20 @@ export const Canvas: React.FC<CanvasProps> = ({
       const x = (e.clientX - rect.left) / zoom;
       const y = (e.clientY - rect.top) / zoom;
 
-      // Calculate arrow dimensions
-      const width = Math.abs(x - arrowStart.x);
-      const height = Math.abs(y - arrowStart.y);
+      // Calculate drag distance
+      const dx = x - arrowStart.x;
+      const dy = y - arrowStart.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
 
-      // Only create arrow if it has some length
-      if (width > 10 || height > 10) {
-        // Determine actual start and end points (handle any direction)
-        const actualX = Math.min(arrowStart.x, x);
-        const actualY = Math.min(arrowStart.y, y);
-        const actualWidth = x - arrowStart.x;
-        const actualHeight = y - arrowStart.y;
-
+      // Only create arrow if drag distance > 5px
+      if (distance > 5) {
         const newArrow: AnyCanvasObject = {
           id: `obj_${Date.now()}`,
           type: 'arrow',
           x: arrowStart.x,
           y: arrowStart.y,
-          width: actualWidth,
-          height: actualHeight,
+          width: dx,
+          height: dy,
           rotation: 0,
           opacity: 1,
           visible: true,
@@ -218,6 +378,109 @@ export const Canvas: React.FC<CanvasProps> = ({
       setIsDrawingArrow(false);
       setArrowStart(null);
       setArrowEnd(null);
+      return;
+    }
+
+    // Line drawing completion
+    if (isDrawingLine && lineStart && lineEnd) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const x = (e.clientX - rect.left) / zoom;
+      const y = (e.clientY - rect.top) / zoom;
+
+      // Calculate drag distance
+      const dx = x - lineStart.x;
+      const dy = y - lineStart.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Only create line if drag distance > 5px
+      if (distance > 5) {
+        const newLine: AnyCanvasObject = {
+          id: `obj_${Date.now()}`,
+          type: 'line',
+          x: Math.min(lineStart.x, x),
+          y: Math.min(lineStart.y, y),
+          width: Math.abs(x - lineStart.x),
+          height: Math.abs(y - lineStart.y),
+          rotation: 0,
+          opacity: 1,
+          visible: true,
+          locked: false,
+          data: {
+            x1: lineStart.x,
+            y1: lineStart.y,
+            x2: x,
+            y2: y,
+            color: '#374151',
+            strokeWidth: 2,
+          },
+        };
+
+        onAddObject(newLine);
+      }
+
+      setIsDrawingLine(false);
+      setLineStart(null);
+      setLineEnd(null);
+      return;
+    }
+
+    // Marquee selection completion
+    if (isMarqueeSelecting && marqueeStart && marqueeEnd) {
+      // Calculate marquee bounds
+      const minX = Math.min(marqueeStart.x, marqueeEnd.x);
+      const maxX = Math.max(marqueeStart.x, marqueeEnd.x);
+      const minY = Math.min(marqueeStart.y, marqueeEnd.y);
+      const maxY = Math.max(marqueeStart.y, marqueeEnd.y);
+
+      // Find all objects that intersect with marquee
+      const selectedIds: string[] = [];
+      objects.forEach((obj) => {
+        if (!obj.visible || obj.locked) return;
+
+        // Check bounding box intersection — lines use data coords
+        let objMinX = obj.x;
+        let objMaxX = obj.x + obj.width;
+        let objMinY = obj.y;
+        let objMaxY = obj.y + obj.height;
+        if (obj.type === 'line') {
+          const d = obj.data as { x1: number; y1: number; x2: number; y2: number };
+          objMinX = Math.min(d.x1, d.x2);
+          objMaxX = Math.max(d.x1, d.x2);
+          objMinY = Math.min(d.y1, d.y2);
+          objMaxY = Math.max(d.y1, d.y2);
+        }
+
+        // Add tolerance so zero-width/height objects (vertical/horizontal lines) are still selectable
+        const tolerance = 5;
+        const intersects =
+          objMinX - tolerance < maxX &&
+          objMaxX + tolerance > minX &&
+          objMinY - tolerance < maxY &&
+          objMaxY + tolerance > minY;
+
+        if (intersects) {
+          selectedIds.push(obj.id);
+        }
+      });
+
+      // Select all intersecting objects in one atomic call
+      if (selectedIds.length > 0) {
+        onSelectMultiple(selectedIds);
+      } else {
+        onSelectObject(null, false);
+      }
+
+      setIsMarqueeSelecting(false);
+      setMarqueeStart(null);
+      setMarqueeEnd(null);
+      return;
+    }
+
+    // Eraser mode cleanup
+    if (isErasing) {
+      setIsErasing(false);
       return;
     }
 
@@ -822,6 +1085,48 @@ export const Canvas: React.FC<CanvasProps> = ({
         );
       }
 
+      case 'line': {
+        const data = obj.data as {
+          x1: number;
+          y1: number;
+          x2: number;
+          y2: number;
+          color: string;
+          strokeWidth: number;
+        };
+
+        return (
+          <g
+            key={obj.id}
+            onMouseDown={(e) => handleObjectMouseDown(e, obj.id)}
+            style={{ cursor: obj.locked ? 'not-allowed' : 'move' }}
+          >
+            <line
+              x1={data.x1}
+              y1={data.y1}
+              x2={data.x2}
+              y2={data.y2}
+              stroke={data.color || '#374151'}
+              strokeWidth={data.strokeWidth || 2}
+              strokeLinecap="round"
+              opacity={opacity}
+            />
+            {isSelected && (
+              <rect
+                x={Math.min(data.x1, data.x2) - 2}
+                y={Math.min(data.y1, data.y2) - 2}
+                width={Math.abs(data.x2 - data.x1) + 4}
+                height={Math.abs(data.y2 - data.y1) + 4}
+                fill="none"
+                stroke="#F59E0B"
+                strokeWidth={2}
+                strokeDasharray="5,5"
+              />
+            )}
+          </g>
+        );
+      }
+
       case 'chart': {
         const data = obj.data as {
           chartType: 'bar' | 'pie' | 'line';
@@ -1148,6 +1453,12 @@ export const Canvas: React.FC<CanvasProps> = ({
         onMouseMove={(e) => {
           if (isDrawingArrow) {
             handleCanvasMouseMove(e);
+          } else if (isDrawingLine) {
+            handleCanvasMouseMove(e);
+          } else if (isErasing) {
+            handleCanvasMouseMove(e);
+          } else if (isMarqueeSelecting) {
+            handleCanvasMouseMove(e);
           } else if (isDragging && dragStart && dragObjectId) {
             const rect = canvasRef.current?.getBoundingClientRect();
             if (!rect) return;
@@ -1158,12 +1469,23 @@ export const Canvas: React.FC<CanvasProps> = ({
             const dx = x - dragStart.x;
             const dy = y - dragStart.y;
 
-            const obj = objects.find((o) => o.id === dragObjectId);
-            if (!obj) return;
+            // Move ALL selected objects together (multi-drag)
+            const idsToMove = selectedObjectIds.length > 1 && selectedObjectIds.includes(dragObjectId)
+              ? selectedObjectIds
+              : [dragObjectId];
 
-            onUpdateObject(dragObjectId, {
-              x: obj.x + dx,
-              y: obj.y + dy,
+            idsToMove.forEach(id => {
+              const obj = objects.find((o) => o.id === id);
+              if (!obj) return;
+              if (obj.type === 'line') {
+                const d = obj.data as { x1: number; y1: number; x2: number; y2: number; color: string; strokeWidth: number };
+                onUpdateObject(id, {
+                  x: obj.x + dx, y: obj.y + dy,
+                  data: { ...d, x1: d.x1 + dx, y1: d.y1 + dy, x2: d.x2 + dx, y2: d.y2 + dy },
+                });
+              } else {
+                onUpdateObject(id, { x: obj.x + dx, y: obj.y + dy });
+              }
             });
 
             setDragStart({ x, y });
@@ -1171,6 +1493,12 @@ export const Canvas: React.FC<CanvasProps> = ({
         }}
         onMouseUp={(e) => {
           if (isDrawingArrow) {
+            handleCanvasMouseUp(e);
+          } else if (isDrawingLine) {
+            handleCanvasMouseUp(e);
+          } else if (isErasing) {
+            handleCanvasMouseUp(e);
+          } else if (isMarqueeSelecting) {
             handleCanvasMouseUp(e);
           } else {
             handleMouseUp();
@@ -1181,12 +1509,22 @@ export const Canvas: React.FC<CanvasProps> = ({
             setIsDrawingArrow(false);
             setArrowStart(null);
             setArrowEnd(null);
+          } else if (isDrawingLine) {
+            setIsDrawingLine(false);
+            setLineStart(null);
+            setLineEnd(null);
+          } else if (isErasing) {
+            setIsErasing(false);
+          } else if (isMarqueeSelecting) {
+            setIsMarqueeSelecting(false);
+            setMarqueeStart(null);
+            setMarqueeEnd(null);
           } else {
             handleMouseUp();
           }
         }}
         style={{
-          cursor: mode === 'arrow' ? 'crosshair' : ['draw', 'fraction', 'chart'].includes(mode) ? 'crosshair' : 'default',
+          cursor: mode === 'arrow' || mode === 'line' ? 'crosshair' : mode === 'eraser' ? 'cell' : ['draw', 'fraction', 'chart'].includes(mode) ? 'crosshair' : 'default',
         }}
       >
         <svg
@@ -1197,6 +1535,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             backgroundColor: '#FFFFFF',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
+          onMouseDown={mode === 'line' || mode === 'select' ? handleCanvasMouseDown : undefined}
         >
           {/* Grid */}
           {renderGrid()}
@@ -1205,18 +1544,84 @@ export const Canvas: React.FC<CanvasProps> = ({
           {objects.filter((o) => o.visible).map(renderObject)}
 
           {/* Drawing arrow preview */}
-          {isDrawingArrow && arrowStart && arrowEnd && (
-            <line
-              x1={arrowStart.x}
-              y1={arrowStart.y}
-              x2={arrowEnd.x}
-              y2={arrowEnd.y}
-              stroke="#374151"
-              strokeWidth={2}
-              strokeDasharray="5,5"
-              opacity={0.5}
-            />
-          )}
+          {isDrawingArrow && arrowStart && arrowEnd && (() => {
+            const dx = arrowEnd.x - arrowStart.x;
+            const dy = arrowEnd.y - arrowStart.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 5) {
+              const angle = Math.atan2(dy, dx);
+              const headLength = 15;
+              const arrowPoint1X = arrowEnd.x - headLength * Math.cos(angle - Math.PI / 6);
+              const arrowPoint1Y = arrowEnd.y - headLength * Math.sin(angle - Math.PI / 6);
+              const arrowPoint2X = arrowEnd.x - headLength * Math.cos(angle + Math.PI / 6);
+              const arrowPoint2Y = arrowEnd.y - headLength * Math.sin(angle + Math.PI / 6);
+
+              return (
+                <g opacity={0.5}>
+                  <line
+                    x1={arrowStart.x}
+                    y1={arrowStart.y}
+                    x2={arrowEnd.x}
+                    y2={arrowEnd.y}
+                    stroke="#374151"
+                    strokeWidth={2}
+                    strokeDasharray="5,5"
+                  />
+                  <polygon
+                    points={`${arrowEnd.x},${arrowEnd.y} ${arrowPoint1X},${arrowPoint1Y} ${arrowPoint2X},${arrowPoint2Y}`}
+                    fill="#374151"
+                  />
+                </g>
+              );
+            }
+            return null;
+          })()}
+
+          {/* Drawing line preview */}
+          {isDrawingLine && lineStart && lineEnd && (() => {
+            const dx = lineEnd.x - lineStart.x;
+            const dy = lineEnd.y - lineStart.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 5) {
+              return (
+                <line
+                  x1={lineStart.x}
+                  y1={lineStart.y}
+                  x2={lineEnd.x}
+                  y2={lineEnd.y}
+                  stroke="#374151"
+                  strokeWidth={2}
+                  strokeDasharray="5,5"
+                  strokeLinecap="round"
+                  opacity={0.6}
+                />
+              );
+            }
+            return null;
+          })()}
+
+          {/* Marquee selection rectangle */}
+          {isMarqueeSelecting && marqueeStart && marqueeEnd && (() => {
+            const x = Math.min(marqueeStart.x, marqueeEnd.x);
+            const y = Math.min(marqueeStart.y, marqueeEnd.y);
+            const width = Math.abs(marqueeEnd.x - marqueeStart.x);
+            const height = Math.abs(marqueeEnd.y - marqueeStart.y);
+
+            return (
+              <rect
+                x={x}
+                y={y}
+                width={width}
+                height={height}
+                fill="rgba(59,130,246,0.1)"
+                stroke="#3b82f6"
+                strokeDasharray="4,4"
+                strokeWidth={1}
+              />
+            );
+          })()}
         </svg>
       </div>
     </div>

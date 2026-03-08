@@ -21,6 +21,7 @@ function App() {
     addObject,
     removeObject,
     selectObject,
+    selectMultiple,
     setMode,
     undo,
     redo,
@@ -63,6 +64,10 @@ function App() {
 
       // Delete or Backspace - delete selected objects
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjects.length > 0) {
+        // Skip if user is editing text
+        const activeTag = document.activeElement?.tagName.toLowerCase();
+        if (activeTag === 'input' || activeTag === 'textarea') return;
+
         // Prevent default backspace behavior (going back in browser)
         e.preventDefault();
         clearCanvas();
@@ -244,8 +249,10 @@ function App() {
             zoom={zoom}
             showGrid={showGrid}
             onSelectObject={selectObject}
+            onSelectMultiple={selectMultiple}
             onUpdateObject={updateObject}
             onAddObject={handleAddObject}
+            onDeleteObject={handleDeleteObject}
             mode={state.mode}
           />
           <TemplateLibrary onSelectTemplate={handleSelectTemplate} />
@@ -262,8 +269,10 @@ function App() {
           zoom={zoom}
           showGrid={showGrid}
           onSelectObject={selectObject}
+          onSelectMultiple={selectMultiple}
           onUpdateObject={updateObject}
           onAddObject={handleAddObject}
+          onDeleteObject={handleDeleteObject}
           mode={state.mode}
         />
         <ObjectCreator mode={state.mode} onAddObject={handleAddObject} />

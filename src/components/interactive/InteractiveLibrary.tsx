@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calculator, TrendingUp, Triangle, Circle, BarChart2, GitBranch, Move3d } from 'lucide-react';
+import { Calculator, TrendingUp, Triangle, Circle, BarChart2, GitBranch, Move3d, Waves, Grid3x3, Crosshair, Layers, Minimize2, Maximize2 } from 'lucide-react';
 import { QuadraticFunction } from './QuadraticFunction';
 import { LinearFunction } from './LinearFunction';
 import { PythagoreanTheorem } from './PythagoreanTheorem';
@@ -9,6 +9,12 @@ import { LogarithmicFunction } from './LogarithmicFunction';
 import { VectorOperations } from './VectorOperations';
 import { DerivativeExplorer } from './DerivativeExplorer';
 import { ProbabilityTree } from './ProbabilityTree';
+import { TrigonometricFunctions } from './TrigonometricFunctions';
+import { CoordinatePlane } from './CoordinatePlane';
+import { FunctionIntersections } from './FunctionIntersections';
+import { InequalitySystems } from './InequalitySystems';
+import { ParallelLines } from './ParallelLines';
+import { TriangleSimilarity } from './TriangleSimilarity';
 
 interface InteractiveModule {
   id: string;
@@ -82,6 +88,48 @@ const modules: InteractiveModule[] = [
     icon: GitBranch,
     category: 'algebra',
   },
+  {
+    id: 'trig-functions',
+    name: 'Тригонометрические функции',
+    description: 'Графики sin, cos, tan с изменением амплитуды, периода и фазы',
+    icon: Waves,
+    category: 'trigonometry',
+  },
+  {
+    id: 'coordinate-plane',
+    name: 'Координатная плоскость',
+    description: 'Добавляйте точки кликом, изучайте координаты',
+    icon: Grid3x3,
+    category: 'geometry',
+  },
+  {
+    id: 'intersections',
+    name: 'Пересечения функций',
+    description: 'Найдите точки пересечения двух графиков',
+    icon: Crosshair,
+    category: 'functions',
+  },
+  {
+    id: 'inequalities',
+    name: 'Системы неравенств',
+    description: 'Визуализация решений систем линейных неравенств',
+    icon: Layers,
+    category: 'algebra',
+  },
+  {
+    id: 'parallel-lines',
+    name: 'Параллельные прямые',
+    description: 'Углы при пересечении параллельных прямых секущей',
+    icon: Minimize2,
+    category: 'geometry',
+  },
+  {
+    id: 'triangle-similarity',
+    name: 'Подобие треугольников',
+    description: 'Свойства подобных треугольников и коэффициент подобия',
+    icon: Maximize2,
+    category: 'geometry',
+  },
 ];
 
 interface InteractiveLibraryProps {
@@ -111,6 +159,18 @@ export const InteractiveLibrary: React.FC<InteractiveLibraryProps> = ({ onClose 
         return <TrigonometricCircle />;
       case 'probability':
         return <ProbabilityTree />;
+      case 'trig-functions':
+        return <TrigonometricFunctions />;
+      case 'coordinate-plane':
+        return <CoordinatePlane />;
+      case 'intersections':
+        return <FunctionIntersections />;
+      case 'inequalities':
+        return <InequalitySystems />;
+      case 'parallel-lines':
+        return <ParallelLines />;
+      case 'triangle-similarity':
+        return <TriangleSimilarity />;
       default:
         return null;
     }

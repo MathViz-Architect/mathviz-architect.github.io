@@ -312,6 +312,49 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         );
       }
 
+      case 'line': {
+        const data = selectedObject.data as {
+          x1: number;
+          y1: number;
+          x2: number;
+          y2: number;
+          color: string;
+          strokeWidth: number;
+        };
+        return (
+          <>
+            <div className="mb-3">
+              <label className="block text-xs text-gray-500 mb-1">Цвет линии</label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={data?.color || '#374151'}
+                  onChange={(e) => handleUpdateData('color', e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={data?.color || '#374151'}
+                  onChange={(e) => handleUpdateData('color', e.target.value)}
+                  className="flex-1 px-2 py-1 text-sm border rounded"
+                />
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-gray-500 mb-1">Толщина линии</label>
+              <input
+                type="number"
+                value={data?.strokeWidth || 2}
+                onChange={(e) => handleUpdateData('strokeWidth', parseInt(e.target.value))}
+                className="w-full px-2 py-1 text-sm border rounded"
+                min={1}
+                max={20}
+              />
+            </div>
+          </>
+        );
+      }
+
       case 'chart': {
         const data = selectedObject.data as {
           chartType: 'bar' | 'pie' | 'line';
@@ -512,75 +555,79 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
       </div>
 
       {/* Position */}
-      <div className="p-4 border-b border-gray-200">
-        <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
-          <Move size={12} /> Позиция
-        </h4>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="block text-xs text-gray-400">X</label>
-            <input
-              type="number"
-              value={Math.round(selectedObject.x)}
-              onChange={(e) => {
-                onUpdateObject(selectedObject.id, { x: parseInt(e.target.value) || 0 });
-                onSaveToHistory?.();
-              }}
-              className="w-full px-2 py-1 text-sm border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400">Y</label>
-            <input
-              type="number"
-              value={Math.round(selectedObject.y)}
-              onChange={(e) => {
-                onUpdateObject(selectedObject.id, { y: parseInt(e.target.value) || 0 });
-                onSaveToHistory?.();
-              }}
-              className="w-full px-2 py-1 text-sm border rounded"
-            />
+      {selectedObject.type !== 'line' && (
+        <div className="p-4 border-b border-gray-200">
+          <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
+            <Move size={12} /> Позиция
+          </h4>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-gray-400">X</label>
+              <input
+                type="number"
+                value={Math.round(selectedObject.x)}
+                onChange={(e) => {
+                  onUpdateObject(selectedObject.id, { x: parseInt(e.target.value) || 0 });
+                  onSaveToHistory?.();
+                }}
+                className="w-full px-2 py-1 text-sm border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400">Y</label>
+              <input
+                type="number"
+                value={Math.round(selectedObject.y)}
+                onChange={(e) => {
+                  onUpdateObject(selectedObject.id, { y: parseInt(e.target.value) || 0 });
+                  onSaveToHistory?.();
+                }}
+                className="w-full px-2 py-1 text-sm border rounded"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Size */}
-      <div className="p-4 border-b border-gray-200">
-        <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
-          <Maximize2 size={12} /> Размер
-        </h4>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="block text-xs text-gray-400">Ширина</label>
-            <input
-              type="number"
-              value={Math.round(selectedObject.width)}
-              onChange={(e) => {
-                onUpdateObject(selectedObject.id, { width: parseInt(e.target.value) || 10 });
-                onSaveToHistory?.();
-              }}
-              className="w-full px-2 py-1 text-sm border rounded"
-              min={10}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400">Высота</label>
-            <input
-              type="number"
-              value={Math.round(selectedObject.height)}
-              onChange={(e) => {
-                onUpdateObject(selectedObject.id, { height: parseInt(e.target.value) || 10 });
-                onSaveToHistory?.();
-              }}
-              className="w-full px-2 py-1 text-sm border rounded"
-              min={10}
-            />
+      {selectedObject.type !== 'line' && (
+        <div className="p-4 border-b border-gray-200">
+          <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
+            <Maximize2 size={12} /> Размер
+          </h4>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-gray-400">Ширина</label>
+              <input
+                type="number"
+                value={Math.round(selectedObject.width)}
+                onChange={(e) => {
+                  onUpdateObject(selectedObject.id, { width: parseInt(e.target.value) || 10 });
+                  onSaveToHistory?.();
+                }}
+                className="w-full px-2 py-1 text-sm border rounded"
+                min={10}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400">Высота</label>
+              <input
+                type="number"
+                value={Math.round(selectedObject.height)}
+                onChange={(e) => {
+                  onUpdateObject(selectedObject.id, { height: parseInt(e.target.value) || 10 });
+                  onSaveToHistory?.();
+                }}
+                className="w-full px-2 py-1 text-sm border rounded"
+                min={10}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Rotation - hide for chart objects */}
-      {selectedObject.type !== 'chart' && (
+      {/* Rotation - hide for chart and line objects */}
+      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <RotateCw size={12} /> Поворот

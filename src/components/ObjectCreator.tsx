@@ -214,7 +214,7 @@ const objectTypes = [
 export const ObjectCreator: React.FC<ObjectCreatorProps> = ({ mode, onAddObject }) => {
   // Show only for modes with multiple object choices
   if (mode === 'select' || mode === 'interactive' || mode === 'challenge' || mode === 'library' ||
-    mode === 'text' || mode === 'arrow' || mode === 'fraction') {
+    mode === 'text' || mode === 'arrow' || mode === 'fraction' || mode === 'line' || mode === 'eraser') {
     return null;
   }
 
