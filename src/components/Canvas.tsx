@@ -1,5 +1,14 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { AnyCanvasObject, Point } from '@/lib/types';
+import {
+  isPointInObject,
+  objectsIntersectRect,
+  screenToCanvas,
+  applyDelta,
+  calculateArrowAngle,
+  calculateArrowHeadPoints,
+  calculateDistance,
+} from '@/math-core';
 
 interface CanvasProps {
   objects: AnyCanvasObject[];
@@ -48,45 +57,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   const selectMouseDownRef = useRef<{ x: number; y: number; objectId: string | null } | null>(null);
   const didMarqueeSelectionRef = useRef(false);
 
-  // Hit detection for eraser tool
-  const isPointInObject = (x: number, y: number, obj: AnyCanvasObject): boolean => {
-    if (obj.type === 'line') {
-      const data = obj.data as { x1: number; y1: number; x2: number; y2: number };
-      // Distance from point to line segment
-      const dx = data.x2 - data.x1;
-      const dy = data.y2 - data.y1;
-      const lengthSquared = dx * dx + dy * dy;
-      if (lengthSquared === 0) return Math.sqrt((x - data.x1) ** 2 + (y - data.y1) ** 2) < 10;
-
-      const t = Math.max(0, Math.min(1, ((x - data.x1) * dx + (y - data.y1) * dy) / lengthSquared));
-      const projX = data.x1 + t * dx;
-      const projY = data.y1 + t * dy;
-      const distance = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
-      return distance < 10;
-    }
-
-    if (obj.type === 'arrow') {
-      // Distance from point to arrow line segment
-      const x1 = obj.x;
-      const y1 = obj.y;
-      const x2 = obj.x + obj.width;
-      const y2 = obj.y + obj.height;
-
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const lengthSquared = dx * dx + dy * dy;
-      if (lengthSquared === 0) return Math.sqrt((x - x1) ** 2 + (y - y1) ** 2) < 10;
-
-      const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lengthSquared));
-      const projX = x1 + t * dx;
-      const projY = y1 + t * dy;
-      const distance = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
-      return distance < 10;
-    }
-
-    // For all other objects, use bounding box
-    return x >= obj.x && x <= obj.x + obj.width && y >= obj.y && y <= obj.y + obj.height;
-  };
+  // Hit detection for eraser tool - now using math-core
+  // (function moved to @/math-core/geometry.ts)
 
   // Handle eraser deletion
   const handleEraserDelete = (x: number, y: number) => {
@@ -129,8 +101,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     const svgRect = svgRef.current?.getBoundingClientRect();
     if (!svgRect) return;
 
-    const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-    const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+    const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
     // Start drag immediately
     setIsDragging(true);
@@ -211,8 +182,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
 
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
       setIsDrawingArrow(true);
       setArrowStart({ x, y });
@@ -225,8 +195,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
 
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
       setIsDrawingLine(true);
       setLineStart({ x, y });
@@ -239,8 +208,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
 
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
       setIsErasing(true);
       handleEraserDelete(x, y);
@@ -257,8 +225,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
 
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
       setArrowEnd({ x, y });
       return;
@@ -269,8 +236,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
 
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
       setLineEnd({ x, y });
       return;
@@ -281,8 +247,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
 
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
       handleEraserDelete(x, y);
       return;
@@ -292,8 +257,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     if (isMarqueeSelecting) {
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
       setMarqueeEnd({ x, y });
       return;
     }
@@ -302,8 +266,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     if (isDragging && dragStart && dragObjectId) {
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
       const dx = x - dragStart.x;
       const dy = y - dragStart.y;
       const idsToMove = selectedObjectIds.length > 1 && selectedObjectIds.includes(dragObjectId)
@@ -311,12 +274,8 @@ export const Canvas: React.FC<CanvasProps> = ({
       idsToMove.forEach((id) => {
         const obj = objects.find((o) => o.id === id);
         if (!obj) return;
-        if (obj.type === 'line') {
-          const d = obj.data as { x1: number; y1: number; x2: number; y2: number; color: string; strokeWidth: number };
-          onUpdateObject(id, { x: obj.x + dx, y: obj.y + dy, data: { ...d, x1: d.x1 + dx, y1: d.y1 + dy, x2: d.x2 + dx, y2: d.y2 + dy } });
-        } else {
-          onUpdateObject(id, { x: obj.x + dx, y: obj.y + dy });
-        }
+        const updates = applyDelta(obj, dx, dy);
+        onUpdateObject(id, updates);
       });
       setDragStart({ x, y });
       return;
@@ -330,13 +289,12 @@ export const Canvas: React.FC<CanvasProps> = ({
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
 
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
       // Calculate drag distance
       const dx = x - arrowStart.x;
       const dy = y - arrowStart.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      const distance = calculateDistance(arrowStart.x, arrowStart.y, x, y);
 
       // Only create arrow if drag distance > 5px
       if (distance > 5) {
@@ -372,13 +330,10 @@ export const Canvas: React.FC<CanvasProps> = ({
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
 
-      const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-      const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
       // Calculate drag distance
-      const dx = x - lineStart.x;
-      const dy = y - lineStart.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      const distance = calculateDistance(lineStart.x, lineStart.y, x, y);
 
       // Only create line if drag distance > 5px
       if (distance > 5) {
@@ -425,39 +380,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       objects.forEach((obj) => {
         if (!obj.visible || obj.locked) return;
 
-        let intersects = false;
-
-        if (obj.type === 'line') {
-          // Line: compute bounding box from endpoints with tolerance
-          const d = obj.data as { x1: number; y1: number; x2: number; y2: number; strokeWidth?: number };
-          const tolerance = (d.strokeWidth || 2) + 3;
-          const bbox = {
-            minX: Math.min(d.x1, d.x2) - tolerance,
-            maxX: Math.max(d.x1, d.x2) + tolerance,
-            minY: Math.min(d.y1, d.y2) - tolerance,
-            maxY: Math.max(d.y1, d.y2) + tolerance
-          };
-
-          // AABB intersection test
-          intersects = bbox.minX < maxX && bbox.maxX > minX && bbox.minY < maxY && bbox.maxY > minY;
-        } else if (obj.type === 'arrow') {
-          // Arrow: compute bounding box from x,y and width,height with tolerance
-          const d = obj.data as { strokeWidth?: number };
-          const tolerance = (d.strokeWidth || 2) + 3;
-          const bbox = {
-            minX: Math.min(obj.x, obj.x + obj.width) - tolerance,
-            maxX: Math.max(obj.x, obj.x + obj.width) + tolerance,
-            minY: Math.min(obj.y, obj.y + obj.height) - tolerance,
-            maxY: Math.max(obj.y, obj.y + obj.height) + tolerance
-          };
-
-          // AABB intersection test
-          intersects = bbox.minX < maxX && bbox.maxX > minX && bbox.minY < maxY && bbox.maxY > minY;
-        } else {
-          // Standard objects: use x, y, width, height
-          intersects = obj.x < maxX && obj.x + obj.width > minX && obj.y < maxY && obj.y + obj.height > minY;
-        }
-
+        const intersects = objectsIntersectRect(obj, minX, minY, maxX, maxY);
         if (intersects) selectedIds.push(obj.id);
       });
 
@@ -499,8 +422,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     const svgRect = svgRef.current?.getBoundingClientRect();
     if (!svgRect) return;
 
-    const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-    const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+    const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
 
     let newObject: AnyCanvasObject;
 
@@ -1013,22 +935,23 @@ export const Canvas: React.FC<CanvasProps> = ({
 
         // Arrow head size
         const headLength = 15;
-        const headWidth = 10;
 
         // Calculate arrow head angle
-        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const angle = calculateArrowAngle(x1, y1, x2, y2);
 
         // Arrow head points at end
-        const arrowPoint1X = x2 - headLength * Math.cos(angle - Math.PI / 6);
-        const arrowPoint1Y = y2 - headLength * Math.sin(angle - Math.PI / 6);
-        const arrowPoint2X = x2 - headLength * Math.cos(angle + Math.PI / 6);
-        const arrowPoint2Y = y2 - headLength * Math.sin(angle + Math.PI / 6);
+        const endPoints = calculateArrowHeadPoints(x2, y2, angle, headLength, 'forward');
+        const arrowPoint1X = endPoints.point1X;
+        const arrowPoint1Y = endPoints.point1Y;
+        const arrowPoint2X = endPoints.point2X;
+        const arrowPoint2Y = endPoints.point2Y;
 
         // Arrow head points at start (for 'both' option)
-        const arrowPoint3X = x1 + headLength * Math.cos(angle - Math.PI / 6);
-        const arrowPoint3Y = y1 + headLength * Math.sin(angle - Math.PI / 6);
-        const arrowPoint4X = x1 + headLength * Math.cos(angle + Math.PI / 6);
-        const arrowPoint4Y = y1 + headLength * Math.sin(angle + Math.PI / 6);
+        const startPoints = calculateArrowHeadPoints(x1, y1, angle, headLength, 'backward');
+        const arrowPoint3X = startPoints.point1X;
+        const arrowPoint3Y = startPoints.point1Y;
+        const arrowPoint4X = startPoints.point2X;
+        const arrowPoint4Y = startPoints.point2Y;
 
         const centerX = obj.x + obj.width / 2;
         const centerY = obj.y + obj.height / 2;
@@ -1099,19 +1022,21 @@ export const Canvas: React.FC<CanvasProps> = ({
 
         // Calculate arrowhead geometry if needed
         const headLength = 15;
-        const angle = Math.atan2(data.y2 - data.y1, data.x2 - data.x1);
+        const angle = calculateArrowAngle(data.x1, data.y1, data.x2, data.y2);
 
         // Arrow head points at end
-        const arrowEndPoint1X = data.x2 - headLength * Math.cos(angle - Math.PI / 6);
-        const arrowEndPoint1Y = data.y2 - headLength * Math.sin(angle - Math.PI / 6);
-        const arrowEndPoint2X = data.x2 - headLength * Math.cos(angle + Math.PI / 6);
-        const arrowEndPoint2Y = data.y2 - headLength * Math.sin(angle + Math.PI / 6);
+        const endPoints = calculateArrowHeadPoints(data.x2, data.y2, angle, headLength, 'forward');
+        const arrowEndPoint1X = endPoints.point1X;
+        const arrowEndPoint1Y = endPoints.point1Y;
+        const arrowEndPoint2X = endPoints.point2X;
+        const arrowEndPoint2Y = endPoints.point2Y;
 
         // Arrow head points at start
-        const arrowStartPoint1X = data.x1 + headLength * Math.cos(angle - Math.PI / 6);
-        const arrowStartPoint1Y = data.y1 + headLength * Math.sin(angle - Math.PI / 6);
-        const arrowStartPoint2X = data.x1 + headLength * Math.cos(angle + Math.PI / 6);
-        const arrowStartPoint2Y = data.y1 + headLength * Math.sin(angle + Math.PI / 6);
+        const startPoints = calculateArrowHeadPoints(data.x1, data.y1, angle, headLength, 'backward');
+        const arrowStartPoint1X = startPoints.point1X;
+        const arrowStartPoint1Y = startPoints.point1Y;
+        const arrowStartPoint2X = startPoints.point2X;
+        const arrowStartPoint2Y = startPoints.point2Y;
 
         return (
           <g
@@ -1528,8 +1453,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               const svgRect = svgRef.current?.getBoundingClientRect();
               if (!svgRect) return;
               // Convert client coords to SVG viewBox coords
-              const x = (e.clientX - svgRect.left) * (canvasSize.width / svgRect.width);
-              const y = (e.clientY - svgRect.top) * (canvasSize.height / svgRect.height);
+              const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
               setIsMarqueeSelecting(true);
               setMarqueeStart({ x, y });
               setMarqueeEnd({ x, y });
@@ -1545,17 +1469,16 @@ export const Canvas: React.FC<CanvasProps> = ({
 
           {/* Drawing arrow preview */}
           {isDrawingArrow && arrowStart && arrowEnd && (() => {
-            const dx = arrowEnd.x - arrowStart.x;
-            const dy = arrowEnd.y - arrowStart.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = calculateDistance(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y);
 
             if (distance > 5) {
-              const angle = Math.atan2(dy, dx);
+              const angle = calculateArrowAngle(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y);
               const headLength = 15;
-              const arrowPoint1X = arrowEnd.x - headLength * Math.cos(angle - Math.PI / 6);
-              const arrowPoint1Y = arrowEnd.y - headLength * Math.sin(angle - Math.PI / 6);
-              const arrowPoint2X = arrowEnd.x - headLength * Math.cos(angle + Math.PI / 6);
-              const arrowPoint2Y = arrowEnd.y - headLength * Math.sin(angle + Math.PI / 6);
+              const points = calculateArrowHeadPoints(arrowEnd.x, arrowEnd.y, angle, headLength, 'forward');
+              const arrowPoint1X = points.point1X;
+              const arrowPoint1Y = points.point1Y;
+              const arrowPoint2X = points.point2X;
+              const arrowPoint2Y = points.point2Y;
 
               return (
                 <g opacity={0.5}>
@@ -1580,9 +1503,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
           {/* Drawing line preview */}
           {isDrawingLine && lineStart && lineEnd && (() => {
-            const dx = lineEnd.x - lineStart.x;
-            const dy = lineEnd.y - lineStart.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = calculateDistance(lineStart.x, lineStart.y, lineEnd.x, lineEnd.y);
 
             if (distance > 5) {
               return (
