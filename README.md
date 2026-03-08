@@ -271,6 +271,50 @@ case 'myobject': {
 
 ---
 
+## 🌐 Деплой на GitHub Pages
+
+Проект настроен для автоматического деплоя на GitHub Pages через GitHub Actions.
+
+### Автоматический деплой
+
+При каждом push в ветку `main` автоматически запускается workflow, который:
+1. Устанавливает зависимости
+2. Собирает production-версию
+3. Деплоит на GitHub Pages
+
+### Настройка (один раз)
+
+1. **Включите GitHub Pages в настройках репозитория:**
+   - Перейдите в Settings → Pages
+   - Source: выберите "GitHub Actions"
+
+2. **Проверьте права доступа:**
+   - Settings → Actions → General → Workflow permissions
+   - Выберите "Read and write permissions"
+
+3. **После первого push в main:**
+   - Workflow запустится автоматически
+   - Приложение будет доступно по адресу: `https://[username].github.io/MathViz-Architect/`
+
+### Ручной деплой
+
+Вы можете запустить деплой вручную:
+1. Перейдите в Actions → Deploy to GitHub Pages
+2. Нажмите "Run workflow"
+3. Выберите ветку `main` и нажмите "Run workflow"
+
+### Локальная сборка для GitHub Pages
+
+Чтобы протестировать сборку локально:
+
+```bash
+cd mathviz-architect
+GITHUB_PAGES=true pnpm build
+pnpm preview
+```
+
+---
+
 ## 🐛 Известные проблемы и решения
 
 ### Проблема: Веб-версия не запускается
