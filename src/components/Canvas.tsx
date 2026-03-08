@@ -195,7 +195,11 @@ export const Canvas: React.FC<CanvasProps> = ({
       return;
     }
 
-    if (mode !== 'arrow' && mode !== 'line' && mode !== 'eraser') {
+    // Only deselect when clicking on empty canvas space (not on any object)
+    // e.target === svg element itself, not a child object
+    const target = e.target as SVGElement | HTMLElement;
+    const isEmptyCanvas = target.tagName === 'svg' || target === e.currentTarget;
+    if (isEmptyCanvas && mode !== 'arrow' && mode !== 'line' && mode !== 'eraser') {
       onSelectObject(null);
     }
   };

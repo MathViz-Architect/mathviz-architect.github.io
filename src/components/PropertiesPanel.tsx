@@ -650,8 +650,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         </div>
       )}
 
-      {/* Rotation - hide for chart and line objects */}
-      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && (
+      {/* Rotation - hide for chart, line and fraction objects */}
+      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && selectedObject.type !== 'fraction' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <RotateCw size={12} /> Поворот

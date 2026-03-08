@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Square,
   Circle,
+  Triangle,
   Type,
   ArrowRight,
   BarChart3,
@@ -65,7 +66,7 @@ const objectTypes = [
   {
     id: 'triangle',
     name: 'Треугольник',
-    icon: Square,
+    icon: Triangle,
     createObject: (): AnyCanvasObject => ({
       id: generateId(),
       type: 'triangle',

@@ -165,10 +165,10 @@ export const templates: Template[] = [
         },
         {
           id: generateId(),
-          type: 'rectangle',
+          type: 'triangle',
           x: 500,
           y: 200,
-          width: 87,
+          width: 100,
           height: 100,
           rotation: 0,
           opacity: 1,
@@ -178,8 +178,6 @@ export const templates: Template[] = [
             fill: '#F59E0B',
             stroke: '#D97706',
             strokeWidth: 2,
-            cornerRadius: 0,
-            isTriangle: true,
           },
         },
       ];
