@@ -50,7 +50,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   const renderPropertyFields = () => {
     switch (selectedObject.type) {
       case 'rectangle':
-      case 'circle': {
+      case 'circle':
+      case 'triangle':
+      case 'polygon': {
         const data = selectedObject.data as {
           fill: string;
           stroke: string;
@@ -118,6 +120,143 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             )}
           </>
+        );
+      }
+
+
+      case 'geoshape': {
+        const data = selectedObject.data as {
+          shapeKind: 'circle' | 'triangle' | 'quadrilateral';
+          radius?: number;
+          sideA?: number; sideB?: number; sideC?: number;
+          sideAB?: number; sideBC?: number; sideCD?: number; sideDA?: number;
+          stroke: string;
+          strokeWidth: number;
+        };
+
+        // Triangle validation
+        const triValid = data.shapeKind !== 'triangle' || (() => {
+          const a = data.sideA ?? 0, b = data.sideB ?? 0, c = data.sideC ?? 0;
+          return a + b > c && a + c > b && b + c > a;
+        })();
+
+        return (
+          <div className="space-y-4">
+            {/* Stroke color */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Цвет линии</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={data.stroke || '#374151'}
+                  onChange={(e) => handleUpdateData('stroke', e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer border border-gray-200"
+                />
+                <span className="text-xs text-gray-500">{data.stroke || '#374151'}</span>
+              </div>
+            </div>
+
+            {/* Stroke width */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Толщина линии</label>
+              <input
+                type="number"
+                value={data.strokeWidth || 2}
+                onChange={(e) => handleUpdateData('strokeWidth', parseInt(e.target.value) || 1)}
+                className="w-full px-2 py-1 text-sm border rounded"
+                min={1} max={10}
+              />
+            </div>
+
+            {/* Circle */}
+            {data.shapeKind === 'circle' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Радиус (px)</label>
+                <input
+                  type="number"
+                  value={data.radius || 80}
+                  onChange={(e) => {
+                    const r = parseInt(e.target.value) || 1;
+                    onUpdateObject(selectedObject.id, {
+                      data: { ...selectedObject.data, radius: r },
+                      width: r * 2,
+                      height: r * 2,
+                    });
+                  }}
+                  className="w-full px-2 py-1 text-sm border rounded"
+                  min={10} max={400}
+                />
+              </div>
+            )}
+
+            {/* Triangle */}
+            {data.shapeKind === 'triangle' && (
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-500">Стороны треугольника</label>
+                {!triValid && (
+                  <div className="text-xs text-red-500 bg-red-50 px-2 py-1 rounded">
+                    ⚠ Не выполняется неравенство треугольника
+                  </div>
+                )}
+                {(['sideA', 'sideB', 'sideC'] as const).map((key, i) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500 w-4">{['a', 'b', 'c'][i]}</label>
+                    <input
+                      type="number"
+                      value={(data[key] ?? 100) as number}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 1;
+                        const a = key === 'sideA' ? val : (data.sideA ?? 100);
+                        const b = key === 'sideB' ? val : (data.sideB ?? 100);
+                        const c = key === 'sideC' ? val : (data.sideC ?? 100);
+                        const maxSide = Math.max(a, b, c);
+                        onUpdateObject(selectedObject.id, {
+                          data: { ...selectedObject.data, [key]: val },
+                          width: maxSide * 1.2,
+                          height: maxSide * 1.0,
+                        });
+                      }}
+                      className="flex-1 px-2 py-1 text-sm border rounded"
+                      min={1}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Quadrilateral */}
+            {data.shapeKind === 'quadrilateral' && (
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-500">Стороны</label>
+                {([
+                  ['sideAB', 'AB (ширина)'], ['sideBC', 'BC (высота)'], ['sideCD', 'CD (ширина)'], ['sideDA', 'DA (высота)']
+                ] as [string, string][]).map(([key, label]) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500 w-20">{label}</label>
+                    <input
+                      type="number"
+                      value={(data[key as keyof typeof data] ?? 100) as number}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 1;
+                        const newData = { ...selectedObject.data, [key]: val };
+                        const ab = key === 'sideAB' ? val : (data.sideAB ?? 160);
+                        const cd = key === 'sideCD' ? val : (data.sideCD ?? 160);
+                        const bc = key === 'sideBC' ? val : (data.sideBC ?? 120);
+                        const da = key === 'sideDA' ? val : (data.sideDA ?? 120);
+                        onUpdateObject(selectedObject.id, {
+                          data: newData,
+                          width: Math.max(ab, cd),
+                          height: Math.max(bc, da),
+                        });
+                      }}
+                      className="flex-1 px-2 py-1 text-sm border rounded"
+                      min={1}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         );
       }
 
@@ -579,7 +718,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
       </div>
 
       {/* Position */}
-      {selectedObject.type !== 'line' && (
+      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <Move size={12} /> Позиция
@@ -614,7 +753,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
       )}
 
       {/* Size */}
-      {selectedObject.type !== 'line' && (
+      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <Maximize2 size={12} /> Размер
@@ -651,7 +790,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
       )}
 
       {/* Rotation - hide for chart, line and fraction objects */}
-      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && selectedObject.type !== 'fraction' && (
+      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && selectedObject.type !== 'fraction' && selectedObject.type !== 'geoshape' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <RotateCw size={12} /> Поворот

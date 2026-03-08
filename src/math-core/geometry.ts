@@ -27,6 +27,23 @@ export const pointToSegmentDistance = (
 };
 
 /**
+ * Point-in-polygon test using ray casting algorithm
+ */
+const pointInPolygon = (x: number, y: number, points: { x: number; y: number }[]): boolean => {
+    let inside = false;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const xi = points[i].x;
+        const yi = points[i].y;
+        const xj = points[j].x;
+        const yj = points[j].y;
+
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+};
+
+/**
  * Check if a point is inside an object (with tolerance for lines/arrows)
  */
 export const isPointInObject = (x: number, y: number, obj: AnyCanvasObject): boolean => {
@@ -43,6 +60,16 @@ export const isPointInObject = (x: number, y: number, obj: AnyCanvasObject): boo
         const y2 = obj.y + obj.height;
         const distance = pointToSegmentDistance(x, y, x1, y1, x2, y2);
         return distance < 10;
+    }
+
+    if (obj.type === 'polygon') {
+        const data = obj.data as { points: { x: number; y: number }[] };
+        // Convert normalized points to absolute coordinates
+        const absolutePoints = data.points.map(p => ({
+            x: obj.x + p.x * obj.width,
+            y: obj.y + p.y * obj.height,
+        }));
+        return pointInPolygon(x, y, absolutePoints);
     }
 
     // For all other objects, use bounding box
@@ -77,7 +104,7 @@ export const getBoundingBox = (
         };
     }
 
-    // Standard objects
+    // Standard objects (including polygon - use bounding box)
     return {
         minX: obj.x,
         maxX: obj.x + obj.width,

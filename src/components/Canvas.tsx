@@ -711,6 +711,174 @@ export const Canvas: React.FC<CanvasProps> = ({
         );
       }
 
+      case 'polygon': {
+        const data = obj.data as {
+          points: { x: number; y: number }[];
+          fill: string;
+          stroke: string;
+          strokeWidth: number;
+        };
+
+        const pts = data.points
+          .map(p => `${obj.x + p.x * obj.width},${obj.y + p.y * obj.height}`)
+          .join(' ');
+
+        return (
+          <g
+            key={obj.id}
+            onMouseDown={(e) => handleObjectMouseDown(e, obj.id)}
+            style={{ cursor: obj.locked ? 'not-allowed' : 'move' }}
+          >
+            <polygon
+              points={pts}
+              fill={data?.fill || '#F59E0B'}
+              stroke={data?.stroke || '#D97706'}
+              strokeWidth={data?.strokeWidth || 2}
+              opacity={opacity}
+            />
+            {isSelected && (
+              <rect
+                x={obj.x - 2}
+                y={obj.y - 2}
+                width={obj.width + 4}
+                height={obj.height + 4}
+                fill="none"
+                stroke="#F59E0B"
+                strokeWidth={2}
+                strokeDasharray="5,5"
+              />
+            )}
+          </g>
+        );
+      }
+
+
+      case 'geoshape': {
+        const data = obj.data as {
+          shapeKind: 'circle' | 'triangle' | 'quadrilateral';
+          radius?: number;
+          sideA?: number; sideB?: number; sideC?: number;
+          sideAB?: number; sideBC?: number; sideCD?: number; sideDA?: number;
+          stroke: string;
+          strokeWidth: number;
+        };
+
+        const cx = obj.x + obj.width / 2;
+        const cy = obj.y + obj.height / 2;
+
+        // Helper: compute triangle points from sides a,b,c using law of cosines
+        const getTrianglePoints = (a: number, b: number, c: number) => {
+          // Place side c along bottom, compute apex
+          const cosA = (b * b + c * c - a * a) / (2 * b * c);
+          if (cosA < -1 || cosA > 1) return null; // invalid
+          const sinA = Math.sqrt(1 - cosA * cosA);
+          // Normalize to fit in obj.width x obj.height
+          const scale = Math.min(obj.width / c, obj.height / (b * sinA)) * 0.9;
+          const baseY = obj.y + obj.height * 0.9;
+          const baseX = obj.x + (obj.width - c * scale) / 2;
+          const px1 = baseX;
+          const py1 = baseY;
+          const px2 = baseX + c * scale;
+          const py2 = baseY;
+          const px3 = baseX + b * cosA * scale;
+          const py3 = baseY - b * sinA * scale;
+          return `${px1},${py1} ${px2},${py2} ${px3},${py3}`;
+        };
+
+        // Helper: compute quadrilateral as rectangle using actual side values as pixels
+        const getQuadPoints = (ab: number, bc: number, cd: number, da: number) => {
+          // ab/cd = horizontal sides, bc/da = vertical sides
+          // Draw as a rectangle with ab width and bc height, centered in obj bounds
+          const w = ab;
+          const h = bc;
+          const ox = obj.x + (obj.width - w) / 2;
+          const oy = obj.y + (obj.height - h) / 2;
+          return `${ox},${oy} ${ox + w},${oy} ${ox + w},${oy + h} ${ox},${oy + h}`;
+        };
+
+        let shapeEl: React.ReactNode = null;
+        let isInvalid = false;
+
+        if (data.shapeKind === 'circle') {
+          const r = Math.min(obj.width, obj.height) / 2 - 2;
+          shapeEl = (
+            <circle
+              cx={cx} cy={cy} r={r}
+              fill="none"
+              stroke={data.stroke || '#374151'}
+              strokeWidth={data.strokeWidth || 2}
+              opacity={opacity}
+            />
+          );
+        } else if (data.shapeKind === 'triangle') {
+          const a = data.sideA ?? 100;
+          const b = data.sideB ?? 100;
+          const c = data.sideC ?? 100;
+          // Validate triangle inequality
+          if (a + b <= c || a + c <= b || b + c <= a) {
+            isInvalid = true;
+          } else {
+            const pts = getTrianglePoints(a, b, c);
+            if (!pts) {
+              isInvalid = true;
+            } else {
+              shapeEl = (
+                <polygon
+                  points={pts}
+                  fill="none"
+                  stroke={data.stroke || '#374151'}
+                  strokeWidth={data.strokeWidth || 2}
+                  opacity={opacity}
+                />
+              );
+            }
+          }
+        } else if (data.shapeKind === 'quadrilateral') {
+          const ab = data.sideAB ?? 160;
+          const bc = data.sideBC ?? 120;
+          const cd = data.sideCD ?? 160;
+          const da = data.sideDA ?? 120;
+          const pts = getQuadPoints(ab, bc, cd, da);
+          shapeEl = (
+            <polygon
+              points={pts}
+              fill="none"
+              stroke={data.stroke || '#374151'}
+              strokeWidth={data.strokeWidth || 2}
+              opacity={opacity}
+            />
+          );
+        }
+
+        return (
+          <g
+            key={obj.id}
+            onMouseDown={(e) => handleObjectMouseDown(e, obj.id)}
+            style={{ cursor: obj.locked ? 'not-allowed' : 'move' }}
+          >
+            {isInvalid ? (
+              <text
+                x={cx} y={cy}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={12}
+                fill="#EF4444"
+              >
+                Неверные стороны
+              </text>
+            ) : shapeEl}
+            {isSelected && (
+              <rect
+                x={obj.x - 2} y={obj.y - 2}
+                width={obj.width + 4} height={obj.height + 4}
+                fill="none" stroke="#F59E0B"
+                strokeWidth={2} strokeDasharray="5,5"
+              />
+            )}
+          </g>
+        );
+      }
+
       case 'fraction': {
         const data = obj.data as {
           numerator: number;

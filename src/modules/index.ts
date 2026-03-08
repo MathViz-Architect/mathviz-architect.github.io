@@ -11,6 +11,9 @@ import {
     Layers,
     Minimize2,
     Maximize2,
+    ArrowUpDown,
+    Search,
+    Waves as WavesIcon,
 } from 'lucide-react';
 
 // Import all module components
@@ -29,6 +32,9 @@ import { FunctionIntersections } from '@/components/interactive/FunctionIntersec
 import { InequalitySystems } from '@/components/interactive/InequalitySystems';
 import { ParallelLines } from '@/components/interactive/ParallelLines';
 import { TriangleSimilarity } from '@/components/interactive/TriangleSimilarity';
+import { FunctionTransformations } from '@/components/interactive/FunctionTransformations';
+import { FunctionAnalysis } from '@/components/interactive/FunctionAnalysis';
+import { TrigCircleGraph } from '@/components/interactive/TrigCircleGraph';
 
 // Register all modules
 registerModule({
@@ -164,4 +170,31 @@ registerModule({
     icon: Maximize2,
     category: 'geometry',
     component: TriangleSimilarity,
+});
+
+registerModule({
+    id: 'function-transformations',
+    name: 'Преобразования функций',
+    description: 'Сдвиг, растяжение и отражение графиков',
+    icon: ArrowUpDown,
+    category: 'functions',
+    component: FunctionTransformations,
+});
+
+registerModule({
+    id: 'function-analysis',
+    name: 'Исследование функции',
+    description: 'Экстремумы, монотонность, выпуклость, точки перегиба',
+    icon: Search,
+    category: 'functions',
+    component: FunctionAnalysis,
+});
+
+registerModule({
+    id: 'trig-circle-graph',
+    name: 'Окружность и график',
+    description: 'Анимация: как окружность порождает синусоиду',
+    icon: WavesIcon,
+    category: 'trigonometry',
+    component: TrigCircleGraph,
 });

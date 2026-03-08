@@ -21,7 +21,7 @@ export interface ObjectStyle {
 
 export interface CanvasObject {
   id: string;
-  type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle';
+  type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle' | 'polygon' | 'geoshape';
   x: number;
   y: number;
   width: number;
@@ -59,6 +59,17 @@ export interface TriangleObject extends CanvasObject {
     fill: string;
     stroke: string;
     strokeWidth: number;
+  };
+}
+
+export interface PolygonObject extends CanvasObject {
+  type: 'polygon';
+  data: {
+    points: { x: number; y: number }[];
+    fill: string;
+    stroke: string;
+    strokeWidth: number;
+    label: string;
   };
 }
 
@@ -119,7 +130,28 @@ export interface LineObject extends CanvasObject {
   };
 }
 
-export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | CanvasObject;
+
+export interface GeoShapeObject extends CanvasObject {
+  type: 'geoshape';
+  data: {
+    shapeKind: 'circle' | 'triangle' | 'quadrilateral';
+    // circle
+    radius?: number;
+    // triangle sides
+    sideA?: number;
+    sideB?: number;
+    sideC?: number;
+    // quadrilateral sides
+    sideAB?: number;
+    sideBC?: number;
+    sideCD?: number;
+    sideDA?: number;
+    stroke: string;
+    strokeWidth: number;
+  };
+}
+
+export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | PolygonObject | GeoShapeObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | CanvasObject;
 
 export interface Project {
   id: string;
