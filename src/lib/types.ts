@@ -10,6 +10,15 @@ export interface Size {
   height: number;
 }
 
+export interface ObjectStyle {
+  stroke?: string;
+  strokeWidth?: number;
+  fill?: string;
+  arrowStart?: boolean;
+  arrowEnd?: boolean;
+  dash?: boolean;
+}
+
 export interface CanvasObject {
   id: string;
   type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle';
@@ -22,6 +31,7 @@ export interface CanvasObject {
   visible: boolean;
   locked: boolean;
   data: Record<string, unknown>;
+  style?: ObjectStyle;
 }
 
 export interface RectangleObject extends CanvasObject {
@@ -104,6 +114,8 @@ export interface LineObject extends CanvasObject {
     y2: number;
     color: string;
     strokeWidth: number;
+    arrowStart?: boolean;
+    arrowEnd?: boolean;
   };
 }
 

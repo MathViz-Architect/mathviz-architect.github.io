@@ -320,6 +320,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           y2: number;
           color: string;
           strokeWidth: number;
+          arrowStart?: boolean;
+          arrowEnd?: boolean;
         };
         return (
           <>
@@ -350,6 +352,28 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 min={1}
                 max={20}
               />
+            </div>
+            <div className="mb-3">
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={data?.arrowStart || false}
+                  onChange={(e) => handleUpdateData('arrowStart', e.target.checked)}
+                  className="rounded"
+                />
+                Стрелка в начале
+              </label>
+            </div>
+            <div className="mb-3">
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={data?.arrowEnd || false}
+                  onChange={(e) => handleUpdateData('arrowEnd', e.target.checked)}
+                  className="rounded"
+                />
+                Стрелка в конце
+              </label>
             </div>
           </>
         );

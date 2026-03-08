@@ -70,7 +70,8 @@ function App() {
 
         // Prevent default backspace behavior (going back in browser)
         e.preventDefault();
-        clearCanvas();
+        selectedObjects.forEach((obj) => removeObject(obj.id));
+        saveToHistory();
       }
     };
 
@@ -224,7 +225,7 @@ function App() {
     // Interactive mode - full screen interactive modules
     if (state.mode === 'interactive') {
       return (
-        <div className="flex-1 bg-gray-100">
+        <div className="flex-1 bg-gray-100 overflow-hidden">
           <InteractiveLibrary />
         </div>
       );
@@ -233,7 +234,7 @@ function App() {
     // Challenge mode - math challenges
     if (state.mode === 'challenge') {
       return (
-        <div className="flex-1 bg-gray-100">
+        <div className="flex-1 bg-gray-100 overflow-hidden">
           <ChallengeMode />
         </div>
       );
@@ -242,7 +243,7 @@ function App() {
     // Library mode - templates
     if (state.mode === 'library') {
       return (
-        <div className="flex-1 flex">
+        <div className="flex-1 flex overflow-hidden">
           <Canvas
             objects={state.objects}
             selectedObjectIds={state.selectedObjectIds}
@@ -262,7 +263,7 @@ function App() {
 
     // Default mode - canvas with object creator
     return (
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden">
         <Canvas
           objects={state.objects}
           selectedObjectIds={state.selectedObjectIds}
@@ -281,10 +282,10 @@ function App() {
   };
 
   return (
-    <div className={`h-screen flex flex-col bg-gray-50 overflow-x-hidden ${state.mode !== 'interactive' && state.mode !== 'challenge' ? 'canvas-mode' : ''
+    <div className={`h-screen flex flex-col bg-gray-50 overflow-hidden ${state.mode !== 'interactive' && state.mode !== 'challenge' ? 'canvas-mode' : ''
       }`}>
       {/* Main content area */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar - Tools */}
         <ToolSidebar
           mode={state.mode}
@@ -303,7 +304,7 @@ function App() {
         />
 
         {/* Center area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Top bar */}
           <TopBar
             projectName={state.projectName}
