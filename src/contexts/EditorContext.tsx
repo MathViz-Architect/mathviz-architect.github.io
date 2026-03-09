@@ -20,7 +20,8 @@ interface EditorContextValue {
   setMode: (mode: AppMode) => void;
   undo: () => void;
   redo: () => void;
-  saveToHistory: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
   newProject: () => void;
   loadProject: (project: any, path: string) => void;
   setProjectPath: (path: string) => void;
@@ -42,6 +43,7 @@ interface EditorContextValue {
   getSavedProjects: () => SavedProject[];
   loadProjectFromStorage: (id: string) => void;
   deleteProjectFromStorage: (id: string) => void;
+  moveObjects: (previousObjects: AnyCanvasObject[], nextObjects: AnyCanvasObject[]) => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -59,17 +61,14 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
   const handleAddObject = useCallback((obj: AnyCanvasObject) => {
     appState.addObject(obj);
-    appState.saveToHistory();
   }, [appState]);
 
   const handleDeleteObject = useCallback((id: string) => {
     appState.removeObject(id);
-    appState.saveToHistory();
   }, [appState]);
 
   const handleSelectTemplate = useCallback((template: Template) => {
     template.createObjects().forEach(obj => appState.addObject(obj));
-    appState.saveToHistory();
     appState.setMode('select');
   }, [appState]);
 

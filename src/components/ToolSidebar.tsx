@@ -45,10 +45,10 @@ export const ToolSidebar: React.FC<ToolSidebarProps> = ({
   onSave,
   onExport,
 }) => {
-  const { state, setMode, undo, redo, clearCanvas, selectedObjects } = useEditorContext();
+  const { state, setMode, undo, redo, canUndo, canRedo, clearCanvas, selectedObjects } = useEditorContext();
   const mode = state.mode;
-  const canUndo = state.history.past.length > 0;
-  const canRedo = state.history.future.length > 0;
+  const canUndoAction = canUndo();
+  const canRedoAction = canRedo();
   const isDirty = state.isDirty;
   const hasSelection = selectedObjects.length > 0;
   return (
@@ -91,16 +91,16 @@ export const ToolSidebar: React.FC<ToolSidebarProps> = ({
       <div className="flex flex-col gap-1 mb-4">
         <button
           onClick={undo}
-          disabled={!canUndo}
-          className={`p-2 rounded-lg ${canUndo ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
+          disabled={!canUndoAction}
+          className={`p-2 rounded-lg ${canUndoAction ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
           title="Отменить"
         >
           <Undo2 size={20} />
         </button>
         <button
           onClick={redo}
-          disabled={!canRedo}
-          className={`p-2 rounded-lg ${canRedo ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
+          disabled={!canRedoAction}
+          className={`p-2 rounded-lg ${canRedoAction ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
           title="Вернуть"
         >
           <Redo2 size={20} />

@@ -1,5 +1,13 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { AnyCanvasObject, AppMode, AppState, Project } from '@/lib/types';
+import { CommandHistory } from '@/lib/commandHistory';
+import {
+  AddObjectCommand,
+  DeleteObjectCommand,
+  UpdateObjectCommand,
+  MoveObjectsCommand,
+  BatchCommand,
+} from '@/lib/commands';
 
 // Generate unique ID
 export const generateId = (): string => {
@@ -14,49 +22,59 @@ const initialState: AppState = {
   projectPath: null,
   projectName: 'Новый проект',
   isDirty: false,
-  history: {
-    past: [],
-    present: [],
-    future: [],
-  },
 };
 
 export function useAppState() {
   const [state, setState] = useState<AppState>(initialState);
+  const historyRef = useRef(new CommandHistory());
+  // Keep a ref to always-current objects to avoid stale closures in commands
+  const objectsRef = useRef<AnyCanvasObject[]>(initialState.objects);
 
-  // Update object in state
-  const updateObject = useCallback((id: string, updates: Partial<AnyCanvasObject>) => {
-    setState((prev) => {
-      const newObjects = prev.objects.map((obj) =>
-        obj.id === id ? { ...obj, ...updates } : obj
-      );
-      return {
-        ...prev,
-        objects: newObjects,
-        isDirty: true,
-      };
-    });
+  // Internal setter for commands — always reads from ref, not closed-over state
+  const setObjects = useCallback((objects: AnyCanvasObject[]) => {
+    objectsRef.current = objects;
+    setState((prev) => ({
+      ...prev,
+      objects,
+      isDirty: true,
+    }));
   }, []);
+
+  // Keep objectsRef in sync with state.objects
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // Update object in state (for final changes only - end of drag, resize, text edit)
+  const updateObject = useCallback((id: string, updates: Partial<AnyCanvasObject>) => {
+    const command = new UpdateObjectCommand(objectsRef.current, id, updates, setObjects);
+    historyRef.current.execute(command);
+  }, [setObjects]);
 
   // Add object to canvas
   const addObject = useCallback((object: AnyCanvasObject) => {
+    const command = new AddObjectCommand(objectsRef.current, object, setObjects);
+    historyRef.current.execute(command);
     setState((prev) => ({
       ...prev,
-      objects: [...prev.objects, object],
       selectedObjectIds: [object.id],
-      isDirty: true,
     }));
-  }, []);
+  }, [setObjects]);
 
   // Remove object from canvas
   const removeObject = useCallback((id: string) => {
+    const command = new DeleteObjectCommand(objectsRef.current, id, setObjects);
+    historyRef.current.execute(command);
     setState((prev) => ({
       ...prev,
-      objects: prev.objects.filter((obj) => obj.id !== id),
       selectedObjectIds: prev.selectedObjectIds.filter((objId) => objId !== id),
-      isDirty: true,
     }));
-  }, []);
+  }, [setObjects]);
+
+  // Move objects (for drag completion)
+  const moveObjects = useCallback((previousObjects: AnyCanvasObject[], nextObjects: AnyCanvasObject[]) => {
+    const command = new MoveObjectsCommand(previousObjects, nextObjects, setObjects);
+    historyRef.current.execute(command);
+  }, [setObjects]);
 
   // Select object
   const selectObject = useCallback((id: string | null, multi: boolean = false) => {
@@ -92,51 +110,23 @@ export function useAppState() {
 
   // Undo/Redo
   const undo = useCallback(() => {
-    setState((prev) => {
-      if (prev.history.past.length === 0) return prev;
-      const previous = prev.history.past[prev.history.past.length - 1];
-      const newPast = prev.history.past.slice(0, -1);
-      return {
-        ...prev,
-        objects: previous,
-        history: {
-          past: newPast,
-          present: previous,
-          future: [prev.history.present, ...prev.history.future],
-        },
-        isDirty: true,
-      };
-    });
+    if (historyRef.current.undo()) {
+      setState((prev) => ({ ...prev, isDirty: true }));
+    }
   }, []);
 
   const redo = useCallback(() => {
-    setState((prev) => {
-      if (prev.history.future.length === 0) return prev;
-      const next = prev.history.future[0];
-      const newFuture = prev.history.future.slice(1);
-      return {
-        ...prev,
-        objects: next,
-        history: {
-          past: [...prev.history.past, prev.history.present],
-          present: next,
-          future: newFuture,
-        },
-        isDirty: true,
-      };
-    });
+    if (historyRef.current.redo()) {
+      setState((prev) => ({ ...prev, isDirty: true }));
+    }
   }, []);
 
-  // Save state to history
-  const saveToHistory = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      history: {
-        past: [...prev.history.past.slice(-19), prev.history.present],
-        present: prev.objects,
-        future: [],
-      },
-    }));
+  const canUndo = useCallback(() => {
+    return historyRef.current.canUndo();
+  }, []);
+
+  const canRedo = useCallback(() => {
+    return historyRef.current.canRedo();
   }, []);
 
   // New project
@@ -146,6 +136,7 @@ export function useAppState() {
       projectName: 'Новый проект',
       projectPath: null,
     });
+    historyRef.current.clear();
   }, []);
 
   // Load project
@@ -155,12 +146,8 @@ export function useAppState() {
       objects: project.objects,
       projectName: project.name,
       projectPath: path,
-      history: {
-        past: [],
-        present: project.objects,
-        future: [],
-      },
     });
+    historyRef.current.clear();
   }, []);
 
   // Set project path
@@ -180,25 +167,28 @@ export function useAppState() {
 
   // Clear canvas or delete selected objects
   const clearCanvas = useCallback(() => {
-    setState((prev) => {
-      // If objects are selected, delete only selected objects
-      if (prev.selectedObjectIds.length > 0) {
-        return {
-          ...prev,
-          objects: prev.objects.filter(obj => !prev.selectedObjectIds.includes(obj.id)),
-          selectedObjectIds: [],
-          isDirty: true,
-        };
-      }
-      // Otherwise, clear entire canvas
-      return {
+    const currentObjects = objectsRef.current;
+    const currentSelectedIds = stateRef.current.selectedObjectIds;
+    // If objects are selected, delete only selected objects
+    if (currentSelectedIds.length > 0) {
+      const commands = currentSelectedIds.map(
+        id => new DeleteObjectCommand(currentObjects, id, setObjects)
+      );
+      const batchCommand = new BatchCommand(commands, 'Удалить выбранные объекты');
+      historyRef.current.execute(batchCommand);
+      setState((prev) => ({
         ...prev,
-        objects: [],
         selectedObjectIds: [],
-        isDirty: true,
-      };
-    });
-  }, []);
+      }));
+    } else {
+      // Otherwise, clear entire canvas
+      const commands = currentObjects.map(
+        obj => new DeleteObjectCommand(currentObjects, obj.id, setObjects)
+      );
+      const batchCommand = new BatchCommand(commands, 'Очистить холст');
+      historyRef.current.execute(batchCommand);
+    }
+  }, [setObjects]);
 
   // Get selected objects
   const selectedObjects = state.objects.filter((obj) =>
@@ -211,11 +201,13 @@ export function useAppState() {
     updateObject,
     addObject,
     removeObject,
+    moveObjects,
     selectObject,
     setMode,
     undo,
     redo,
-    saveToHistory,
+    canUndo,
+    canRedo,
     newProject,
     loadProject,
     setProjectPath,

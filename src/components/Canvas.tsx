@@ -21,6 +21,7 @@ export const Canvas: React.FC = () => {
     updateObject: onUpdateObject,
     handleAddObject: onAddObject,
     handleDeleteObject: onDeleteObject,
+    moveObjects: onMoveObjects,
   } = useEditorContext();
   const objects = state.objects;
   const selectedObjectIds = state.selectedObjectIds;
@@ -30,6 +31,7 @@ export const Canvas: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Point | null>(null);
   const [dragObjectId, setDragObjectId] = useState<string | null>(null);
+  const dragStartObjectsRef = useRef<AnyCanvasObject[]>([]);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
@@ -133,6 +135,9 @@ export const Canvas: React.FC = () => {
     if (!svgRect) return;
 
     const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+
+    // Save initial state before drag
+    dragStartObjectsRef.current = [...objects];
 
     // Start drag immediately
     setIsDragging(true);
@@ -469,9 +474,14 @@ export const Canvas: React.FC = () => {
 
     // Object dragging completion
     if (isDragging) {
+      // Save move to history if objects were actually moved
+      if (dragStartObjectsRef.current.length > 0) {
+        onMoveObjects(dragStartObjectsRef.current, objects);
+      }
       setIsDragging(false);
       setDragStart(null);
       setDragObjectId(null);
+      dragStartObjectsRef.current = [];
       return;
     }
   };

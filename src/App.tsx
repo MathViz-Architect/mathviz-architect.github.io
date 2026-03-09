@@ -25,7 +25,6 @@ function AppContent() {
     removeObject,
     undo,
     redo,
-    saveToHistory,
     loadProject,
     setProjectPath,
     markAsSaved,
@@ -70,13 +69,12 @@ function AppContent() {
         // Prevent default backspace behavior (going back in browser)
         e.preventDefault();
         selectedObjects.forEach((obj) => removeObject(obj.id));
-        saveToHistory();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedObjects, removeObject, undo, redo, saveToHistory]);
+  }, [selectedObjects, removeObject, undo, redo]);
 
   // File operations
   const handleNew = useCallback(() => {

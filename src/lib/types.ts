@@ -187,9 +187,4 @@ export interface AppState {
   projectPath: string | null;
   projectName: string;
   isDirty: boolean;
-  history: {
-    past: AnyCanvasObject[][];
-    present: AnyCanvasObject[];
-    future: AnyCanvasObject[][];
-  };
 }
