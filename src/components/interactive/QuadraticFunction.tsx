@@ -115,7 +115,7 @@ export const QuadraticFunction: React.FC<QuadraticFunctionProps> = ({ onInsert }
         {/* Left: Graph */}
         <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
           <div className="w-full max-w-2xl">
-            <svg viewBox="0 0 400 300" className="w-full h-auto border border-gray-200 rounded-lg bg-white shadow-sm">
+            <svg viewBox="-20 -20 440 340" className="w-full h-auto border border-gray-200 rounded-lg bg-white shadow-sm">
               <CoordinateGrid width={400} height={300} scale={40} originX={200} originY={150} gridId="grid-quad" />
 
               {/* Parabola */}

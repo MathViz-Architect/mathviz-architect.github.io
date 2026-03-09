@@ -78,7 +78,7 @@ export const PythagoreanTheorem: React.FC<PythagoreanTheoremProps> = ({ onInsert
         {/* Left: Graph */}
         <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
           <div className="w-full max-w-2xl">
-            <svg viewBox="0 0 600 550" className="w-full h-auto border border-gray-200 rounded-lg bg-white shadow-sm">
+            <svg viewBox="-20 -20 640 590" className="w-full h-auto border border-gray-200 rounded-lg bg-white shadow-sm">
               {/* Background grid */}
               <defs>
                 <pattern id="grid2" width="25" height="25" patternUnits="userSpaceOnUse">

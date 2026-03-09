@@ -102,7 +102,7 @@ export const TrigonometricCircle: React.FC<TrigonometricCircleProps> = ({ onInse
         {/* Left: Graph */}
         <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
           <div className="w-full max-w-2xl">
-            <svg viewBox="0 0 400 400" className="w-full h-auto border border-gray-200 rounded-lg bg-white shadow-sm">
+            <svg viewBox="-20 -20 440 440" className="w-full h-auto border border-gray-200 rounded-lg bg-white shadow-sm">
               {/* Background */}
               <rect width="400" height="400" fill="#FAFAFA" />
 

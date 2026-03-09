@@ -188,3 +188,68 @@ export interface AppState {
   projectName: string;
   isDirty: boolean;
 }
+
+// Challenge types - New Template Architecture
+export type ParameterDef =
+  | { type: 'int'; min: number; max: number }
+  | { type: 'choice'; values: (string | number)[] }
+  | { type: 'expression'; value: string };
+
+export interface ProblemTemplate {
+  id: string;
+  class: number;
+  subject: 'algebra' | 'geometry' | 'probability' | 'logic';
+  section: string;
+  topic: string;
+  difficulty: 1 | 2 | 3 | 4;
+  problemType: 'numeric' | 'multiple_choice' | 'comparison' | 'text';
+  template: string;
+  parameters: Record<string, ParameterDef>;
+  constraints?: string[];
+  answer_formula: string;
+  hint?: string;
+  solution_steps_template?: string[];
+}
+
+export interface GeneratedProblem {
+  id: string;
+  template_id: string;
+  params: Record<string, number | string>;
+  question: string;
+  answer: number | string;
+  hint?: string;
+}
+
+// Legacy types for backward compatibility
+export interface GeneratedData {
+  [key: string]: number | string;
+}
+
+export interface StaticChallenge {
+  type: 'static';
+  id: string;
+  title: string;
+  category: string;
+  topic: string;
+  difficulty: number;
+  question: string;
+  hint?: string;
+  correctAnswer: string;
+  explanation?: string;
+}
+
+export interface GeneratedChallenge {
+  type: 'generated';
+  id: string;
+  title: string;
+  category: string;
+  topic: string;
+  difficulty: number;
+  generator: () => GeneratedData;
+  render: (data: GeneratedData) => { question: string; hint?: string };
+  validate: (data: GeneratedData, answer: string) => boolean;
+  explanation?: (data: GeneratedData) => string;
+}
+}
+
+export type Challenge = StaticChallenge | GeneratedChallenge;
