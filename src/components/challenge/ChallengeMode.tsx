@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { CheckCircle, XCircle, ArrowRight, HelpCircle } from 'lucide-react';
 import { Challenge, GeneratedData, StaticChallenge, GeneratedChallenge, ProblemTemplate, GeneratedProblem } from '@/lib/types';
 import { problemTemplates } from '@/lib/problemTemplates';
-import { generateProblem, validateAnswer } from '@/lib/templateEngine';
+import { generateProblem, validateAnswer, checkCommonMistake } from '@/lib/templateEngine';
 
 interface OldChallenge {
   id: string;
@@ -358,6 +358,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   const [selectedTriangleType, setSelectedTriangleType] = useState<'equilateral' | 'isosceles' | 'scalene' | null>(null);
   const [result, setResult] = useState<'correct' | 'incorrect' | null>(null);
   const [showHint, setShowHint] = useState(false);
+  const [mistakeFeedback, setMistakeFeedback] = useState<string | null>(null);
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
@@ -519,11 +520,14 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
 
       if (isCorrect) {
         setResult('correct');
+        setMistakeFeedback(null);
         if (!completedChallenges.includes(generatedProblem.template_id)) {
           setCompletedChallenges([...completedChallenges, generatedProblem.template_id]);
         }
       } else {
         setResult('incorrect');
+        const feedback = checkCommonMistake(generatedProblem, activeTemplate, userAnswer);
+        setMistakeFeedback(feedback);
       }
       return;
     }
@@ -586,6 +590,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
     setSelectedTriangleType(null);
     setResult(null);
     setShowHint(false);
+    setMistakeFeedback(null);
   };
 
   const handleBack = () => {
@@ -603,6 +608,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
     setSelectedTriangleType(null);
     setResult(null);
     setShowHint(false);
+    setMistakeFeedback(null);
   };
 
   const getDifficultyColor = (difficulty: Challenge['difficulty']) => {
@@ -764,7 +770,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                 <XCircle size={24} />
                 <div>
                   <div className="font-semibold">Неправильно 😔</div>
-                  <div className="text-sm">Попробуйте ещё раз или посмотрите подсказку.</div>
+                  <div className="text-sm">{mistakeFeedback ?? 'Попробуйте ещё раз или посмотрите подсказку.'}</div>
                 </div>
               </>
             )}
@@ -1176,7 +1182,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="font-medium text-gray-800">Задача: {template.section}</div>
+                  <div className="font-medium text-gray-800">Задача: {template.topic_title ?? template.section}</div>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${template.difficulty === 1 ? 'bg-green-100 text-green-700' : template.difficulty === 2 ? 'bg-yellow-100 text-yellow-700' : template.difficulty === 3 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
                       {template.difficulty === 1 ? 'Легко' : template.difficulty === 2 ? 'Средне' : template.difficulty === 3 ? 'Сложно' : 'Олимпиадное'}

@@ -201,6 +201,7 @@ export interface ProblemTemplate {
   subject: 'algebra' | 'geometry' | 'probability' | 'logic';
   section: string;
   topic: string;
+  topic_title?: string;
   difficulty: 1 | 2 | 3 | 4;
   problemType: 'numeric' | 'multiple_choice' | 'comparison' | 'text';
   template: string;
@@ -209,6 +210,10 @@ export interface ProblemTemplate {
   answer_formula: string;
   hint?: string;
   solution_steps_template?: string[];
+  common_mistakes?: Array<{
+    pattern: string;
+    feedback: string;
+  }>;
 }
 
 export interface GeneratedProblem {
