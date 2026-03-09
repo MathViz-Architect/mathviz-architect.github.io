@@ -44,6 +44,8 @@ interface EditorContextValue {
   loadProjectFromStorage: (id: string) => void;
   deleteProjectFromStorage: (id: string) => void;
   moveObjects: (previousObjects: AnyCanvasObject[], nextObjects: AnyCanvasObject[]) => void;
+  interactiveModuleId: string | null;
+  setInteractiveModuleId: (moduleId: string | null) => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -52,6 +54,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const appState = useAppState();
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
+  const [interactiveModuleId, setInteractiveModuleId] = useState<string | null>(null);
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleZoomIn = useCallback(() => setZoom(z => Math.min(z + 0.1, 2)), []);
@@ -230,6 +233,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       getSavedProjects,
       loadProjectFromStorage,
       deleteProjectFromStorage,
+      interactiveModuleId,
+      setInteractiveModuleId,
     }}>
       {children}
     </EditorContext.Provider>

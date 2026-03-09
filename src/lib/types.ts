@@ -201,26 +201,40 @@ export interface SolutionStep {
   result?: string;
 }
 
+export interface CommonMistake {
+  pattern: string;
+  feedback: string;
+}
+
+export type AnswerType =
+  | 'number'       // ✅ реализовать
+  | 'fraction'     // ✅ реализовать
+  | 'coordinate'   // ✅ реализовать
+  | 'expression'   // 🔜 зарезервировать
+  | 'interval'     // 🔜 зарезервировать
+  | 'set';         // 🔜 зарезервировать
+
+export interface DifficultyConfig {
+  template: string;
+  parameters: Record<string, ParameterDef>;
+  answer_formula: string;
+  constraints?: string[];
+  solution?: SolutionStep[];
+  hint?: string;
+  common_mistakes?: CommonMistake[];
+  answer_type?: AnswerType;  // default: 'number'
+}
+
 export interface ProblemTemplate {
   id: string;
   class: number;
   subject: 'algebra' | 'geometry' | 'probability' | 'logic';
   section: string;
   topic: string;
-  topic_title?: string;
-  difficulty: 1 | 2 | 3 | 4;
+  topic_title: string;
   problemType: 'numeric' | 'multiple_choice' | 'comparison' | 'text';
-  template: string;
-  parameters: Record<string, ParameterDef>;
-  constraints?: string[];
-  answer_formula: string;
-  hint?: string;
-  solution_steps_template?: string[];
-  solution?: SolutionStep[];
-  common_mistakes?: Array<{
-    pattern: string;
-    feedback: string;
-  }>;
+  difficulties: Partial<Record<1 | 2 | 3 | 4, DifficultyConfig>>;
+  relatedModule?: string;
 }
 
 export interface GeneratedProblem {
@@ -231,6 +245,7 @@ export interface GeneratedProblem {
   answer: number | string;
   hint?: string;
   solution?: SolutionStep[];
+  answer_type?: AnswerType;  // default: 'number'
 }
 
 // Legacy types for backward compatibility

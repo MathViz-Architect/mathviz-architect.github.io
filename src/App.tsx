@@ -30,6 +30,7 @@ function AppContent() {
     markAsSaved,
     newProject,
     handleSelectTemplate,
+    interactiveModuleId,
   } = useEditorContext();
 
   const [showWelcome, setShowWelcome] = useState(() => {
@@ -238,7 +239,7 @@ function AppContent() {
     if (state.mode === 'interactive') {
       return (
         <div className="flex-1 bg-gray-100 overflow-hidden">
-          <InteractiveLibrary />
+          <InteractiveLibrary initialModule={interactiveModuleId ?? undefined} />
         </div>
       );
     }

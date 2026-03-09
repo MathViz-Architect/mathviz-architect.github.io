@@ -3,10 +3,11 @@ import { getModules, getModuleById } from '@/lib/moduleRegistry';
 
 interface InteractiveLibraryProps {
   onClose?: () => void;
+  initialModule?: string;
 }
 
-export const InteractiveLibrary: React.FC<InteractiveLibraryProps> = ({ onClose }) => {
-  const [activeModule, setActiveModule] = useState<string | null>(null);
+export const InteractiveLibrary: React.FC<InteractiveLibraryProps> = ({ onClose, initialModule }) => {
+  const [activeModule, setActiveModule] = useState<string | null>(initialModule ?? null);
 
   const renderModule = () => {
     if (!activeModule) return null;

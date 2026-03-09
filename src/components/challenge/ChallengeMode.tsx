@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, ArrowRight, HelpCircle, Award, Star, TrendingUp, Target } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, HelpCircle, Award, Star, TrendingUp, Target, Search } from 'lucide-react';
 import { Challenge, GeneratedData, StaticChallenge, GeneratedChallenge, ProblemTemplate, GeneratedProblem, StudentProgress, TopicProgress, SkillLevel } from '@/lib/types';
 import { problemTemplates } from '@/lib/problemTemplates';
 import { generateProblem, validateAnswer, checkCommonMistake } from '@/lib/templateEngine';
 import { getUnmetPrerequisites } from '@/lib/topicGraph';
 import { curriculum } from '@/lib/curriculum';
 import { createAdaptiveState, updateAdaptiveState, selectTemplate, getDifficultyLabel, AdaptiveState } from '@/lib/adaptiveEngine';
+import { useEditorContext } from '@/contexts/EditorContext';
 
 interface OldChallenge {
   id: string;
@@ -424,6 +425,7 @@ interface ChallengeModeProps {
 }
 
 export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
+  const { setMode, setInteractiveModuleId } = useEditorContext();
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
   const [activeTemplate, setActiveTemplate] = useState<ProblemTemplate | null>(null);
   const [generatedProblem, setGeneratedProblem] = useState<GeneratedProblem | null>(null);
@@ -445,12 +447,12 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   // Generate problem when a template is selected
   React.useEffect(() => {
     if (activeTemplate) {
-      const problem = generateProblem(activeTemplate);
+      const problem = generateProblem(activeTemplate, adaptiveState.currentDifficulty);
       setGeneratedProblem(problem);
     } else {
       setGeneratedProblem(null);
     }
-  }, [activeTemplate]);
+  }, [activeTemplate, adaptiveState.currentDifficulty]);
 
   // Generate data when a generated challenge is selected (legacy support)
   React.useEffect(() => {
@@ -514,7 +516,11 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   const handleCheck = () => {
     // Handle template-based problems
     if (activeTemplate && generatedProblem) {
-      const isCorrect = validateAnswer(generatedProblem, userAnswer || selectedSign || selectedTriangleType || '');
+      const isCorrect = validateAnswer(
+        generatedProblem,
+        userAnswer || selectedSign || selectedTriangleType || '',
+        generatedProblem.answer_type || 'number'
+      );
 
       // Update progress
       const topicKey = `${activeTemplate.class}-${activeTemplate.subject}-${activeTemplate.topic}`;
@@ -547,7 +553,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         }
       } else {
         setResult('incorrect');
-        const feedback = checkCommonMistake(generatedProblem, activeTemplate, userAnswer);
+        const feedback = checkCommonMistake(generatedProblem, activeTemplate, userAnswer, adaptiveState.currentDifficulty);
         setMistakeFeedback(feedback);
       }
       return;
@@ -599,6 +605,13 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
       }
     } else {
       setResult('incorrect');
+    }
+  };
+
+  const handleExploreModule = () => {
+    if (activeTemplate?.relatedModule) {
+      setInteractiveModuleId(activeTemplate.relatedModule);
+      setMode('interactive');
     }
   };
 
@@ -728,6 +741,19 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
           </div>
         )}
 
+        {/* Related Module Link */}
+        {activeTemplate?.relatedModule && (
+          <div className="mb-6">
+            <button
+              onClick={handleExploreModule}
+              className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              <Search size={16} />
+              🔍 Исследовать в интерактивном модуле
+            </button>
+          </div>
+        )}
+
         {/* Answer input */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -785,7 +811,11 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                 type="text"
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="Введите число..."
+                placeholder={
+                  generatedProblem.answer_type === 'fraction' ? 'Например: 3/4' :
+                    generatedProblem.answer_type === 'coordinate' ? 'Например: (3, 4)' :
+                      'Введите число...'
+                }
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
               />
