@@ -6,7 +6,6 @@ import {
   Type,
   Minus,
   Eraser,
-  BarChart3,
   Library,
   Brain,
   FunctionSquare,
@@ -43,7 +42,6 @@ const tools = [
   { id: 'text', name: 'Текст', icon: Type, mode: 'text' as AppMode },
   { id: 'line', name: 'Линия', icon: Minus, mode: 'line' as AppMode },
   { id: 'eraser', name: 'Ластик', icon: Eraser, mode: 'eraser' as AppMode },
-  { id: 'chart', name: 'Диаграммы', icon: BarChart3, mode: 'chart' as AppMode },
   { id: 'library', name: 'Библиотека', icon: Library, mode: 'library' as AppMode },
   { id: 'challenge', name: 'Задачи', icon: Brain, mode: 'challenge' as AppMode },
 ];

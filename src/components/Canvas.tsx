@@ -57,6 +57,12 @@ export const Canvas: React.FC<CanvasProps> = ({
   const selectMouseDownRef = useRef<{ x: number; y: number; objectId: string | null } | null>(null);
   const didMarqueeSelectionRef = useRef(false);
 
+  // Panning state
+  const [panOffset, setPanOffset] = useState<Point>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState<Point | null>(null);
+  const [isSpacePressed, setIsSpacePressed] = useState(false);
+
   // Hit detection for eraser tool - now using math-core
   // (function moved to @/math-core/geometry.ts)
 
@@ -90,6 +96,33 @@ export const Canvas: React.FC<CanvasProps> = ({
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
   }, [zoom]);
+
+  // Handle Space key for panning
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !editingTextId) {
+        e.preventDefault();
+        setIsSpacePressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setIsSpacePressed(false);
+        if (isPanning) {
+          setIsPanning(false);
+          setPanStart(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [editingTextId, isPanning]);
 
   // Handle mouse down on object
   const handleObjectMouseDown = (e: React.MouseEvent, objectId: string) => {
@@ -177,6 +210,20 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Handle canvas mouse down - unified for arrow drawing and object dragging
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    // Panning with middle mouse button or Space + left click
+    if (e.button === 1 || (isSpacePressed && e.button === 0)) {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX, y: e.clientY });
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    // Don't start other actions if Space is pressed (waiting for pan)
+    if (isSpacePressed) {
+      return;
+    }
+
     // Arrow drawing mode
     if (mode === 'arrow' && e.target === e.currentTarget) {
       const svgRect = svgRef.current?.getBoundingClientRect();
@@ -220,6 +267,15 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Handle canvas mouse move - unified for arrow drawing and object dragging
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    // Panning
+    if (isPanning && panStart) {
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
+      setPanOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+      setPanStart({ x: e.clientX, y: e.clientY });
+      return;
+    }
+
     // Arrow drawing
     if (isDrawingArrow && arrowStart) {
       const svgRect = svgRef.current?.getBoundingClientRect();
@@ -284,6 +340,13 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Handle canvas mouse up - unified for arrow drawing and object dragging
   const handleCanvasMouseUp = (e: React.MouseEvent) => {
+    // Panning completion
+    if (isPanning) {
+      setIsPanning(false);
+      setPanStart(null);
+      return;
+    }
+
     // Arrow drawing completion
     if (isDrawingArrow && arrowStart && arrowEnd) {
       const svgRect = svgRef.current?.getBoundingClientRect();
@@ -417,6 +480,14 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Handle double click to add object
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+    // Double-click on empty canvas resets pan
+    const target = e.target as SVGElement | HTMLElement;
+    const isEmptyCanvas = target.tagName === 'svg' || target === e.currentTarget;
+    if (isEmptyCanvas) {
+      setPanOffset({ x: 0, y: 0 });
+      return;
+    }
+
     if (!['shape', 'draw', 'fraction', 'chart', 'arrow', 'text'].includes(mode)) return;
 
     const svgRect = svgRef.current?.getBoundingClientRect();
@@ -785,15 +856,35 @@ export const Canvas: React.FC<CanvasProps> = ({
           return `${px1},${py1} ${px2},${py2} ${px3},${py3}`;
         };
 
-        // Helper: compute quadrilateral as rectangle using actual side values as pixels
+        // Helper: compute quadrilateral points using all four independent sides
         const getQuadPoints = (ab: number, bc: number, cd: number, da: number) => {
-          // ab/cd = horizontal sides, bc/da = vertical sides
-          // Draw as a rectangle with ab width and bc height, centered in obj bounds
-          const w = ab;
-          const h = bc;
-          const ox = obj.x + (obj.width - w) / 2;
-          const oy = obj.y + (obj.height - h) / 2;
-          return `${ox},${oy} ${ox + w},${oy} ${ox + w},${oy + h} ${ox},${oy + h}`;
+          // Place quadrilateral centered in obj bounds
+          // A is top-left, B is top-right, C is bottom-right, D is bottom-left
+          // AB = top side, BC = right side, CD = bottom side, DA = left side
+
+          const maxWidth = Math.max(ab, cd);
+          const maxHeight = Math.max(bc, da);
+          const ox = obj.x + (obj.width - maxWidth) / 2;
+          const oy = obj.y + (obj.height - maxHeight) / 2;
+
+          // Point A (top-left)
+          const ax = ox;
+          const ay = oy;
+
+          // Point B (top-right) - distance AB from A
+          const bx = ax + ab;
+          const by = ay;
+
+          // Point D (bottom-left) - distance DA down from A
+          const dx = ax;
+          const dy = ay + da;
+
+          // Point C (bottom-right) - distance BC down from B and distance CD from D
+          // Average the two possible positions for C
+          const cx = (bx + (dx + cd)) / 2;
+          const cy = (by + bc + dy) / 2;
+
+          return `${ax},${ay} ${bx},${by} ${cx},${cy} ${dx},${dy}`;
         };
 
         let shapeEl: React.ReactNode = null;
@@ -1583,7 +1674,10 @@ export const Canvas: React.FC<CanvasProps> = ({
         onMouseMove={(e) => { handleCanvasMouseMove(e); }}
         onMouseUp={(e) => { handleCanvasMouseUp(e); }}
         onMouseLeave={() => {
-          if (isDrawingArrow) {
+          if (isPanning) {
+            setIsPanning(false);
+            setPanStart(null);
+          } else if (isDrawingArrow) {
             setIsDrawingArrow(false);
             setArrowStart(null);
             setArrowEnd(null);
@@ -1602,7 +1696,7 @@ export const Canvas: React.FC<CanvasProps> = ({
           }
         }}
         style={{
-          cursor: mode === 'arrow' || mode === 'line' ? 'crosshair' : mode === 'eraser' ? 'cell' : ['draw', 'fraction', 'chart'].includes(mode) ? 'crosshair' : 'default',
+          cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : mode === 'arrow' || mode === 'line' ? 'crosshair' : mode === 'eraser' ? 'cell' : ['draw', 'fraction', 'chart'].includes(mode) ? 'crosshair' : 'default',
         }}
       >
         <svg
@@ -1613,9 +1707,12 @@ export const Canvas: React.FC<CanvasProps> = ({
           style={{
             backgroundColor: '#FFFFFF',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
           }}
           onMouseDown={(e: React.MouseEvent<SVGSVGElement>) => {
             if (mode === 'line') { handleCanvasMouseDown(e as unknown as React.MouseEvent); return; }
+            // Don't start marquee if panning or Space is pressed
+            if (isPanning || isSpacePressed) return;
             // Marquee: only when clicking directly on SVG background (not on objects)
             if (mode === 'select' && e.target === e.currentTarget) {
               const svgRect = svgRef.current?.getBoundingClientRect();

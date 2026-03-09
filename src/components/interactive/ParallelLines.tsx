@@ -148,17 +148,15 @@ export const ParallelLines: React.FC = () => {
         const key = getSectorKey(sectorIndex);
 
         if (highlight === 'corresponding') {
-            // Corresponding angles: exactly 4 total (one per quadrant, one per intersection).
-            // Each corresponding pair shares the same quadrant but one is exterior to point1,
-            // the other exterior to point2. Exterior = NOT between the parallel lines.
-            const isExterior = !isInteriorSector(sectorIndex, pointIndex);
-            if (!isExterior) return '#94a3b8';
+            // Corresponding angles: 4 pairs (8 angles total), one pair per quadrant.
+            // Each pair has the same sectorKey (same position/quadrant) at both intersections.
+            // Color by quadrant based on mid-angle of the sector.
             const startAngle = rays[sectorIndex].angle;
             let endAngle = rays[(sectorIndex + 1) % rays.length].angle;
             if (sectorIndex === rays.length - 1) endAngle += 2 * Math.PI;
             const mid = ((startAngle + endAngle) / 2) % (2 * Math.PI);
             if (mid < Math.PI / 2) return '#3b82f6';       // UR - blue
-            if (mid < Math.PI)     return '#10b981';       // UL - green
+            if (mid < Math.PI) return '#10b981';       // UL - green
             if (mid < 3 * Math.PI / 2) return '#f59e0b';  // LL - orange
             return '#ef4444';                              // LR - red
         }

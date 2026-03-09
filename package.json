@@ -15,7 +15,10 @@
     "build:prod": "cross-env BUILD_MODE=prod pnpm build && electron-builder",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron": "electron ."
+    "electron": "electron .",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -74,6 +77,7 @@
     "@types/react-dom": "^18.3.1",
     "@types/react-router-dom": "^5",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/ui": "^2.1.8",
     "autoprefixer": "10.4.20",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
@@ -89,6 +93,7 @@
     "typescript-eslint": "^8.15.0",
     "vite": "^6.0.1",
     "vite-plugin-source-identifier": "1.1.2",
+    "vitest": "^2.1.8",
     "wait-on": "^9.0.4"
   },
   "build": {
@@ -105,17 +110,23 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/icon.png"
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "icon": "public/icon.png"
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "icon": "public/icon.png"
     },
     "nsis": {

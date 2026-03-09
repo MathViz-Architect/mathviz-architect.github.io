@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Grid3X3, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import { AnyCanvasObject } from '@/lib/types';
 
 interface TopBarProps {
   projectName: string;
+  onRenameProject?: (name: string) => void;
   zoom: number;
   showGrid: boolean;
   onZoomIn: () => void;
@@ -17,6 +18,7 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({
   projectName,
+  onRenameProject,
   zoom,
   showGrid,
   onZoomIn,
@@ -30,11 +32,41 @@ export const TopBar: React.FC<TopBarProps> = ({
   const hasSelection = selectedObjects.length > 0;
   const firstSelected = selectedObjects[0];
 
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(projectName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { if (editing) inputRef.current?.select(); }, [editing]);
+
+  const commitRename = () => {
+    setEditing(false);
+    const trimmed = draft.trim() || projectName;
+    setDraft(trimmed);
+    if (trimmed !== projectName) onRenameProject?.(trimmed);
+  };
+
   return (
     <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
       {/* Project name */}
       <div className="flex items-center gap-2">
-        <span className="text-lg font-semibold text-gray-800">{projectName}</span>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') { setDraft(projectName); setEditing(false); } }}
+            className="text-lg font-semibold text-gray-800 border-b-2 border-indigo-400 outline-none bg-transparent px-1"
+          />
+        ) : (
+          <span
+            className="text-lg font-semibold text-gray-800 cursor-pointer hover:text-indigo-600 transition-colors"
+            title="Нажмите для переименования"
+            onClick={() => { setDraft(projectName); setEditing(true); }}
+          >
+            {projectName}
+          </span>
+        )}
       </div>
 
       {/* Center - View controls */}

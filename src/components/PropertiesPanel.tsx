@@ -229,7 +229,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-gray-500">Стороны</label>
                 {([
-                  ['sideAB', 'AB (ширина)'], ['sideBC', 'BC (высота)'], ['sideCD', 'CD (ширина)'], ['sideDA', 'DA (высота)']
+                  ['sideAB', 'AB'], ['sideBC', 'BC'], ['sideCD', 'CD'], ['sideDA', 'DA']
                 ] as [string, string][]).map(([key, label]) => (
                   <div key={key} className="flex items-center gap-2">
                     <label className="text-xs text-gray-500 w-20">{label}</label>
@@ -238,16 +238,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                       value={(data[key as keyof typeof data] ?? 100) as number}
                       onChange={(e) => {
                         const val = parseInt(e.target.value) || 1;
-                        const newData = { ...selectedObject.data, [key]: val };
-                        const ab = key === 'sideAB' ? val : (data.sideAB ?? 160);
-                        const cd = key === 'sideCD' ? val : (data.sideCD ?? 160);
-                        const bc = key === 'sideBC' ? val : (data.sideBC ?? 120);
-                        const da = key === 'sideDA' ? val : (data.sideDA ?? 120);
-                        onUpdateObject(selectedObject.id, {
-                          data: newData,
-                          width: Math.max(ab, cd),
-                          height: Math.max(bc, da),
-                        });
+                        handleUpdateData(key, val);
                       }}
                       className="flex-1 px-2 py-1 text-sm border rounded"
                       min={1}

@@ -93,8 +93,13 @@ function App() {
 
   // File operations
   const handleNew = useCallback(() => {
+    if (state.isDirty) {
+      if (!window.confirm('Несохранённые изменения будут потеряны. Продолжить?')) {
+        return;
+      }
+    }
     newProject();
-  }, [newProject]);
+  }, [newProject, state.isDirty]);
 
   const handleOpen = useCallback(async () => {
     if (window.electronAPI) {
@@ -110,6 +115,28 @@ function App() {
           }
         }
       }
+    } else {
+      // Web fallback: use file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.mvz,.json';
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const project: Project = JSON.parse(event.target?.result as string);
+              loadProject(project, '');
+            } catch (e) {
+              console.error('Failed to parse project file:', e);
+              alert('Ошибка при открытии файла. Проверьте формат файла.');
+            }
+          };
+          reader.readAsText(file);
+        }
+      };
+      input.click();
     }
   }, [loadProject]);
 
@@ -137,13 +164,74 @@ function App() {
         setProjectPath(filePath);
         markAsSaved();
       }
+    } else {
+      // Web fallback: download as file
+      const project: Project = {
+        id: generateId(),
+        name: state.projectName,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        objects: state.objects,
+        canvasSize: { width: 800, height: 600 },
+        backgroundColor: '#FFFFFF',
+      };
+
+      const json = JSON.stringify(project, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.projectName}.mvz`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      markAsSaved();
     }
   }, [state, setProjectPath, markAsSaved]);
 
   const handleExport = useCallback(async () => {
-    // Export functionality will be implemented later
-    console.log('Export clicked');
-  }, []);
+    if (window.electronAPI) {
+      // Electron export will be implemented later
+      console.log('Export clicked (Electron)');
+      return;
+    }
+
+    // Web fallback: export as SVG
+    const svgElement = document.querySelector('svg') as SVGSVGElement;
+    if (!svgElement) {
+      alert('Не удалось найти холст для экспорта');
+      return;
+    }
+
+    try {
+      // Clone SVG to avoid modifying the original
+      const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
+
+      // Add XML namespace if not present
+      if (!svgClone.getAttribute('xmlns')) {
+        svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      }
+
+      // Serialize SVG
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(svgClone);
+
+      // Create blob and download
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.projectName}.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to export SVG:', e);
+      alert('Ошибка при экспорте. Попробуйте ещё раз.');
+    }
+  }, [state.projectName]);
 
   // View controls
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.1, 2));
@@ -311,6 +399,7 @@ function App() {
           {/* Top bar */}
           <TopBar
             projectName={state.projectName}
+            onRenameProject={setProjectName}
             zoom={zoom}
             showGrid={showGrid}
             onZoomIn={handleZoomIn}
@@ -326,8 +415,8 @@ function App() {
           {renderMainContent()}
         </div>
 
-        {/* Right panel - Properties (hidden in interactive mode) */}
-        {state.mode !== 'interactive' && (
+        {/* Right panel - Properties (hidden in interactive mode and when nothing selected) */}
+        {state.mode !== 'interactive' && selectedObjects.length > 0 && (
           <PropertiesPanel
             selectedObjects={selectedObjects}
             onUpdateObject={updateObject}
