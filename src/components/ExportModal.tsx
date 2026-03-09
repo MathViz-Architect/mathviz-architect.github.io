@@ -36,12 +36,29 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
         let maxY = -Infinity;
 
         state.objects.forEach(obj => {
-            const bbox = getBoundingBox(obj);
-            minX = Math.min(minX, bbox.x);
-            minY = Math.min(minY, bbox.y);
-            maxX = Math.max(maxX, bbox.x + bbox.width);
-            maxY = Math.max(maxY, bbox.y + bbox.height);
+            try {
+                const bbox = getBoundingBox(obj);
+                if (bbox && isFinite(bbox.x) && isFinite(bbox.y) && isFinite(bbox.width) && isFinite(bbox.height)) {
+                    minX = Math.min(minX, bbox.x);
+                    minY = Math.min(minY, bbox.y);
+                    maxX = Math.max(maxX, bbox.x + bbox.width);
+                    maxY = Math.max(maxY, bbox.y + bbox.height);
+                } else {
+                    // Fallback for objects without proper bbox (lines, arrows)
+                    minX = Math.min(minX, obj.x ?? 0);
+                    minY = Math.min(minY, obj.y ?? 0);
+                    maxX = Math.max(maxX, (obj.x ?? 0) + (obj.width ?? 100));
+                    maxY = Math.max(maxY, (obj.y ?? 0) + (obj.height ?? 100));
+                }
+            } catch {
+                // skip broken objects
+            }
         });
+
+        // Safety fallback if still no valid bounds
+        if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
+            return { x: 0, y: 0, width: 800, height: 600 };
+        }
 
         const padding = 20;
         return {
@@ -108,64 +125,65 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
                 svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
             }
 
-            const selectionRects = svgClone.querySelectorAll('rect[stroke-dasharray]');
-            selectionRects.forEach(rect => rect.remove());
+            svgClone.querySelectorAll('rect[stroke-dasharray]').forEach(el => el.remove());
 
             const bounds = computeCanvasBounds();
             svgClone.setAttribute('viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
 
-            const width = bounds.width * pngResolution;
-            const height = bounds.height * pngResolution;
+            const width = Math.round(bounds.width * pngResolution);
+            const height = Math.round(bounds.height * pngResolution);
             svgClone.setAttribute('width', width.toString());
             svgClone.setAttribute('height', height.toString());
 
             const serializer = new XMLSerializer();
             const svgString = serializer.serializeToString(svgClone);
-            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-            const svgUrl = URL.createObjectURL(svgBlob);
+            const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
 
             const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-
-                if (ctx) {
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(0, 0, width, height);
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `${state.projectName}.png`;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
-                            onClose();
-                        }
-                        setIsExporting(false);
-                    }, 'image/png');
-                }
-
-                URL.revokeObjectURL(svgUrl);
-            };
-
-            img.onerror = () => {
-                console.error('Failed to load SVG as image');
-                alert('Ошибка при экспорте PNG');
+            img.src = svgDataUrl;
+            try {
+                await img.decode();
+            } catch (decodeErr) {
+                console.error('SVG decode error:', decodeErr);
+                alert('Ошибка при экспорте PNG: не удалось декодировать SVG');
                 setIsExporting(false);
-                URL.revokeObjectURL(svgUrl);
-            };
+                return;
+            }
 
-            img.src = svgUrl;
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                alert('Ошибка при экспорте PNG: нет доступа к canvas');
+                setIsExporting(false);
+                return;
+            }
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+
+            await new Promise<void>((resolve) => {
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const pngUrl = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = pngUrl;
+                        a.download = `${state.projectName}.png`;
+                        a.style.display = 'none';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+                        onClose();
+                    }
+                    setIsExporting(false);
+                    resolve();
+                }, 'image/png');
+            });
         } catch (e) {
             console.error('Failed to export PNG:', e);
-            alert('Ошибка при экспорте PNG');
             setIsExporting(false);
         }
     };
@@ -183,53 +201,66 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
                 svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
             }
 
-            const selectionRects = svgClone.querySelectorAll('rect[stroke-dasharray]');
-            selectionRects.forEach(rect => rect.remove());
+            svgClone.querySelectorAll('rect[stroke-dasharray]').forEach(el => el.remove());
 
             const bounds = computeCanvasBounds();
             svgClone.setAttribute('viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
-            svgClone.setAttribute('width', bounds.width.toString());
-            svgClone.setAttribute('height', bounds.height.toString());
+            svgClone.setAttribute('width', '100%');
+            svgClone.setAttribute('height', '100%');
+            svgClone.removeAttribute('style');
 
             const serializer = new XMLSerializer();
             const svgString = serializer.serializeToString(svgClone);
 
-            // Note: For better PDF support, jsPDF library can be added in the future
-            const printWindow = window.open('', '_blank');
-            if (printWindow) {
-                printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>${state.projectName}</title>
-              <style>
-                body { margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; }
-                svg { max-width: 100%; height: auto; }
-                @media print {
-                  body { padding: 0; }
-                  svg { max-width: 100%; page-break-inside: avoid; }
-                }
-              </style>
-            </head>
-            <body>
-              ${svgString}
-              <script>
-                window.onload = () => {
-                  window.print();
-                };
-              </script>
-            </body>
-          </html>
-        `);
-                printWindow.document.close();
-            }
+            const isLandscape = bounds.width > bounds.height;
+            const orientation = isLandscape ? 'landscape' : 'portrait';
+
+            const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { size: A4 ${orientation}; margin: 10mm; }
+    html, body { width: 100%; height: 100%; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>${svgString}</body>
+</html>`;
+
+            // Chrome ignores @page from iframe.print(), but respects it when
+            // the iframe is visible and we use window.print() with a print stylesheet
+            // that hides everything except the iframe.
+            const iframe = document.createElement('iframe');
+            iframe.id = '__mathviz_print_iframe__';
+            iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:99999;background:white;';
+            iframe.srcdoc = htmlContent;
+            document.body.appendChild(iframe);
+
+            // Add a print style to hide everything except the iframe
+            const printStyle = document.createElement('style');
+            printStyle.id = '__mathviz_print_style__';
+            printStyle.textContent = `@media print { body > *:not(#__mathviz_print_iframe__) { display: none !important; } #__mathviz_print_iframe__ { position: fixed; top: 0; left: 0; width: 100%; height: 100%; } }`;
+            document.head.appendChild(printStyle);
+
+            iframe.onload = () => {
+                setTimeout(() => {
+                    window.print();
+                    setTimeout(() => {
+                        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                        const ps = document.getElementById('__mathviz_print_style__');
+                        if (ps) ps.remove();
+                    }, 1000);
+                }, 300);
+            };
 
             onClose();
         } catch (e) {
             console.error('Failed to export PDF:', e);
             alert('Ошибка при экспорте PDF');
         }
-    };
+    };;
 
     const handleExport = () => {
         switch (selectedFormat) {
@@ -270,8 +301,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
                     <button
                         onClick={() => setSelectedFormat('png')}
                         className={`w-full p-4 rounded-lg border-2 transition-all text-left ${selectedFormat === 'png'
-                                ? 'border-indigo-500 bg-indigo-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-indigo-500 bg-indigo-50'
+                            : 'border-gray-200 hover:border-gray-300'
                             }`}
                     >
                         <div className="flex items-center gap-3">
@@ -296,8 +327,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
                     <button
                         onClick={() => setSelectedFormat('svg')}
                         className={`w-full p-4 rounded-lg border-2 transition-all text-left ${selectedFormat === 'svg'
-                                ? 'border-emerald-500 bg-emerald-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-emerald-500 bg-emerald-50'
+                            : 'border-gray-200 hover:border-gray-300'
                             }`}
                     >
                         <div className="flex items-center gap-3">
@@ -322,8 +353,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
                     <button
                         onClick={() => setSelectedFormat('pdf')}
                         className={`w-full p-4 rounded-lg border-2 transition-all text-left ${selectedFormat === 'pdf'
-                                ? 'border-rose-500 bg-rose-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-rose-500 bg-rose-50'
+                            : 'border-gray-200 hover:border-gray-300'
                             }`}
                     >
                         <div className="flex items-center gap-3">
@@ -357,8 +388,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
                                     key={res}
                                     onClick={() => setPngResolution(res)}
                                     className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${pngResolution === res
-                                            ? 'bg-indigo-600 text-white'
-                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     {res}x
