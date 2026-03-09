@@ -355,19 +355,76 @@ export const problemTemplates: ProblemTemplate[] = [
         section: 'Логические задачи',
         topic: 'magicSquare',
         topic_title: 'Магический квадрат',
-        problemType: 'numeric',
+        problemType: 'magicSquare',
         skills: ['logical_reasoning', 'addition'],
         difficulties: {
-            3: {
-                template: 'В магическом квадрате сумма чисел в каждой строке, столбце и диагонали равна {sum}. Найдите пропущенное число: [{a}, {b}, ?]',
+            1: {
+                template: 'В магическом квадрате сумма чисел в каждой строке, столбце и диагонали равна {magicSum}. Найдите пропущенное число.',
                 parameters: {
-                    sum: { type: 'int', min: 15, max: 30 },
-                    a: { type: 'int', min: 1, max: 10 },
-                    b: { type: 'int', min: 1, max: 10 },
+                    offset: { type: 'int', min: 0, max: 3 },
+                    // Base magic square: [2,7,6, 9,5,1, 4,3,8] with sum=15
+                    // Add offset*3 to each cell, sum becomes 15 + offset*9
+                    magicSum: { type: 'expression', value: '15 + offset * 9' },
+                    // Generate all 9 cells
+                    c0: { type: 'expression', value: '2 + offset * 3' },
+                    c1: { type: 'expression', value: '7 + offset * 3' },
+                    c2: { type: 'expression', value: '6 + offset * 3' },
+                    c3: { type: 'expression', value: '9 + offset * 3' },
+                    c4: { type: 'expression', value: '5 + offset * 3' },
+                    c5: { type: 'expression', value: '1 + offset * 3' },
+                    c6: { type: 'expression', value: '4 + offset * 3' },
+                    c7: { type: 'expression', value: '3 + offset * 3' },
+                    c8: { type: 'expression', value: '8 + offset * 3' },
+                    // Hide center cell (index 4)
+                    hiddenIndex: { type: 'expression', value: '4' },
                 },
-                constraints: ['sum > a + b'],
-                answer_formula: 'sum - a - b',
-                hint: 'Сумма всех трёх чисел должна равняться магической константе',
+                answer_formula: 'c4',
+                hint: 'Найдите сумму строки или столбца с двумя известными числами, затем вычтите их из магической суммы',
+            },
+            2: {
+                template: 'В магическом квадрате сумма чисел в каждой строке, столбце и диагонали равна {magicSum}. Найдите пропущенное число.',
+                parameters: {
+                    offset: { type: 'int', min: 1, max: 5 },
+                    magicSum: { type: 'expression', value: '15 + offset * 9' },
+                    c0: { type: 'expression', value: '2 + offset * 3' },
+                    c1: { type: 'expression', value: '7 + offset * 3' },
+                    c2: { type: 'expression', value: '6 + offset * 3' },
+                    c3: { type: 'expression', value: '9 + offset * 3' },
+                    c4: { type: 'expression', value: '5 + offset * 3' },
+                    c5: { type: 'expression', value: '1 + offset * 3' },
+                    c6: { type: 'expression', value: '4 + offset * 3' },
+                    c7: { type: 'expression', value: '3 + offset * 3' },
+                    c8: { type: 'expression', value: '8 + offset * 3' },
+                    // Hide corner cell (index 0)
+                    hiddenIndex: { type: 'expression', value: '0' },
+                },
+                answer_formula: 'c0',
+                hint: 'Используйте диагональ или строку/столбец с двумя известными числами',
+            },
+            3: {
+                template: 'В магическом квадрате сумма чисел в каждой строке, столбце и диагонали равна {magicSum}. Найдите пропущенное число.',
+                parameters: {
+                    offset: { type: 'int', min: 2, max: 6 },
+                    magicSum: { type: 'expression', value: '15 + offset * 9' },
+                    c0: { type: 'expression', value: '2 + offset * 3' },
+                    c1: { type: 'expression', value: '7 + offset * 3' },
+                    c2: { type: 'expression', value: '6 + offset * 3' },
+                    c3: { type: 'expression', value: '9 + offset * 3' },
+                    c4: { type: 'expression', value: '5 + offset * 3' },
+                    c5: { type: 'expression', value: '1 + offset * 3' },
+                    c6: { type: 'expression', value: '4 + offset * 3' },
+                    c7: { type: 'expression', value: '3 + offset * 3' },
+                    c8: { type: 'expression', value: '8 + offset * 3' },
+                    // Hide edge cell (index 7)
+                    hiddenIndex: { type: 'expression', value: '7' },
+                },
+                answer_formula: 'c7',
+                hint: 'Проверьте нижнюю строку и средний столбец - в них есть два известных числа',
+                solution: [
+                    { explanation: 'Магическая сумма равна {magicSum}' },
+                    { explanation: 'Найдем пропущенное число в нижней строке:', expression: '{c6} + ? + {c8} = {magicSum}' },
+                    { explanation: 'Вычисляем:', expression: '? = {magicSum} - {c6} - {c8} = {answer}' },
+                ],
             },
         },
     },
@@ -529,17 +586,18 @@ export const problemTemplates: ProblemTemplate[] = [
         skills: ['fraction_addition', 'fraction_of_number'],
         difficulties: {
             1: {
-                template: 'Вычислите: {a}/{d} + {b}/{d} = ? (ответ в виде десятичной дроби с точностью до сотых)',
+                template: 'Вычислите: {a}/{d} + {b}/{d} = ?',
                 parameters: {
                     d: { type: 'int', min: 4, max: 10 },
                     a: { type: 'int', min: 1, max: 5 },
                     b: { type: 'int', min: 1, max: 5 },
                 },
                 constraints: ['a < d', 'b < d', 'a + b < d'],
-                answer_formula: 'Math.round((a + b) / d * 100) / 100',
+                answer_formula: '(a + b) / d',
+                answer_type: 'fraction',
                 hint: 'Сложите числители, знаменатель оставьте тем же: ({a} + {b})/{d}',
                 common_mistakes: [
-                    { pattern: 'a + b', feedback: 'Не забудьте разделить на знаменатель {d}' },
+                    { pattern: 'a + b', feedback: 'При сложении дробей с одинаковым знаменателем складываются только числители, знаменатель остаётся прежним' },
                 ],
             },
             2: {
@@ -558,21 +616,22 @@ export const problemTemplates: ProblemTemplate[] = [
                 ],
             },
             3: {
-                template: 'Вычислите: {a}/{d} + {b}/{d} = ? (ответ в виде десятичной дроби с точностью до сотых)',
+                template: 'Вычислите: {a}/{d} + {b}/{d} = ?',
                 parameters: {
                     d: { type: 'int', min: 5, max: 12 },
                     a: { type: 'int', min: 1, max: 8 },
                     b: { type: 'int', min: 1, max: 8 },
                 },
                 constraints: ['a < d', 'b < d', 'a + b < d'],
-                answer_formula: 'Math.round((a + b) / d * 100) / 100',
+                answer_formula: '(a + b) / d',
+                answer_type: 'fraction',
                 hint: 'Сложите числители, знаменатель оставьте тем же: ({a} + {b})/{d}',
                 solution: [
                     { explanation: 'Складываем дроби с одинаковым знаменателем:', expression: '{a}/{d} + {b}/{d} = ({a} + {b})/{d}' },
                     { explanation: 'Вычисляем:', expression: '{a + b}/{d} = {answer}' },
                 ],
                 common_mistakes: [
-                    { pattern: 'a + b', feedback: 'Не забудьте разделить на знаменатель {d}' },
+                    { pattern: 'a + b', feedback: 'При сложении дробей с одинаковым знаменателем складываются только числители, знаменатель остаётся прежним' },
                 ],
             },
         },

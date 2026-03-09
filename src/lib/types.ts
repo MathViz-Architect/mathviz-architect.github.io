@@ -232,7 +232,7 @@ export interface ProblemTemplate {
   section: string;
   topic: string;
   topic_title: string;
-  problemType: 'numeric' | 'multiple_choice' | 'comparison' | 'text';
+  problemType: 'numeric' | 'multiple_choice' | 'comparison' | 'text' | 'magicSquare';
   difficulties: Partial<Record<1 | 2 | 3 | 4, DifficultyConfig>>;
   relatedModule?: string;
   skills?: string[];

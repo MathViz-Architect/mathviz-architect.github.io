@@ -443,16 +443,35 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   const [studentProgress, setStudentProgress] = useState<StudentProgress>(() => loadProgress());
   const [achievementMessage, setAchievementMessage] = useState<string | null>(null);
   const [adaptiveState, setAdaptiveState] = useState<AdaptiveState>(() => createAdaptiveState());
+  const [problemKey, setProblemKey] = useState(0);
 
-  // Generate problem when a template is selected
+  // Use ref to track current difficulty without triggering useEffect
+  const currentDifficultyRef = React.useRef(adaptiveState.currentDifficulty);
+
+  // Update ref when difficulty changes
+  React.useEffect(() => {
+    currentDifficultyRef.current = adaptiveState.currentDifficulty;
+  }, [adaptiveState.currentDifficulty]);
+
+  // Generate problem when a template is selected or problemKey changes
   React.useEffect(() => {
     if (activeTemplate) {
-      const problem = generateProblem(activeTemplate, adaptiveState.currentDifficulty);
+      console.log('[ChallengeMode] useEffect triggered - generating problem', {
+        templateId: activeTemplate.id,
+        difficulty: currentDifficultyRef.current,
+        problemKey,
+      });
+      const problem = generateProblem(activeTemplate, currentDifficultyRef.current);
+      console.log('[ChallengeMode] Generated problem:', {
+        templateId: problem.template_id,
+        params: problem.params,
+        answer: problem.answer,
+      });
       setGeneratedProblem(problem);
     } else {
       setGeneratedProblem(null);
     }
-  }, [activeTemplate, adaptiveState.currentDifficulty]);
+  }, [activeTemplate, problemKey]); // Removed adaptiveState.currentDifficulty from dependencies
 
   // Generate data when a generated challenge is selected (legacy support)
   React.useEffect(() => {
@@ -616,6 +635,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   };
 
   const handleNextChallenge = () => {
+    console.log('[ChallengeMode] handleNextChallenge called');
+
     // If we have an active template and we're in a topic, select next template adaptively
     if (activeTemplate && selectedTopic && selectedCategory) {
       const [subjectKey, topicKey] = selectedTopic.split('/');
@@ -628,8 +649,32 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
 
       if (availableTemplates.length > 0) {
         // Use adaptive engine to select next template
-        const nextTemplate = selectTemplate(availableTemplates, adaptiveState.currentDifficulty);
-        setActiveTemplate(nextTemplate);
+        const nextTemplate = selectTemplate(availableTemplates, adaptiveState.currentDifficulty) ?? activeTemplate;
+
+        // Guard: ensure we have a valid template
+        if (!nextTemplate) {
+          console.error('[ChallengeMode] No valid template available');
+          return;
+        }
+
+        console.log('[ChallengeMode] Next template selected:', {
+          currentTemplateId: activeTemplate.id,
+          nextTemplateId: nextTemplate.id,
+          templateChanged: nextTemplate !== activeTemplate,
+        });
+
+        // Update template only if it changed
+        if (nextTemplate !== activeTemplate) {
+          setActiveTemplate(nextTemplate);
+        }
+
+        // Increment problemKey to force regeneration via useEffect
+        // This ensures a new problem is generated even if template and difficulty stay the same
+        setProblemKey(k => {
+          console.log('[ChallengeMode] Incrementing problemKey:', k, '->', k + 1);
+          return k + 1;
+        });
+
         setUserAnswer('');
         setSelectedSign(null);
         setSelectedTriangleType(null);
@@ -763,12 +808,31 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
           {/* Comparison problems */}
           {activeTemplate.problemType === 'comparison' && (
             <div className="flex items-center justify-center gap-4 p-6 bg-gray-50 rounded-xl">
-              <div className="text-3xl font-bold text-gray-800">{generatedProblem.params.a}</div>
+              {/* Left fraction/number */}
+              <div className="text-center">
+                {generatedProblem.params.d || generatedProblem.params.d1 ? (
+                  <div className="flex flex-col items-center">
+                    <div className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2">
+                      {generatedProblem.params.a}
+                    </div>
+                    <div className="text-3xl font-bold text-gray-800 px-2 mt-1">
+                      {generatedProblem.params.d || generatedProblem.params.d1}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-3xl font-bold text-gray-800">{generatedProblem.params.a}</div>
+                )}
+              </div>
+
+              {/* Comparison buttons */}
               <div className="flex gap-2">
                 {['>', '<', '='].map((sign) => (
                   <button
                     key={sign}
-                    onClick={() => setSelectedSign(sign as '>' | '<' | '=')}
+                    onClick={() => {
+                      setSelectedSign(sign as '>' | '<' | '=');
+                      if (result === 'incorrect') setResult(null);
+                    }}
                     className={`w-16 h-16 text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign
                       ? 'bg-indigo-600 text-white border-indigo-600'
                       : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
@@ -778,7 +842,22 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                   </button>
                 ))}
               </div>
-              <div className="text-3xl font-bold text-gray-800">{generatedProblem.params.b}</div>
+
+              {/* Right fraction/number */}
+              <div className="text-center">
+                {generatedProblem.params.d || generatedProblem.params.d2 ? (
+                  <div className="flex flex-col items-center">
+                    <div className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2">
+                      {generatedProblem.params.b}
+                    </div>
+                    <div className="text-3xl font-bold text-gray-800 px-2 mt-1">
+                      {generatedProblem.params.d || generatedProblem.params.d2}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-3xl font-bold text-gray-800">{generatedProblem.params.b}</div>
+                )}
+              </div>
             </div>
           )}
 
@@ -792,7 +871,10 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
               ].map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => setUserAnswer(option.value)}
+                  onClick={() => {
+                    setUserAnswer(option.value);
+                    if (result === 'incorrect') setResult(null);
+                  }}
                   className={`w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${userAnswer === option.value
                     ? 'bg-indigo-600 text-white border-indigo-600'
                     : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
@@ -804,41 +886,95 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
             </div>
           )}
 
+          {/* Magic Square problems */}
+          {activeTemplate.problemType === 'magicSquare' && (
+            <div>
+              <div className="flex justify-center p-6 bg-gray-50 rounded-xl mb-4">
+                <div className="inline-grid grid-cols-3 gap-2">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((index) => {
+                    const cellValue = generatedProblem.params[`c${index}`];
+                    const isHidden = generatedProblem.params.hiddenIndex === index;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`w-16 h-16 flex items-center justify-center text-xl font-bold rounded-lg border-2 ${isHidden
+                          ? 'border-indigo-500 bg-indigo-100 text-indigo-600'
+                          : 'border-gray-300 bg-white text-gray-800'
+                          }`}
+                      >
+                        {isHidden ? '?' : cellValue}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <input
+                type="number"
+                value={userAnswer}
+                onChange={(e) => {
+                  setUserAnswer(e.target.value);
+                  if (result === 'incorrect') setResult(null);
+                }}
+                placeholder="Введите пропущенное число..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                onKeyDown={(e) => e.key === 'Enter' && result !== 'correct' && handleCheck()}
+                disabled={result === 'correct'}
+              />
+            </div>
+          )}
+
           {/* Numeric problems */}
           {activeTemplate.problemType === 'numeric' && (
             <div className="flex gap-3">
               <input
                 type="text"
                 value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
+                onChange={(e) => {
+                  setUserAnswer(e.target.value);
+                  if (result === 'incorrect') setResult(null);
+                }}
                 placeholder={
                   generatedProblem.answer_type === 'fraction' ? 'Например: 3/4' :
                     generatedProblem.answer_type === 'coordinate' ? 'Например: (3, 4)' :
                       'Введите число...'
                 }
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
+                onKeyDown={(e) => e.key === 'Enter' && result !== 'correct' && handleCheck()}
+                disabled={result === 'correct'}
               />
+              {result !== 'correct' && (
+                <button
+                  onClick={handleCheck}
+                  disabled={!userAnswer.trim()}
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Проверить
+                  <ArrowRight size={18} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Check button for comparison, text, and magic square problems */}
+          {result !== 'correct' && (
+            activeTemplate.problemType === 'comparison' ||
+            (activeTemplate.problemType === 'text' && activeTemplate.topic === 'triangles') ||
+            activeTemplate.problemType === 'magicSquare'
+          ) && (
               <button
                 onClick={handleCheck}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+                disabled={
+                  activeTemplate.problemType === 'comparison' ? !selectedSign :
+                    activeTemplate.problemType === 'magicSquare' ? !userAnswer :
+                      !userAnswer
+                }
+                className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Проверить
                 <ArrowRight size={18} />
               </button>
-            </div>
-          )}
-
-          {/* Check button for comparison and text problems */}
-          {(activeTemplate.problemType === 'comparison' || (activeTemplate.problemType === 'text' && activeTemplate.topic === 'triangles')) && (
-            <button
-              onClick={handleCheck}
-              className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
-            >
-              Проверить
-              <ArrowRight size={18} />
-            </button>
-          )}
+            )}
         </div>
 
         {/* Result */}

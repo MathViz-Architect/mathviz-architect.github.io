@@ -6,6 +6,59 @@
 import { GeneratedProblem, AnswerType } from '../types';
 
 /**
+ * Calculate Greatest Common Divisor using Euclidean algorithm
+ */
+function gcd(a: number, b: number): number {
+    a = Math.abs(Math.round(a));
+    b = Math.abs(Math.round(b));
+    while (b !== 0) {
+        const temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
+
+/**
+ * Parse fraction string to [numerator, denominator]
+ * Accepts: "3/4", "3 / 4"
+ * Returns null if not a valid fraction
+ */
+function parseFractionToRational(input: string): [number, number] | null {
+    const trimmed = input.trim();
+    const fractionMatch = trimmed.match(/^\s*(-?\d+)\s*\/\s*(-?\d+)\s*$/);
+
+    if (fractionMatch) {
+        const numerator = parseInt(fractionMatch[1], 10);
+        const denominator = parseInt(fractionMatch[2], 10);
+        if (denominator !== 0) {
+            return [numerator, denominator];
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Reduce fraction to simplest form
+ */
+function reduceFraction(numerator: number, denominator: number): [number, number] {
+    if (denominator === 0) return [numerator, denominator];
+
+    const divisor = gcd(numerator, denominator);
+    let num = numerator / divisor;
+    let den = denominator / divisor;
+
+    // Keep denominator positive
+    if (den < 0) {
+        num = -num;
+        den = -den;
+    }
+
+    return [num, den];
+}
+
+/**
  * Parse fraction string to decimal
  * Accepts: "3/4", "3 / 4", "0.75"
  */
@@ -19,13 +72,9 @@ function parseFraction(input: string): number | null {
     }
 
     // Try fraction format: a/b
-    const fractionMatch = trimmed.match(/^\s*(-?\d+)\s*\/\s*(-?\d+)\s*$/);
-    if (fractionMatch) {
-        const numerator = parseInt(fractionMatch[1], 10);
-        const denominator = parseInt(fractionMatch[2], 10);
-        if (denominator !== 0) {
-            return numerator / denominator;
-        }
+    const rational = parseFractionToRational(trimmed);
+    if (rational) {
+        return rational[0] / rational[1];
     }
 
     return null;
@@ -82,6 +131,36 @@ export function validateAnswer(
         }
 
         case 'fraction': {
+            // Try to parse user answer as a fraction
+            const userRational = parseFractionToRational(userAnswer);
+
+            // Parse expected answer
+            let expectedRational: [number, number] | null = null;
+
+            if (typeof answer === 'number') {
+                // Convert decimal to fraction (with reasonable precision)
+                // For example: 0.444... should match 4/9
+                const userDecimal = userRational ? userRational[0] / userRational[1] : parseFraction(userAnswer);
+
+                if (userDecimal === null) {
+                    return false;
+                }
+
+                // Use larger tolerance for decimal comparison with fractions
+                return Math.abs(userDecimal - answer) < 0.01;
+            } else if (typeof answer === 'string') {
+                expectedRational = parseFractionToRational(answer);
+            }
+
+            // If both are fractions, compare as rational numbers
+            if (userRational && expectedRational) {
+                const [userNum, userDen] = reduceFraction(userRational[0], userRational[1]);
+                const [expNum, expDen] = reduceFraction(expectedRational[0], expectedRational[1]);
+
+                return userNum === expNum && userDen === expDen;
+            }
+
+            // Fallback to decimal comparison
             const userValue = parseFraction(userAnswer);
             const expectedValue = typeof answer === 'number' ? answer : parseFraction(String(answer));
 
@@ -89,7 +168,7 @@ export function validateAnswer(
                 return false;
             }
 
-            return Math.abs(userValue - expectedValue) < tolerance;
+            return Math.abs(userValue - expectedValue) < 0.01;
         }
 
         case 'coordinate': {

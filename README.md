@@ -360,9 +360,11 @@ interface ProblemTemplate {
     - Skills: pattern_recognition, arithmetic_sequence, geometric_sequence
     - Арифметическая прогрессия, геометрическая прогрессия, пропущенное число
 
-18. **grade5-magic** — Магический квадрат (1 уровень)
+18. **grade5-magic** — Магический квадрат (3 уровня, `problemType: 'magicSquare'`)
     - Skills: logical_reasoning, addition
-    - Найти пропущенное число в магическом квадрате
+    - Визуальная сетка 3×3 с выделенной пропущенной ячейкой
+    - Difficulty 1: скрыта центральная ячейка; 2: угловая; 3: боковая
+    - Offset-генерация: базовый квадрат [2,7,6,9,5,1,4,3,8] + случайный сдвиг
 
 19. **grade5-olympiad** — Олимпиадные задачи (1 уровень, difficulty 4)
     - Skills: logical_reasoning, number_theory
