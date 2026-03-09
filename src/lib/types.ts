@@ -178,7 +178,7 @@ export interface Tool {
   createObject: () => Partial<AnyCanvasObject>;
 }
 
-export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser';
+export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser' | 'projects';
 
 export interface AppState {
   mode: AppMode;

@@ -8,40 +8,36 @@ import { ObjectCreator } from './components/ObjectCreator';
 import { InteractiveLibrary } from './components/interactive/InteractiveLibrary';
 import { ChallengeMode } from './components/challenge/ChallengeMode';
 import { WelcomeScreen } from './components/interactive/WelcomeScreen';
-import { useAppState, generateId } from './hooks/useAppState';
-import { AnyCanvasObject, Project } from './lib/types';
-import { Template } from './lib/templates';
+import { ProjectsPanel } from './components/ProjectsPanel';
+import { ExportModal } from './components/ExportModal';
+import { EditorProvider, useEditorContext } from './contexts/EditorContext';
+import { generateId } from './hooks/useAppState';
+import { Project } from './lib/types';
 import './types/electron.d.ts';
 
 // Register all interactive modules
 import '@/modules/index';
 
-function App() {
+function AppContent() {
   const {
     state,
     selectedObjects,
-    updateObject,
-    addObject,
     removeObject,
-    selectObject,
-    selectMultiple,
-    setMode,
     undo,
     redo,
     saveToHistory,
-    newProject,
     loadProject,
     setProjectPath,
-    setProjectName,
     markAsSaved,
-    clearCanvas,
-  } = useAppState();
+    newProject,
+    handleSelectTemplate,
+  } = useEditorContext();
 
-  const [zoom, setZoom] = useState(1);
-  const [showGrid, setShowGrid] = useState(true);
   const [showWelcome, setShowWelcome] = useState(() => {
     return !localStorage.getItem('welcomeScreenShown');
   });
+
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -80,16 +76,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedObjects, clearCanvas, undo, redo]);
-
-  // Handle template selection
-  const handleSelectTemplate = useCallback((template: Template) => {
-    const objects = template.createObjects();
-    objects.forEach((obj) => addObject(obj));
-    saveToHistory();
-    // Switch to select mode after adding template
-    setMode('select');
-  }, [addObject, saveToHistory, setMode]);
+  }, [selectedObjects, removeObject, undo, redo, saveToHistory]);
 
   // File operations
   const handleNew = useCallback(() => {
@@ -197,73 +184,9 @@ function App() {
       return;
     }
 
-    // Web fallback: export as SVG
-    const svgElement = document.querySelector('svg') as SVGSVGElement;
-    if (!svgElement) {
-      alert('Не удалось найти холст для экспорта');
-      return;
-    }
-
-    try {
-      // Clone SVG to avoid modifying the original
-      const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
-
-      // Add XML namespace if not present
-      if (!svgClone.getAttribute('xmlns')) {
-        svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-      }
-
-      // Serialize SVG
-      const serializer = new XMLSerializer();
-      const svgString = serializer.serializeToString(svgClone);
-
-      // Create blob and download
-      const blob = new Blob([svgString], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${state.projectName}.svg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error('Failed to export SVG:', e);
-      alert('Ошибка при экспорте. Попробуйте ещё раз.');
-    }
-  }, [state.projectName]);
-
-  // View controls
-  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.1, 2));
-  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.1, 0.5));
-  const handleZoomReset = () => setZoom(1);
-  const handleToggleGrid = () => setShowGrid((g) => !g);
-
-  // Object controls
-  const handleToggleVisibility = () => {
-    if (selectedObjects.length > 0) {
-      const obj = selectedObjects[0];
-      updateObject(obj.id, { visible: !obj.visible });
-    }
-  };
-
-  const handleToggleLock = () => {
-    if (selectedObjects.length > 0) {
-      const obj = selectedObjects[0];
-      updateObject(obj.id, { locked: !obj.locked });
-    }
-  };
-
-  const handleDeleteObject = (id: string) => {
-    removeObject(id);
-    saveToHistory();
-  };
-
-  // Add new object
-  const handleAddObject = (obj: AnyCanvasObject) => {
-    addObject(obj);
-    saveToHistory();
-  };
+    // Web: Open export modal
+    setShowExportModal(true);
+  }, []);
 
   // Menu events from Electron
   useEffect(() => {
@@ -331,22 +254,20 @@ function App() {
       );
     }
 
+    // Projects mode - saved projects list
+    if (state.mode === 'projects') {
+      return (
+        <div className="flex-1 bg-gray-100 overflow-hidden">
+          <ProjectsPanel />
+        </div>
+      );
+    }
+
     // Library mode - templates
     if (state.mode === 'library') {
       return (
         <div className="flex-1 flex overflow-hidden">
-          <Canvas
-            objects={state.objects}
-            selectedObjectIds={state.selectedObjectIds}
-            zoom={zoom}
-            showGrid={showGrid}
-            onSelectObject={selectObject}
-            onSelectMultiple={selectMultiple}
-            onUpdateObject={updateObject}
-            onAddObject={handleAddObject}
-            onDeleteObject={handleDeleteObject}
-            mode={state.mode}
-          />
+          <Canvas />
           <TemplateLibrary onSelectTemplate={handleSelectTemplate} />
         </div>
       );
@@ -355,80 +276,54 @@ function App() {
     // Default mode - canvas with object creator
     return (
       <div className="flex-1 flex overflow-hidden">
-        <Canvas
-          objects={state.objects}
-          selectedObjectIds={state.selectedObjectIds}
-          zoom={zoom}
-          showGrid={showGrid}
-          onSelectObject={selectObject}
-          onSelectMultiple={selectMultiple}
-          onUpdateObject={updateObject}
-          onAddObject={handleAddObject}
-          onDeleteObject={handleDeleteObject}
-          mode={state.mode}
-        />
-        <ObjectCreator mode={state.mode} onAddObject={handleAddObject} />
+        <Canvas />
+        <ObjectCreator />
       </div>
     );
   };
 
   return (
-    <div className={`h-screen flex flex-col bg-gray-50 overflow-hidden ${state.mode !== 'interactive' && state.mode !== 'challenge' ? 'canvas-mode' : ''
+    <div className={`h-screen flex flex-col bg-gray-50 overflow-hidden ${state.mode !== 'interactive' && state.mode !== 'challenge' && state.mode !== 'projects' ? 'canvas-mode' : ''
       }`}>
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar - Tools */}
         <ToolSidebar
-          mode={state.mode}
-          onModeChange={setMode}
-          onUndo={undo}
-          onRedo={redo}
           onNew={handleNew}
           onOpen={handleOpen}
           onSave={handleSave}
           onExport={handleExport}
-          onClear={clearCanvas}
-          canUndo={state.history.past.length > 0}
-          canRedo={state.history.future.length > 0}
-          isDirty={state.isDirty}
-          hasSelection={selectedObjects.length > 0}
         />
 
         {/* Center area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Top bar */}
-          <TopBar
-            projectName={state.projectName}
-            onRenameProject={setProjectName}
-            zoom={zoom}
-            showGrid={showGrid}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-            onToggleGrid={handleToggleGrid}
-            selectedObjects={selectedObjects}
-            onToggleVisibility={handleToggleVisibility}
-            onToggleLock={handleToggleLock}
-          />
+          <TopBar />
 
           {/* Main content */}
           {renderMainContent()}
         </div>
 
-        {/* Right panel - Properties (hidden in interactive mode and when nothing selected) */}
-        {state.mode !== 'interactive' && selectedObjects.length > 0 && (
-          <PropertiesPanel
-            selectedObjects={selectedObjects}
-            onUpdateObject={updateObject}
-            onDeleteObject={handleDeleteObject}
-            onSaveToHistory={saveToHistory}
-          />
+        {/* Right panel - Properties (hidden in interactive/challenge/library/projects mode and when nothing selected) */}
+        {state.mode !== 'interactive' && state.mode !== 'challenge' && state.mode !== 'library' && state.mode !== 'projects' && selectedObjects.length > 0 && (
+          <PropertiesPanel />
         )}
       </div>
 
       {/* Welcome Screen */}
       {showWelcome && <WelcomeScreen onClose={() => setShowWelcome(false)} />}
+
+      {/* Export Modal */}
+      {showExportModal && <ExportModal onClose={() => setShowExportModal(false)} />}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <EditorProvider>
+      <AppContent />
+    </EditorProvider>
   );
 }
 

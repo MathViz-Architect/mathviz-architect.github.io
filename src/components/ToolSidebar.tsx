@@ -2,7 +2,6 @@ import React from 'react';
 import {
   MousePointer2,
   Square,
-  Circle,
   Type,
   Minus,
   Eraser,
@@ -16,24 +15,10 @@ import {
   FilePlus,
   Download,
   Trash2,
+  FolderKanban,
 } from 'lucide-react';
 import { AppMode } from '@/lib/types';
-
-interface ToolSidebarProps {
-  mode: AppMode;
-  onModeChange: (mode: AppMode) => void;
-  onUndo: () => void;
-  onRedo: () => void;
-  onNew: () => void;
-  onOpen: () => void;
-  onSave: () => void;
-  onExport: () => void;
-  onClear: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
-  isDirty: boolean;
-  hasSelection: boolean;
-}
+import { useEditorContext } from '@/contexts/EditorContext';
 
 const tools = [
   { id: 'select', name: 'Выбор', icon: MousePointer2, mode: 'select' as AppMode },
@@ -43,24 +28,29 @@ const tools = [
   { id: 'line', name: 'Линия', icon: Minus, mode: 'line' as AppMode },
   { id: 'eraser', name: 'Ластик', icon: Eraser, mode: 'eraser' as AppMode },
   { id: 'library', name: 'Библиотека', icon: Library, mode: 'library' as AppMode },
+  { id: 'projects', name: 'Проекты', icon: FolderKanban, mode: 'projects' as AppMode },
   { id: 'challenge', name: 'Задачи', icon: Brain, mode: 'challenge' as AppMode },
 ];
 
+interface ToolSidebarProps {
+  onNew: () => void;
+  onOpen: () => void;
+  onSave: () => void;
+  onExport: () => void;
+}
+
 export const ToolSidebar: React.FC<ToolSidebarProps> = ({
-  mode,
-  onModeChange,
-  onUndo,
-  onRedo,
   onNew,
   onOpen,
   onSave,
   onExport,
-  onClear,
-  canUndo,
-  canRedo,
-  isDirty,
-  hasSelection,
 }) => {
+  const { state, setMode, undo, redo, clearCanvas, selectedObjects } = useEditorContext();
+  const mode = state.mode;
+  const canUndo = state.history.past.length > 0;
+  const canRedo = state.history.future.length > 0;
+  const isDirty = state.isDirty;
+  const hasSelection = selectedObjects.length > 0;
   return (
     <div className="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-2">
       {/* File operations */}
@@ -100,7 +90,7 @@ export const ToolSidebar: React.FC<ToolSidebarProps> = ({
       {/* Undo/Redo */}
       <div className="flex flex-col gap-1 mb-4">
         <button
-          onClick={onUndo}
+          onClick={undo}
           disabled={!canUndo}
           className={`p-2 rounded-lg ${canUndo ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
           title="Отменить"
@@ -108,7 +98,7 @@ export const ToolSidebar: React.FC<ToolSidebarProps> = ({
           <Undo2 size={20} />
         </button>
         <button
-          onClick={onRedo}
+          onClick={redo}
           disabled={!canRedo}
           className={`p-2 rounded-lg ${canRedo ? 'hover:bg-gray-100 text-gray-600' : 'text-gray-300 cursor-not-allowed'}`}
           title="Вернуть"
@@ -122,25 +112,35 @@ export const ToolSidebar: React.FC<ToolSidebarProps> = ({
       {/* Tools */}
       <div className="flex flex-col gap-1">
         {tools.map((tool) => {
+          // Hide Projects button in Electron
+          if (tool.id === 'projects' && window.electronAPI) {
+            return null;
+          }
+
           const isInteractive = tool.id === 'interactive';
           const isChallenge = tool.id === 'challenge';
+          const isProjects = tool.id === 'projects';
           const isActive = mode === tool.mode;
 
           return (
             <button
               key={tool.id}
-              onClick={() => onModeChange(tool.mode)}
+              onClick={() => setMode(tool.mode)}
               className={`p-2 rounded-lg transition-all ${isActive
                 ? isInteractive
                   ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200'
                   : isChallenge
                     ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-200'
-                    : 'bg-indigo-100 text-indigo-600'
+                    : isProjects
+                      ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200'
+                      : 'bg-indigo-100 text-indigo-600'
                 : isInteractive
                   ? 'text-indigo-600 hover:bg-indigo-50 border-2 border-indigo-200'
                   : isChallenge
                     ? 'text-amber-600 hover:bg-amber-50 border-2 border-amber-200'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    : isProjects
+                      ? 'text-emerald-600 hover:bg-emerald-50 border-2 border-emerald-200'
+                      : 'text-gray-600 hover:bg-gray-100'
                 }`}
               title={tool.name}
             >
@@ -154,7 +154,7 @@ export const ToolSidebar: React.FC<ToolSidebarProps> = ({
 
       {/* Clear canvas or delete selected */}
       <button
-        onClick={onClear}
+        onClick={clearCanvas}
         className="p-2 rounded-lg hover:bg-red-50 text-red-500"
         title={hasSelection ? "Удалить выбранное" : "Очистить холст"}
       >

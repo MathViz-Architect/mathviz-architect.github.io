@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEditorContext } from '@/contexts/EditorContext';
 import {
   Square,
   Circle,
@@ -13,10 +14,7 @@ import {
 import { generateId } from '@/hooks/useAppState';
 import { AnyCanvasObject } from '@/lib/types';
 
-interface ObjectCreatorProps {
-  mode: string;
-  onAddObject: (obj: AnyCanvasObject) => void;
-}
+
 
 const objectTypes = [
   {
@@ -163,7 +161,9 @@ const objectTypes = [
   },
 ];
 
-export const ObjectCreator: React.FC<ObjectCreatorProps> = ({ mode, onAddObject }) => {
+export const ObjectCreator: React.FC = () => {
+  const { state, handleAddObject: onAddObject } = useEditorContext();
+  const mode = state.mode;
   // Show only for modes with multiple object choices
   if (mode === 'select' || mode === 'interactive' || mode === 'challenge' || mode === 'library' ||
     mode === 'text' || mode === 'arrow' || mode === 'fraction' || mode === 'line' || mode === 'eraser') {
@@ -172,7 +172,8 @@ export const ObjectCreator: React.FC<ObjectCreatorProps> = ({ mode, onAddObject 
 
   // Filter objects based on mode
   const getFilteredObjects = () => {
-    switch (mode) {
+    const currentMode = mode as string;
+    switch (currentMode) {
       case 'shape':
         return objectTypes.filter(obj =>
           obj.id === 'rectangle' || obj.id === 'circle' || obj.id === 'triangle' ||

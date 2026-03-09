@@ -87,7 +87,7 @@ export function useAppState() {
 
   // Set app mode
   const setMode = useCallback((mode: AppMode) => {
-    setState((prev) => ({ ...prev, mode }));
+    setState((prev) => ({ ...prev, mode, selectedObjectIds: [] }));
   }, []);
 
   // Undo/Redo

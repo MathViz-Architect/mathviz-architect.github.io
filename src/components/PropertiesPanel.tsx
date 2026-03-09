@@ -1,29 +1,19 @@
 import React from 'react';
+import { useEditorContext } from '@/contexts/EditorContext';
 import { X, Move, RotateCw, Maximize2 } from 'lucide-react';
 import { AnyCanvasObject } from '@/lib/types';
 
-interface PropertiesPanelProps {
-  selectedObjects: AnyCanvasObject[];
-  onUpdateObject: (id: string, updates: Partial<AnyCanvasObject>) => void;
-  onDeleteObject: (id: string) => void;
-  onSaveToHistory?: () => void;
-}
-
-export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
-  selectedObjects,
-  onUpdateObject,
-  onDeleteObject,
-  onSaveToHistory,
-}) => {
+export const PropertiesPanel: React.FC = () => {
+  const {
+    selectedObjects,
+    updateObject: onUpdateObject,
+    handleDeleteObject: onDeleteObject,
+    saveToHistory: onSaveToHistory,
+  } = useEditorContext();
   const selectedObject = selectedObjects[0];
 
   if (selectedObjects.length === 0) {
-    return (
-      <div className="w-80 bg-white border-l border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Свойства</h3>
-        <p className="text-sm text-gray-400">Выберите объект для редактирования</p>
-      </div>
-    );
+    return null;
   }
 
   if (selectedObjects.length > 1) {
@@ -781,7 +771,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
       )}
 
       {/* Rotation - hide for chart, line and fraction objects */}
-      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && selectedObject.type !== 'fraction' && selectedObject.type !== 'geoshape' && (
+      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && selectedObject.type !== 'fraction' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'text' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <RotateCw size={12} /> Поворот

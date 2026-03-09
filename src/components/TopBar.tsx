@@ -1,34 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Grid3X3, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
-import { AnyCanvasObject } from '@/lib/types';
+import { useEditorContext } from '@/contexts/EditorContext';
 
-interface TopBarProps {
-  projectName: string;
-  onRenameProject?: (name: string) => void;
-  zoom: number;
-  showGrid: boolean;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onZoomReset: () => void;
-  onToggleGrid: () => void;
-  selectedObjects: AnyCanvasObject[];
-  onToggleVisibility: () => void;
-  onToggleLock: () => void;
-}
+export const TopBar: React.FC = () => {
+  const {
+    state,
+    setProjectName,
+    zoom,
+    showGrid,
+    handleZoomIn,
+    handleZoomOut,
+    handleZoomReset,
+    handleToggleGrid,
+    selectedObjects,
+    handleToggleVisibility,
+    handleToggleLock,
+  } = useEditorContext();
 
-export const TopBar: React.FC<TopBarProps> = ({
-  projectName,
-  onRenameProject,
-  zoom,
-  showGrid,
-  onZoomIn,
-  onZoomOut,
-  onZoomReset,
-  onToggleGrid,
-  selectedObjects,
-  onToggleVisibility,
-  onToggleLock,
-}) => {
+  const projectName = state.projectName;
   const hasSelection = selectedObjects.length > 0;
   const firstSelected = selectedObjects[0];
 
@@ -42,7 +31,7 @@ export const TopBar: React.FC<TopBarProps> = ({
     setEditing(false);
     const trimmed = draft.trim() || projectName;
     setDraft(trimmed);
-    if (trimmed !== projectName) onRenameProject?.(trimmed);
+    if (trimmed !== projectName) setProjectName(trimmed);
   };
 
   return (
@@ -72,21 +61,21 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Center - View controls */}
       <div className="flex items-center gap-2">
         <button
-          onClick={onZoomOut}
+          onClick={handleZoomOut}
           className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
           title="Уменьшить"
         >
           <ZoomOut size={18} />
         </button>
         <button
-          onClick={onZoomReset}
+          onClick={handleZoomReset}
           className="px-2 py-1 rounded hover:bg-gray-100 text-sm text-gray-600 min-w-[60px]"
           title="Сбросить масштаб"
         >
           {Math.round(zoom * 100)}%
         </button>
         <button
-          onClick={onZoomIn}
+          onClick={handleZoomIn}
           className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
           title="Увеличить"
         >
@@ -94,7 +83,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         </button>
         <div className="w-px h-6 bg-gray-200 mx-2" />
         <button
-          onClick={onToggleGrid}
+          onClick={handleToggleGrid}
           className={`p-1.5 rounded ${showGrid ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-100 text-gray-600'}`}
           title="Сетка"
         >
@@ -107,19 +96,17 @@ export const TopBar: React.FC<TopBarProps> = ({
         {hasSelection && (
           <>
             <button
-              onClick={onToggleVisibility}
-              className={`p-1.5 rounded hover:bg-gray-100 ${
-                firstSelected?.visible ? 'text-gray-600' : 'text-gray-400'
-              }`}
+              onClick={handleToggleVisibility}
+              className={`p-1.5 rounded hover:bg-gray-100 ${firstSelected?.visible ? 'text-gray-600' : 'text-gray-400'
+                }`}
               title={firstSelected?.visible ? 'Скрыть' : 'Показать'}
             >
               {firstSelected?.visible ? <Eye size={18} /> : <EyeOff size={18} />}
             </button>
             <button
-              onClick={onToggleLock}
-              className={`p-1.5 rounded hover:bg-gray-100 ${
-                firstSelected?.locked ? 'text-indigo-600' : 'text-gray-600'
-              }`}
+              onClick={handleToggleLock}
+              className={`p-1.5 rounded hover:bg-gray-100 ${firstSelected?.locked ? 'text-indigo-600' : 'text-gray-600'
+                }`}
               title={firstSelected?.locked ? 'Разблокировать' : 'Заблокировать'}
             >
               {firstSelected?.locked ? <Lock size={18} /> : <Unlock size={18} />}

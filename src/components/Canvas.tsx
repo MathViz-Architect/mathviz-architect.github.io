@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useEditorContext } from '@/contexts/EditorContext';
 import { AnyCanvasObject, Point } from '@/lib/types';
 import {
   isPointInObject,
@@ -10,31 +11,20 @@ import {
   calculateDistance,
 } from '@/math-core';
 
-interface CanvasProps {
-  objects: AnyCanvasObject[];
-  selectedObjectIds: string[];
-  zoom: number;
-  showGrid: boolean;
-  onSelectObject: (id: string | null, multi?: boolean) => void;
-  onSelectMultiple: (ids: string[]) => void;
-  onUpdateObject: (id: string, updates: Partial<AnyCanvasObject>) => void;
-  onAddObject: (obj: AnyCanvasObject) => void;
-  onDeleteObject?: (id: string) => void;
-  mode: string;
-}
-
-export const Canvas: React.FC<CanvasProps> = ({
-  objects,
-  selectedObjectIds,
-  zoom,
-  showGrid,
-  onSelectObject,
-  onSelectMultiple,
-  onUpdateObject,
-  onAddObject,
-  onDeleteObject,
-  mode,
-}) => {
+export const Canvas: React.FC = () => {
+  const {
+    state,
+    zoom,
+    showGrid,
+    selectObject: onSelectObject,
+    selectMultiple: onSelectMultiple,
+    updateObject: onUpdateObject,
+    handleAddObject: onAddObject,
+    handleDeleteObject: onDeleteObject,
+  } = useEditorContext();
+  const objects = state.objects;
+  const selectedObjectIds = state.selectedObjectIds;
+  const mode = state.mode;
   const canvasRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -94,7 +84,15 @@ export const Canvas: React.FC<CanvasProps> = ({
 
     updateSize();
     window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+
+    // Also observe element size changes (e.g. when mode changes and sidebar appears/disappears)
+    const observer = new ResizeObserver(updateSize);
+    if (canvasRef.current) observer.observe(canvasRef.current);
+
+    return () => {
+      window.removeEventListener('resize', updateSize);
+      observer.disconnect();
+    };
   }, [zoom]);
 
   // Handle Space key for panning
@@ -480,10 +478,14 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Handle double click to add object
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
-    // Double-click on empty canvas resets pan
     const target = e.target as SVGElement | HTMLElement;
     const isEmptyCanvas = target.tagName === 'svg' || target === e.currentTarget;
-    if (isEmptyCanvas) {
+
+    // In text mode, double-click on empty canvas creates a text object
+    if (isEmptyCanvas && mode === 'text') {
+      // fall through to object creation below
+    } else if (isEmptyCanvas) {
+      // Double-click on empty canvas resets pan
       setPanOffset({ x: 0, y: 0 });
       return;
     }
@@ -1701,6 +1703,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       >
         <svg
           ref={svgRef}
+          data-canvas-svg
           width={canvasSize.width * zoom}
           height={canvasSize.height * zoom}
           viewBox={`0 0 ${canvasSize.width} ${canvasSize.height}`}
