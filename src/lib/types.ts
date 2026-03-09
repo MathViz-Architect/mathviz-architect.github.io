@@ -195,6 +195,12 @@ export type ParameterDef =
   | { type: 'choice'; values: (string | number)[] }
   | { type: 'expression'; value: string };
 
+export interface SolutionStep {
+  explanation: string;
+  expression?: string;
+  result?: string;
+}
+
 export interface ProblemTemplate {
   id: string;
   class: number;
@@ -210,6 +216,7 @@ export interface ProblemTemplate {
   answer_formula: string;
   hint?: string;
   solution_steps_template?: string[];
+  solution?: SolutionStep[];
   common_mistakes?: Array<{
     pattern: string;
     feedback: string;
@@ -223,6 +230,7 @@ export interface GeneratedProblem {
   question: string;
   answer: number | string;
   hint?: string;
+  solution?: SolutionStep[];
 }
 
 // Legacy types for backward compatibility
@@ -258,3 +266,17 @@ export interface GeneratedChallenge {
 }
 
 export type Challenge = StaticChallenge | GeneratedChallenge;
+
+export type SkillLevel = 'not_started' | 'practicing' | 'proficient' | 'mastered';
+
+export interface TopicProgress {
+  topicKey: string;
+  attempts: number;
+  correct: number;
+  streak: number;
+  level: SkillLevel;
+}
+
+export interface StudentProgress {
+  topics: Record<string, TopicProgress>;
+}

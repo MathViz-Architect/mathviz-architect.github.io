@@ -250,6 +250,9 @@ export const problemTemplates: ProblemTemplate[] = [
         section: 'Простые уравнения',
         topic: 'arithmetic',
         topic_title: 'Уравнение: a × x = b',
+        difficulty: 1,
+        problemType: 'numeric',
+        template: 'Решите уравнение: {a} × x = {b}',
         parameters: {
             a: { type: 'int', min: 2, max: 9 },
             x: { type: 'int', min: 2, max: 12 },
@@ -295,6 +298,11 @@ export const problemTemplates: ProblemTemplate[] = [
         constraints: ['a !== b'],
         answer_formula: '2 * (a + b)',
         hint: 'Периметр = 2 × (длина + ширина)',
+        solution: [
+            { explanation: 'Периметр прямоугольника — сумма всех четырёх сторон' },
+            { explanation: 'Две длины и две ширины:', expression: '2 × {a} + 2 × {b}' },
+            { explanation: 'Считаем:', expression: '2 × ({a} + {b})', result: '{answer} см' },
+        ],
         common_mistakes: [
             { pattern: 'a + b', feedback: 'Ты сложил стороны только один раз. Периметр = 2 × (a + b).' },
             { pattern: 'a * b', feedback: 'Это формула площади, а не периметра.' },
@@ -341,6 +349,11 @@ export const problemTemplates: ProblemTemplate[] = [
         constraints: ['a !== b'],
         answer_formula: 'a * b',
         hint: 'Площадь = длина × ширина',
+        solution: [
+            { explanation: 'Площадь прямоугольника вычисляется по формуле:', expression: 'Площадь = длина × ширина' },
+            { explanation: 'Подставляем значения:', expression: '{a} × {b}' },
+            { explanation: 'Ответ:', result: '{answer} см²' },
+        ],
         common_mistakes: [
             { pattern: '2 * (a + b)', feedback: 'Это формула периметра, а не площади. Площадь = длина × ширина.' },
             { pattern: 'a + b', feedback: 'Площадь считается умножением, а не сложением.' },
@@ -508,5 +521,73 @@ export const problemTemplates: ProblemTemplate[] = [
         constraints: ['sum > a + c', 'a !== c'],
         answer_formula: 'sum - a - c',
         hint: 'x = сумма − первое число − третье число',
+    },
+
+    // ===== OLYMPIAD LEVEL (Difficulty 4) =====
+    {
+        id: 'grade5-olympiad-1',
+        class: 5,
+        subject: 'logic',
+        section: 'Олимпиадные задачи',
+        topic: 'olympiad',
+        topic_title: 'Числовой ребус: AB + BA',
+        difficulty: 4,
+        problemType: 'numeric',
+        template: 'В ребусе AB + BA = {sum}, где A и B — разные цифры. Найдите значение A (большую цифру).',
+        parameters: {
+            a: { type: 'int', min: 2, max: 8 },
+            b: { type: 'int', min: 1, max: 7 },
+            sum: { type: 'expression', value: '(a * 10 + b) + (b * 10 + a)' },
+        },
+        constraints: ['a !== b', 'a > b'],
+        answer_formula: 'a',
+        hint: 'AB + BA = (10A + B) + (10B + A) = 11A + 11B = 11(A + B). Разделите {sum} на 11, затем найдите A и B.',
+        solution: [
+            { explanation: 'Запишем двузначные числа через разряды:', expression: 'AB = 10A + B, BA = 10B + A' },
+            { explanation: 'Сложим их:', expression: '(10A + B) + (10B + A) = 11A + 11B = 11(A + B)' },
+            { explanation: 'Получаем:', expression: '11(A + B) = {sum}' },
+            { explanation: 'Делим на 11:', expression: 'A + B = {sum} ÷ 11' },
+            { explanation: 'Так как A > B и оба — цифры, находим A =', result: '{answer}' },
+        ],
+    },
+
+    {
+        id: 'grade5-olympiad-2',
+        class: 5,
+        subject: 'logic',
+        section: 'Олимпиадные задачи',
+        topic: 'olympiad',
+        topic_title: 'Задача на взвешивание',
+        difficulty: 4,
+        problemType: 'numeric',
+        template: 'У вас есть {n} одинаковых монет, одна из которых фальшивая (легче). За сколько взвешиваний на чашечных весах без гирь можно гарантированно найти фальшивую монету?',
+        parameters: {
+            n: { type: 'choice', values: [9, 27] },
+            answer: { type: 'expression', value: 'n === 9 ? 2 : 3' },
+        },
+        answer_formula: 'answer',
+        hint: 'Делите монеты на 3 равные группы. Каждое взвешивание уменьшает количество подозрительных монет в 3 раза.',
+    },
+
+    {
+        id: 'grade5-olympiad-3',
+        class: 5,
+        subject: 'algebra',
+        section: 'Олимпиадные задачи',
+        topic: 'olympiad',
+        topic_title: 'Возраст и цифры',
+        difficulty: 4,
+        problemType: 'numeric',
+        template: 'Возраст дедушки записывается двузначным числом. Возраст внука получается перестановкой цифр возраста дедушки. Разность их возрастов равна {diff}. Сколько лет внуку?',
+        parameters: {
+            a: { type: 'int', min: 2, max: 7 },
+            b: { type: 'int', min: 1, max: 6 },
+            grandfather: { type: 'expression', value: 'a * 10 + b' },
+            grandson: { type: 'expression', value: 'b * 10 + a' },
+            diff: { type: 'expression', value: 'grandfather - grandson' },
+        },
+        constraints: ['a > b', 'a !== b', 'grandfather - grandson > 0'],
+        answer_formula: 'grandson',
+        hint: 'Дедушка старше, значит его возраст AB, где A > B. Внук BA. Разность (10A + B) − (10B + A) = 9(A − B) = {diff}.',
     },
 ];

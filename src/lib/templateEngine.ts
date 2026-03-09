@@ -1,4 +1,4 @@
-import { ProblemTemplate, GeneratedProblem, ParameterDef } from './types';
+import { ProblemTemplate, GeneratedProblem, ParameterDef, SolutionStep } from './types';
 
 // Helper to generate random integer in range [min, max]
 const randomInt = (min: number, max: number): number =>
@@ -291,6 +291,14 @@ function safeEval(expr: string, params: Record<string, number | string>): number
  * Generate a problem from a template
  */
 export function generateProblem(template: ProblemTemplate): GeneratedProblem {
+    // Validate required fields
+    if (!template.template || typeof template.template !== 'string') {
+        throw new Error(`Template ${template.id}: 'template' field is missing or not a string`);
+    }
+    if (!template.answer_formula || typeof template.answer_formula !== 'string') {
+        throw new Error(`Template ${template.id}: 'answer_formula' field is missing or not a string`);
+    }
+
     const params = generateParams(template);
 
     // Substitute parameters in template string
@@ -305,10 +313,75 @@ export function generateProblem(template: ProblemTemplate): GeneratedProblem {
     // Generate hint if template has one
     let hint: string | undefined;
     if (template.hint) {
+        if (typeof template.hint !== 'string') {
+            throw new Error(`Template ${template.id}: 'hint' field is not a string`);
+        }
         hint = template.hint;
         for (const [key, value] of Object.entries(params)) {
             hint = hint.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
         }
+    }
+
+    // Generate solution steps if template has them
+    let solution: SolutionStep[] | undefined;
+    if (template.solution) {
+        solution = template.solution.map(step => {
+            const generatedStep: SolutionStep = {
+                explanation: step.explanation,
+            };
+
+            // Substitute parameters in explanation
+            for (const [key, value] of Object.entries(params)) {
+                generatedStep.explanation = generatedStep.explanation.replace(
+                    new RegExp(`\\{${key}\\}`, 'g'),
+                    String(value)
+                );
+            }
+
+            // Substitute parameters in expression if present
+            if (step.expression) {
+                generatedStep.expression = step.expression;
+                for (const [key, value] of Object.entries(params)) {
+                    generatedStep.expression = generatedStep.expression.replace(
+                        new RegExp(`\\{${key}\\}`, 'g'),
+                        String(value)
+                    );
+                }
+            }
+
+            // Substitute parameters in result if present
+            if (step.result) {
+                generatedStep.result = step.result;
+                for (const [key, value] of Object.entries(params)) {
+                    generatedStep.result = generatedStep.result.replace(
+                        new RegExp(`\\{${key}\\}`, 'g'),
+                        String(value)
+                    );
+                }
+            }
+
+            // Special handling for {answer} placeholder
+            if (generatedStep.explanation.includes('{answer}')) {
+                generatedStep.explanation = generatedStep.explanation.replace(
+                    /\{answer\}/g,
+                    String(answer)
+                );
+            }
+            if (generatedStep.expression && generatedStep.expression.includes('{answer}')) {
+                generatedStep.expression = generatedStep.expression.replace(
+                    /\{answer\}/g,
+                    String(answer)
+                );
+            }
+            if (generatedStep.result && generatedStep.result.includes('{answer}')) {
+                generatedStep.result = generatedStep.result.replace(
+                    /\{answer\}/g,
+                    String(answer)
+                );
+            }
+
+            return generatedStep;
+        });
     }
 
     return {
@@ -318,6 +391,7 @@ export function generateProblem(template: ProblemTemplate): GeneratedProblem {
         question,
         answer,
         hint,
+        solution,
     };
 }
 
@@ -355,9 +429,23 @@ export function checkCommonMistake(
     if (isNaN(parsed)) return null;
 
     for (const mistake of template.common_mistakes) {
-        const mistakeValue = evaluateFormula(mistake.pattern, problem.params);
-        if (Math.abs(parsed - Number(mistakeValue)) < 0.01) {
-            return mistake.feedback;
+        if (!mistake.pattern || typeof mistake.pattern !== 'string') {
+            console.warn(`Template ${template.id}: common_mistake has invalid pattern`);
+            continue;
+        }
+        if (!mistake.feedback || typeof mistake.feedback !== 'string') {
+            console.warn(`Template ${template.id}: common_mistake has invalid feedback`);
+            continue;
+        }
+
+        try {
+            const mistakeValue = evaluateFormula(mistake.pattern, problem.params);
+            if (Math.abs(parsed - Number(mistakeValue)) < 0.01) {
+                return mistake.feedback;
+            }
+        } catch (error) {
+            console.warn(`Template ${template.id}: error evaluating mistake pattern:`, error);
+            continue;
         }
     }
     return null;

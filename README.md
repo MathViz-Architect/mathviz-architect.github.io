@@ -4,7 +4,7 @@
 
 Интерактивное desktop-приложение для создания математических визуализаций, диаграмм и обучающих материалов для учеников 5-11 классов.
 
-![Version](https://img.shields.io/badge/version-1.5.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![React](https://img.shields.io/badge/React-18.3-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6)
 ![Electron](https://img.shields.io/badge/Electron-40.8-47848f)
@@ -65,22 +65,25 @@
   - Автоматический расчёт итоговых вероятностей
 - **Системы неравенств** - визуализация решений систем линейных неравенств
 
-### 🎮 Режим задач (v1.5.0)
+### 🎮 Режим задач (v2.0.0) — архитектура уровня Khan Academy
 
-Полностью переработанная система на основе шаблонов — один шаблон генерирует сотни уникальных задач.
+Полноценная адаптивная система обучения на основе шаблонов — один шаблон генерирует сотни уникальных задач.
 
-**Архитектура:**
+**Архитектура (7 слоёв):**
 ```
-ProblemTemplate → templateEngine → GeneratedProblem → validateAnswer
+Curriculum → TopicGraph → ProblemTemplate → VariantGenerator → SolutionEngine → AssessmentEngine → AdaptiveEngine
 ```
 
 **Ключевые файлы:**
 
 | Файл | Описание |
 |------|----------|
-| `src/lib/types.ts` | Типы `ProblemTemplate`, `GeneratedProblem`, `ParameterDef` |
+| `src/lib/types.ts` | Типы `ProblemTemplate`, `GeneratedProblem`, `SolutionStep`, `ParameterDef` |
+| `src/lib/curriculum.ts` | Структура учебной программы: классы, предметы, темы |
+| `src/lib/topicGraph.ts` | Граф зависимостей между темами (prerequisites) |
 | `src/lib/templateEngine.ts` | Генерация параметров, вычисление ответа, валидация, `checkCommonMistake` |
-| `src/lib/problemTemplates.ts` | 25 шаблонов для 5 класса |
+| `src/lib/problemTemplates.ts` | 30+ шаблонов задач для 5 класса |
+| `src/lib/adaptiveEngine.ts` | Адаптивный движок сложности |
 | `src/components/challenge/ChallengeMode.tsx` | UI режима задач |
 
 **Навигация:** Класс (5, 6, 7, 8, 9–11) → Предмет → Тема. Темы без задач помечаются «В разработке» и недоступны для клика.
@@ -91,8 +94,24 @@ ProblemTemplate → templateEngine → GeneratedProblem → validateAnswer
 
 **Поля шаблона:**
 - `topic_title` — человекочитаемое название в списке задач
+- `solution` — пошаговое решение (`SolutionStep[]`), раскрывается кнопкой после ответа
 - `common_mistakes` — типичные ошибки с обратной связью (показываются вместо "Неправильно")
 - `hint` — подсказка, раскрывается по кнопке
+
+**TopicGraph (prerequisites):**
+- Мягкие зависимости — тема остаётся доступной, но показывается предупреждение «Рекомендуем сначала пройти: X»
+- Предупреждение автоматически исчезает после достижения уровня `proficient`/`mastered`
+
+**Адаптивный алгоритм (`adaptiveEngine.ts`):**
+- 3 правильных подряд → сложность +1 (максимум 4)
+- 3 неправильных подряд → сложность -1 (минимум 1)
+- Accuracy < 40% за последние 10 ответов → сложность -1
+- Accuracy > 80% за последние 10 ответов → сложность +1
+- Текущая сложность отображается в UI рядом со streak
+
+**Skill Mastery (прогресс):**
+- 🎯 Не начато → 📈 Практика → ⭐ Уверенно → 🏆 Мастерство
+- Прогресс сохраняется в localStorage
 
 **CSP-совместимость:** `templateEngine` использует собственный парсер выражений без `eval`/`new Function` — работает при строгой Content Security Policy.
 
@@ -201,9 +220,12 @@ mathviz-architect/
 │   ├── hooks/               # React хуки
 │   │   └── useAppState.ts   # Управление состоянием
 │   ├── lib/                 # Утилиты и типы
-│   │   ├── types.ts         # TypeScript типы (+ ProblemTemplate, GeneratedProblem)
+│   │   ├── types.ts         # TypeScript типы (+ ProblemTemplate, GeneratedProblem, SolutionStep)
+│   │   ├── curriculum.ts    # Структура учебной программы (классы → предметы → темы)
+│   │   ├── topicGraph.ts    # Граф зависимостей тем (prerequisites)
 │   │   ├── templateEngine.ts # Движок генерации задач из шаблонов
 │   │   ├── problemTemplates.ts # Шаблоны задач (5–11 класс)
+│   │   ├── adaptiveEngine.ts # Адаптивный движок сложности
 │   │   ├── commands.ts      # Command Pattern: AddObject, DeleteObject, UpdateObject, MoveObjects, Batch
 │   │   ├── commandHistory.ts # Стек команд (undo/redo, макс. 50 шагов)
 │   │   ├── templates.ts     # Шаблоны объектов
@@ -352,6 +374,34 @@ case 'myobject': {
    - Импортируйте компонент
    - Вызовите `registerModule()` с метаданными модуля
 
+### Добавление шаблона задачи
+
+```typescript
+// src/lib/problemTemplates.ts
+{
+  id: 'grade6-fractions-1',
+  class: 6,
+  subject: 'algebra',
+  section: 'Дроби',
+  topic: 'fractions',
+  topic_title: 'Сложение дробей с одинаковым знаменателем',
+  difficulty: 1,
+  problemType: 'numeric',
+  template: 'Вычислите: {a}/{d} + {b}/{d} = ?',
+  parameters: {
+    d: { type: 'int', min: 2, max: 10 },
+    a: { type: 'int', min: 1, max: 5 },
+    b: { type: 'int', min: 1, max: 5 },
+  },
+  answer_formula: 'a + b',
+  hint: 'При одинаковых знаменателях складываем только числители',
+  solution: [
+    { explanation: 'Знаменатели одинаковые — складываем числители' },
+    { expression: '{a} + {b}', result: '{answer}' },
+  ],
+}
+```
+
 ---
 
 ## 🌐 Деплой на GitHub Pages
@@ -451,7 +501,7 @@ pnpm run electron
 
 ## 🎯 Текущий статус проекта
 
-### ✅ Реализовано (v1.5.0)
+### ✅ Реализовано (v2.0.0)
 - Базовые инструменты рисования (фигуры, линии с опциональными стрелками, текст)
 - Математические фигуры с редактируемыми сторонами (окружность, треугольник, четырёхугольник)
 - Валидация неравенства треугольника
@@ -489,7 +539,7 @@ pnpm run electron
 - Защита от NaN в `computeCanvasBounds` для объектов без стандартных bbox (линии, стрелки)
 - Новая архитектура системы задач: `ProblemTemplate` + `templateEngine` (генерация задач из шаблонов)
 - Иерархическая навигация в режиме задач: 5 классов (5–11), предметы, темы с пометкой «В разработке»
-- 25 шаблонов задач для 5 класса (алгебра, геометрия, логика)
+- 30+ шаблонов задач для 5 класса (алгебра, геометрия, логика)
 - Типы задач: numeric, comparison, text; 4 уровня сложности
 - Исправлен crash `Cannot read properties of undefined (reading 'id')` — добавлен `templates: []` для топиков без шаблонов
 - **[v1.5.0]** Исправлена генерация `expression`-параметров — двухпроходная генерация (сначала `int`/`choice`, потом `expression`)
@@ -498,13 +548,21 @@ pnpm run electron
 - **[v1.5.0]** Исправлены диапазоны параметров шаблонов: убраны нули и некорректные значения
 - **[v1.5.0]** Поле `topic_title` — читаемые названия задач в списке тем
 - **[v1.5.0]** `common_mistakes` — умная обратная связь при типичных ошибках (5 шаблонов геометрии)
+- **[v2.0.0]** Архитектура уровня Khan Academy — 7 слоёв: Curriculum, TopicGraph, ProblemTemplate, VariantGenerator, SolutionEngine, AssessmentEngine, AdaptiveEngine
+- **[v2.0.0]** `curriculum.ts` — централизованная структура учебной программы, вынесена из ChallengeMode
+- **[v2.0.0]** `topicGraph.ts` — граф зависимостей между темами с мягкими prerequisites
+- **[v2.0.0]** Исправлен баг prerequisites: предупреждение корректно снимается после прохождения темы
+- **[v2.0.0]** `adaptiveEngine.ts` — адаптивная сложность по 4 правилам, отображается в UI
+- **[v2.0.0]** SolutionEngine — пошаговые решения (`SolutionStep[]`) в шаблонах, раскрываются после ответа
+- **[v2.0.0]** Skill Mastery: 4 уровня владения темой (🎯 → 📈 → ⭐ → 🏆), сохраняются в localStorage
+- **[v2.0.0]** Исправлен баг: шаблон `grade5-equations-2` — добавлены недостающие обязательные поля
 
 ### 🚧 В разработке
 
 **Режим задач (приоритет):**
 - Наполнение шаблонами для 6, 7, 8, 9–11 классов
-- Сохранение прогресса в localStorage
 - `common_mistakes` для оставшихся шаблонов (алгебра, логика)
+- `solution` для оставшихся шаблонов
 
 **Остальное:**
 - Property-based тестирование для критических компонентов
