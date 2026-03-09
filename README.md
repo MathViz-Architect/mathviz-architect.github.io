@@ -88,7 +88,7 @@ Curriculum → TopicGraph → ProblemTemplate → VariantGenerator → SolutionE
 | `src/lib/engine/variantGenerator.ts` | Генерация параметров и вариантов задач |
 | `src/lib/engine/answerValidator.ts` | Проверка ответа пользователя |
 | `src/lib/engine/mistakeAnalyzer.ts` | Анализ типичных ошибок |
-| `src/lib/problemTemplates.ts` | 10 multi-difficulty шаблонов для 5 класса (30+ конфигураций) |
+| `src/lib/problemTemplates.ts` | 19 multi-difficulty шаблонов для 5 класса (49 конфигураций) |
 | `src/lib/adaptiveEngine.ts` | Адаптивный движок сложности |
 | `src/components/challenge/ChallengeMode.tsx` | UI режима задач |
 
@@ -203,7 +203,7 @@ interface ProblemTemplate {
   difficulty 1: a ∈ [3..15], b ∈ [3..15]  → 169 вариантов
   difficulty 2: a ∈ [3..20], b ∈ [3..20]  → 324 варианта
 
-10 шаблонов × 3 уровня × ~200 вариантов → ~6 000 задач
+19 шаблонов × 3 уровня × ~200 вариантов → ~11 400 задач (только 5 класс)
 ```
 
 ---
@@ -279,11 +279,104 @@ interface ProblemTemplate {
 
 ---
 
+### 🎯 Шаблоны задач для 5 класса (19 шаблонов, 49 конфигураций)
+
+#### Арифметика и числа (5 шаблонов)
+1. **grade5-comparison** — Сравнение чисел (2 уровня)
+   - Skills: number_comparison, place_value
+   - Двузначные и трёхзначные числа
+
+2. **grade5-arithmetic** — Порядок действий (3 уровня)
+   - Skills: order_of_operations, multiplication, addition
+   - От простых выражений до скобок
+
+3. **grade5-decimals** — Десятичные дроби (3 уровня)
+   - Skills: decimal_addition, decimal_multiplication, place_value
+   - Сложение, умножение, деление десятичных дробей
+
+4. **grade5-divisors** — Делимость на 2 (1 уровень)
+   - Skills: divisibility, even_odd
+   - Проверка чётности
+
+5. **grade5-equations** — Простые уравнения (3 уровня)
+   - Skills: linear_equation, inverse_operations
+   - x + a = b, a × x = b, x − a = b
+
+#### Дроби (2 шаблона)
+6. **grade5-fractions-comparison** — Сравнение дробей (3 уровня)
+   - Skills: fraction_concept, fraction_comparison
+   - Одинаковые и разные знаменатели
+
+7. **grade5-fractions-intro** — Действия с дробями (3 уровня)
+   - Skills: fraction_addition, fraction_of_number
+   - Сложение дробей, нахождение дроби от числа
+
+#### Делимость (1 шаблон)
+8. **grade5-gcd-lcm** — НОД и НОК (3 уровня)
+   - Skills: gcd, lcm, prime_factorization
+   - НОД двух чисел, НОК двух чисел, НОД трёх чисел
+
+#### Геометрия (5 шаблонов)
+9. **grade5-perimeter** — Периметр фигур (2 уровня)
+   - Skills: perimeter_formula, multiplication, addition
+   - Прямоугольник и квадрат
+   - Related module: coordinate-plane
+
+10. **grade5-area** — Площадь фигур (3 уровня)
+    - Skills: area_formula, multiplication, square_root
+    - Прямоугольник, квадрат, обратная задача
+    - Related module: coordinate-plane
+
+11. **grade5-triangle** — Свойства треугольников (3 уровня)
+    - Skills: triangle_types, angle_sum, triangle_inequality
+    - Сумма углов, типы треугольников, неравенство треугольника
+    - Related module: triangle-similarity
+
+12. **grade5-angles** — Углы (3 уровня)
+    - Skills: angle_types, adjacent_angles, vertical_angles
+    - Смежные углы, вертикальные углы, отношение углов
+    - Related module: parallel-lines
+
+13. **grade5-coordinates** — Координатная плоскость (3 уровня)
+    - Skills: coordinate_plane, coordinates_reading
+    - Чтение координат x и y, расстояние между точками
+    - Related module: coordinate-plane
+
+#### Текстовые задачи (3 шаблона)
+14. **grade5-price** — Цена, количество, стоимость (3 уровня)
+    - Skills: price_quantity, multiplication, division
+    - Найти стоимость, найти цену, задача со сдачей
+
+15. **grade5-speed** — Скорость, время, расстояние (3 уровня)
+    - Skills: speed_time_distance, multiplication, division
+    - S = v × t, t = S ÷ v, v = S ÷ t
+
+16. **grade5-parts** — Задачи на части (3 уровня)
+    - Skills: fraction_of_number, percentage_concept, division
+    - Найти 1/n от числа, найти m/n от числа, найти число по части
+
+#### Логика (3 шаблона)
+17. **grade5-patterns** — Числовые последовательности (3 уровня)
+    - Skills: pattern_recognition, arithmetic_sequence, geometric_sequence
+    - Арифметическая прогрессия, геометрическая прогрессия, пропущенное число
+
+18. **grade5-magic** — Магический квадрат (1 уровень)
+    - Skills: logical_reasoning, addition
+    - Найти пропущенное число в магическом квадрате
+
+19. **grade5-olympiad** — Олимпиадные задачи (1 уровень, difficulty 4)
+    - Skills: logical_reasoning, number_theory
+    - Ребусы с цифрами
+
+**Итого:** 19 шаблонов, 49 конфигураций сложности, ~11 400 уникальных задач
+
+---
+
 ### 🗂️ Дорожная карта контента
 
 | Класс | Шаблонов (план) | Темы |
 |-------|-----------------|------|
-| 5 класс | ✅ 30+ (реализовано) | арифметика, геометрия, логика |
+| 5 класс | ✅ 19 шаблонов (реализовано) | арифметика, десятичные дроби, обыкновенные дроби, НОД/НОК, углы, координаты, текстовые задачи, логика |
 | 6 класс | 50 | дроби, проценты, координаты |
 | 7 класс | 60 | уравнения, геометрия |
 | 8 класс | 60 | квадратные уравнения, геометрия |
@@ -291,7 +384,7 @@ interface ProblemTemplate {
 | 10 класс | 70 | тригонометрия, производные |
 | 11 класс | 70 | вероятность, интегралы |
 
-**Итого: ~410 шаблонов → ~150 000 уникальных задач**
+**Итого: ~400 шаблонов → ~150 000 уникальных задач**
 
 #### Порядок добавления классов
 
@@ -868,9 +961,12 @@ pnpm run electron
 - **[v2.0.0]** Skill Mastery: 4 уровня владения темой, сохраняются в localStorage
 - **[v2.0.0]** Связь задача → интерактивный модуль (кнопка «Исследовать», поле `relatedModule`, 11 шаблонов)
 - **[v2.0.0]** Рефактор `templateEngine.ts` → `engine/` (4 модуля: expressionParser, variantGenerator, answerValidator, mistakeAnalyzer)
-- **[v2.0.0]** Multi-difficulty templates: 30+ шаблонов смёрджены в 10, каждый покрывает 2–4 уровня сложности через `difficulties: Partial<Record<1|2|3|4, DifficultyConfig>>`
+- **[v2.0.0]** Multi-difficulty templates: 30+ шаблонов смёрджены в 19, каждый покрывает 1–4 уровня сложности через `difficulties: Partial<Record<1|2|3|4, DifficultyConfig>>`
 - **[v2.0.0]** `answer_type` — финальная схема типов ответов: `number`, `fraction`, `coordinate` реализованы; `expression`, `interval`, `set` зарезервированы
-- **[v2.0.0]** `pnpm test:templates` — CLI-тест 1000 вариантов на каждую конфигурацию (22 конфигурации, 22 000 вариантов)
+- **[v2.0.0]** `pnpm test:templates` — CLI-тест 1000 вариантов на каждую конфигурацию (49 конфигураций, 49 000 вариантов)
+- **[v2.0.0]** 19 шаблонов для 5 класса: арифметика (5), дроби (2), делимость (1), геометрия (5), текстовые задачи (3), логика (3)
+- **[v2.0.0]** `skills` mapping — каждый шаблон помечен навыками которые он тренирует (для будущей аналитики прогресса)
+- **[v2.0.0]** Answer beauty validation — автоматическая проверка что ответы удобны для ввода (не более 2 знаков после запятой, не отрицательные, знаменатель дробей ≤ 12)
 
 ### 🚧 В разработке
 

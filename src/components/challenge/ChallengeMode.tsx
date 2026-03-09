@@ -704,8 +704,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         {/* Challenge header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
-            <span className={`px-2 py-1 rounded text-xs font-medium ${activeTemplate.difficulty === 1 ? 'bg-green-100 text-green-700' : activeTemplate.difficulty === 2 ? 'bg-yellow-100 text-yellow-700' : activeTemplate.difficulty === 3 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
-              {activeTemplate.difficulty === 1 ? 'Легко' : activeTemplate.difficulty === 2 ? 'Средне' : activeTemplate.difficulty === 3 ? 'Сложно' : 'Олимпиадное'}
+            <span className={`px-2 py-1 rounded text-xs font-medium ${adaptiveState.currentDifficulty === 1 ? 'bg-green-100 text-green-700' : adaptiveState.currentDifficulty === 2 ? 'bg-yellow-100 text-yellow-700' : adaptiveState.currentDifficulty === 3 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+              {adaptiveState.currentDifficulty === 1 ? 'Легко' : adaptiveState.currentDifficulty === 2 ? 'Средне' : adaptiveState.currentDifficulty === 3 ? 'Сложно' : 'Олимпиадное'}
             </span>
             <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
               ⚡ {getDifficultyLabel(adaptiveState.currentDifficulty)}
@@ -1311,7 +1311,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
               key={template.id}
               onClick={() => {
                 setActiveTemplate(template);
-                setAdaptiveState(createAdaptiveState(template.difficulty));
+                setAdaptiveState(createAdaptiveState(1));
               }}
               className="w-full p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left"
             >
@@ -1319,8 +1319,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                 <div className="flex-1">
                   <div className="font-medium text-gray-800">Задача: {template.topic_title ?? template.section}</div>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${template.difficulty === 1 ? 'bg-green-100 text-green-700' : template.difficulty === 2 ? 'bg-yellow-100 text-yellow-700' : template.difficulty === 3 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
-                      {template.difficulty === 1 ? 'Легко' : template.difficulty === 2 ? 'Средне' : template.difficulty === 3 ? 'Сложно' : 'Олимпиадное'}
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? 'bg-green-100 text-green-700' : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? 'bg-yellow-100 text-yellow-700' : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+                      {Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? 'Легко' : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? 'Средне' : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? 'Сложно' : 'Олимпиадное'}
                     </span>
                     {completedChallenges.includes(template.id) && (
                       <CheckCircle size={16} className="text-green-500" />
