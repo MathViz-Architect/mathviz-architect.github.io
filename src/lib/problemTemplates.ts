@@ -10,6 +10,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic: 'comparison',
         topic_title: 'Сравнение чисел',
         problemType: 'comparison',
+        skills: ['number_comparison', 'place_value'],
         difficulties: {
             1: {
                 template: 'Сравните числа {a} и {b}. Выберите правильный знак.',
@@ -41,6 +42,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic: 'arithmetic',
         topic_title: 'Порядок действий',
         problemType: 'numeric',
+        skills: ['order_of_operations', 'multiplication', 'addition'],
         difficulties: {
             1: {
                 template: 'Вычислите: {a} + {b} × {c} = ?',
@@ -85,6 +87,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic: 'patterns',
         topic_title: 'Числовые последовательности',
         problemType: 'numeric',
+        skills: ['pattern_recognition', 'arithmetic_sequence', 'geometric_sequence'],
         difficulties: {
             1: {
                 template: 'Найдите следующее число в последовательности: {t1}, {t2}, {t3}, {t4}, ?',
@@ -137,6 +140,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic: 'divisors',
         topic_title: 'Делимость на 2',
         problemType: 'numeric',
+        skills: ['divisibility', 'even_odd'],
         difficulties: {
             1: {
                 template: 'Число {n} делится на 2 без остатка?',
@@ -158,6 +162,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic: 'arithmetic',
         topic_title: 'Решение уравнений',
         problemType: 'numeric',
+        skills: ['linear_equation', 'inverse_operations'],
         difficulties: {
             1: {
                 template: 'Решите уравнение: x + {a} = {b}',
@@ -200,6 +205,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic: 'perimeter',
         topic_title: 'Периметр фигур',
         problemType: 'numeric',
+        skills: ['perimeter_formula', 'multiplication', 'addition'],
         difficulties: {
             1: {
                 template: 'Прямоугольник имеет длину {a} см и ширину {b} см. Чему равен его периметр?',
@@ -246,6 +252,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic_title: 'Площадь фигур',
         problemType: 'numeric',
         relatedModule: 'coordinate-plane',
+        skills: ['area_formula', 'multiplication', 'square_root'],
         difficulties: {
             1: {
                 template: 'Прямоугольник имеет длину {a} см и ширину {b} см. Чему равна его площадь?',
@@ -300,6 +307,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic_title: 'Свойства треугольников',
         problemType: 'text',
         relatedModule: 'triangle-similarity',
+        skills: ['triangle_types', 'angle_sum', 'triangle_inequality'],
         difficulties: {
             1: {
                 template: 'В треугольнике два угла равны {a}° и {b}°. Чему равен третий угол?',
@@ -348,6 +356,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic: 'magicSquare',
         topic_title: 'Магический квадрат',
         problemType: 'numeric',
+        skills: ['logical_reasoning', 'addition'],
         difficulties: {
             3: {
                 template: 'В магическом квадрате сумма чисел в каждой строке, столбце и диагонали равна {sum}. Найдите пропущенное число: [{a}, {b}, ?]',
@@ -372,6 +381,7 @@ export const problemTemplates: ProblemTemplate[] = [
         topic: 'olympiad',
         topic_title: 'Олимпиадные задачи',
         problemType: 'numeric',
+        skills: ['logical_reasoning', 'number_theory'],
         difficulties: {
             4: {
                 template: 'В ребусе AB + BA = {sum}, где A и B — разные цифры. Найдите значение A (большую цифру).',

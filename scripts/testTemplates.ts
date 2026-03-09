@@ -14,10 +14,63 @@ interface TestResult {
     total: number;
     passed: number;
     failed: number;
+    uglyAnswers: number;
     errors: Array<{
         message: string;
         params?: Record<string, number | string>;
     }>;
+    uglyExamples: Array<{
+        answer: unknown;
+        params: Record<string, number | string>;
+    }>;
+}
+
+/**
+ * Check if answer is "beautiful" (easy for students to input)
+ */
+function isBeautifulAnswer(answer: unknown, answerType: string = 'number', subject?: string, problemType?: string): boolean {
+    // Comparison answers (<, >, =) are always beautiful
+    if (typeof answer === 'string' && ['<', '>', '='].includes(answer)) {
+        return true;
+    }
+
+    // Text answers (like triangle types) are always beautiful if problemType is 'text'
+    if (problemType === 'text' && typeof answer === 'string') {
+        return true;
+    }
+
+    if (answerType === 'number' || !answerType) {
+        const num = Number(answer);
+        if (isNaN(num)) {
+            // If it's not a number and not handled above, it's probably a text answer
+            return typeof answer === 'string';
+        }
+
+        // Not more than 2 decimal places
+        if (!Number.isInteger(num) && Math.round(num * 100) / 100 !== num) return false;
+
+        // Not negative (for most grade 5-7 problems)
+        if (num < 0) return false;
+
+        // Not zero for geometry problems
+        if (subject === 'geometry' && num === 0) return false;
+
+        return true;
+    }
+
+    if (answerType === 'fraction') {
+        // Parse fraction and check denominator <= 12
+        const answerStr = String(answer);
+        const fractionMatch = answerStr.match(/^\s*(-?\d+)\s*\/\s*(-?\d+)\s*$/);
+        if (fractionMatch) {
+            const denominator = parseInt(fractionMatch[2], 10);
+            return denominator <= 12;
+        }
+        // If it's a decimal, it's fine
+        return true;
+    }
+
+    return true;
 }
 
 function testTemplate(template: ProblemTemplate, difficulty: 1 | 2 | 3 | 4, iterations: number = 1000): TestResult {
@@ -27,7 +80,9 @@ function testTemplate(template: ProblemTemplate, difficulty: 1 | 2 | 3 | 4, iter
         total: iterations,
         passed: 0,
         failed: 0,
+        uglyAnswers: 0,
         errors: [],
+        uglyExamples: [],
     };
 
     for (let i = 0; i < iterations; i++) {
@@ -119,6 +174,24 @@ function testTemplate(template: ProblemTemplate, difficulty: 1 | 2 | 3 | 4, iter
 
             if (isValid) {
                 result.passed++;
+
+                // Check 8: Answer Beauty (warning only, not a failure)
+                const isBeautiful = isBeautifulAnswer(
+                    problem.answer,
+                    problem.answer_type || 'number',
+                    template.subject,
+                    template.problemType
+                );
+                if (!isBeautiful) {
+                    result.uglyAnswers++;
+                    // Store first 3 ugly examples
+                    if (result.uglyExamples.length < 3) {
+                        result.uglyExamples.push({
+                            answer: problem.answer,
+                            params: problem.params,
+                        });
+                    }
+                }
             } else {
                 result.failed++;
                 // Only store first 5 errors to avoid memory issues
@@ -162,7 +235,15 @@ function main() {
             totalPassed += result.failed === 0 ? 1 : 0;
 
             if (result.failed === 0) {
-                console.log(`${result.passed}/${result.total} ✅`);
+                if (result.uglyAnswers > 0) {
+                    console.log(`${result.passed}/${result.total} ✅ (${result.uglyAnswers} ugly answers ⚠️)`);
+                    console.log(`  - ${result.uglyAnswers} variants had non-beautiful answers`);
+                    for (const example of result.uglyExamples) {
+                        console.log(`    Example: answer = ${example.answer}, params: ${JSON.stringify(example.params)}`);
+                    }
+                } else {
+                    console.log(`${result.passed}/${result.total} ✅`);
+                }
             } else {
                 console.log(`${result.passed}/${result.total} ❌`);
                 for (const error of result.errors) {

@@ -235,6 +235,7 @@ export interface ProblemTemplate {
   problemType: 'numeric' | 'multiple_choice' | 'comparison' | 'text';
   difficulties: Partial<Record<1 | 2 | 3 | 4, DifficultyConfig>>;
   relatedModule?: string;
+  skills?: string[];
 }
 
 export interface GeneratedProblem {
