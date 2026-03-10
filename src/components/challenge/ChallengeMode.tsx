@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle, XCircle, ArrowRight, HelpCircle, Award, Star, TrendingUp, Target, Search } from 'lucide-react';
-import { Challenge, GeneratedData, StaticChallenge, GeneratedChallenge, ProblemTemplate, GeneratedProblem, StudentProgress, TopicProgress, SkillLevel } from '@/lib/types';
+import { Challenge, GeneratedData, StaticChallenge, GeneratedChallenge, ProblemTemplate, GeneratedProblem, StudentProgress, TopicProgress, SkillLevel, CurriculumCategory } from '@/lib/types';
 import { problemTemplates } from '@/lib/problemTemplates';
 import { generateProblem, validateAnswer, checkCommonMistake } from '@/lib/templateEngine';
 import { getUnmetPrerequisites } from '@/lib/topicGraph';
@@ -472,7 +472,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
 
   // Category structure - built from curriculum
   const categoryStructure = React.useMemo(() => {
-    const structure: Record<string, any> = {};
+    const structure: Record<string, CurriculumCategory> = {};
 
     curriculum.forEach(grade => {
       const gradeKey = grade.id === 9 ? 'grade9_11' : `grade${grade.id}`;
@@ -725,14 +725,13 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
     setAchievementMessage(null);
   };
 
-  const getDifficultyColor = (difficulty: Challenge['difficulty']) => {
+  const getDifficultyColor = (difficulty: number) => {
     switch (difficulty) {
-      case 'easy':
-        return 'bg-green-100 text-green-700';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'hard':
-        return 'bg-red-100 text-red-700';
+      case 1: return 'bg-green-100 text-green-700';
+      case 2: return 'bg-yellow-100 text-yellow-700';
+      case 3: return 'bg-orange-100 text-orange-700';
+      case 4: return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-700';
     }
   };
 
@@ -1076,7 +1075,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(activeChallenge.difficulty)}`}>
-              {activeChallenge.difficulty === 'easy' ? 'Легко' : activeChallenge.difficulty === 'medium' ? 'Средне' : 'Сложно'}
+              {activeChallenge.difficulty === 1 ? 'Легко' : activeChallenge.difficulty === 2 ? 'Средне' : activeChallenge.difficulty === 3 ? 'Сложно' : 'Очень сложно'}
             </span>
             {completedChallenges.includes(activeChallenge.id) && (
               <CheckCircle size={20} className="text-green-500" />

@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { JSDOM } from 'jsdom';
+const { JSDOM } = require('jsdom');
 
 describe('Phase 2: Preservation Property Tests', () => {
     describe('2.1 Select Mode Preservation', () => {

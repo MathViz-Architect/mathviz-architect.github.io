@@ -151,7 +151,7 @@ export const LinearFunction: React.FC<LinearFunctionProps> = ({ onInsert }) => {
             {/* Formula display */}
             <div className="text-center py-3 bg-gray-50 rounded-lg">
               <span className="text-xl font-mono">
-                y = {k.toFixed(1)}x {b >= 0 ? '+' : '-'} {Math.abs(b.toFixed(1))}
+                y = {k.toFixed(1)}x {b >= 0 ? '+' : '-'} {Math.abs(Number(b.toFixed(1)))}
               </span>
               <div className="text-sm text-gray-500 mt-1">
                 Угол наклона: α = arctg({k.toFixed(1)}) = {Math.atan(k).toFixed(2)} рад

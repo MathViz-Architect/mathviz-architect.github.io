@@ -32,49 +32,41 @@ export function updateAdaptiveState(
     state: AdaptiveState,
     isCorrect: boolean
 ): AdaptiveState {
-    // Update recent answers (keep last 10)
     const newRecentAnswers = [...state.recentAnswers, isCorrect].slice(-10);
 
-    // Update consecutive counters
     let newConsecutiveCorrect = state.consecutiveCorrect;
     let newConsecutiveWrong = state.consecutiveWrong;
 
     if (isCorrect) {
         newConsecutiveCorrect++;
-        newConsecutiveWrong = 0; // Reset wrong streak
+        newConsecutiveWrong = 0;
     } else {
         newConsecutiveWrong++;
-        newConsecutiveCorrect = 0; // Reset correct streak
+        newConsecutiveCorrect = 0;
     }
 
-    // Calculate accuracy from recent answers (if we have enough data)
     let accuracy = 0;
     if (newRecentAnswers.length >= 5) {
         const correctCount = newRecentAnswers.filter(a => a).length;
         accuracy = correctCount / newRecentAnswers.length;
     }
 
-    // Determine new difficulty
     let newDifficulty = state.currentDifficulty;
 
-    // Rule 1: 3 correct in a row → increase difficulty
     if (newConsecutiveCorrect >= 3) {
         newDifficulty = Math.min(4, newDifficulty + 1) as 1 | 2 | 3 | 4;
-        newConsecutiveCorrect = 0; // Reset after applying
+        newConsecutiveCorrect = 0;
     }
 
-    // Rule 2: 3 wrong in a row → decrease difficulty
     if (newConsecutiveWrong >= 3) {
         newDifficulty = Math.max(1, newDifficulty - 1) as 1 | 2 | 3 | 4;
-        newConsecutiveWrong = 0; // Reset after applying
+        newConsecutiveWrong = 0;
     }
 
-    // Rule 3: Low accuracy (< 40%) → decrease difficulty
     if (newRecentAnswers.length >= 10 && accuracy < 0.4) {
         newDifficulty = Math.max(1, newDifficulty - 1) as 1 | 2 | 3 | 4;
     }
 
-    // Rule 4: High accuracy (> 80%) → increase difficulty
     if (newRecentAnswers.length >= 10 && accuracy > 0.8) {
         newDifficulty = Math.min(4, newDifficulty + 1) as 1 | 2 | 3 | 4;
     }
@@ -88,10 +80,16 @@ export function updateAdaptiveState(
 }
 
 /**
- * Select a template based on current difficulty
- * Priority: templates with difficulty === currentDifficulty
- * Fallback: closest difficulty
- * Random selection among matching templates
+ * Returns the available difficulty levels for a template (sorted ascending).
+ */
+function getAvailableLevels(t: ProblemTemplate): number[] {
+    return (Object.keys(t.difficulties) as string[]).map(Number).sort((a, b) => a - b);
+}
+
+/**
+ * Select a template based on current difficulty.
+ * Priority: templates that have the exact difficulty level configured.
+ * Fallback: templates whose closest available level is nearest to requested difficulty.
  */
 export function selectTemplate(
     templates: ProblemTemplate[],
@@ -101,28 +99,26 @@ export function selectTemplate(
         throw new Error('No templates available');
     }
 
-    // Filter templates by exact difficulty match
-    const exactMatches = templates.filter(t => t.difficulty === difficulty);
+    // Exact match: template has this difficulty level configured
+    const exactMatches = templates.filter(
+        t => t.difficulties[difficulty as 1 | 2 | 3 | 4] !== undefined
+    );
 
     if (exactMatches.length > 0) {
-        // Random selection from exact matches
         return exactMatches[Math.floor(Math.random() * exactMatches.length)];
     }
 
-    // No exact match - find closest difficulty
-    const sortedByCloseness = [...templates].sort((a, b) => {
-        const diffA = Math.abs(a.difficulty - difficulty);
-        const diffB = Math.abs(b.difficulty - difficulty);
-        return diffA - diffB;
-    });
+    // Fallback: find templates with the closest available difficulty level
+    const closestDistance = (t: ProblemTemplate) =>
+        Math.min(...getAvailableLevels(t).map(d => Math.abs(d - difficulty)));
 
-    // Get all templates with the closest difficulty
-    const closestDiff = Math.abs(sortedByCloseness[0].difficulty - difficulty);
-    const closestMatches = sortedByCloseness.filter(
-        t => Math.abs(t.difficulty - difficulty) === closestDiff
+    const sortedByCloseness = [...templates].sort(
+        (a, b) => closestDistance(a) - closestDistance(b)
     );
 
-    // Random selection from closest matches
+    const minDist = closestDistance(sortedByCloseness[0]);
+    const closestMatches = sortedByCloseness.filter(t => closestDistance(t) === minDist);
+
     return closestMatches[Math.floor(Math.random() * closestMatches.length)];
 }
 
@@ -131,13 +127,9 @@ export function selectTemplate(
  */
 export function getDifficultyLabel(difficulty: 1 | 2 | 3 | 4): string {
     switch (difficulty) {
-        case 1:
-            return 'Легко';
-        case 2:
-            return 'Средне';
-        case 3:
-            return 'Сложно';
-        case 4:
-            return 'Олимпиадное';
+        case 1: return 'Легко';
+        case 2: return 'Средне';
+        case 3: return 'Сложно';
+        case 4: return 'Олимпиадное';
     }
 }

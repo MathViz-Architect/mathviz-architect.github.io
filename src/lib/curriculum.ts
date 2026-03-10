@@ -73,18 +73,43 @@ export const curriculum: CurriculumGrade[] = [
                 id: 'algebra',
                 title: 'Алгебра',
                 topics: [
-                    { id: 'fractions', title: 'Дроби' },
+                    // Делимость
+                    { id: 'divisibility_rules', title: 'Признаки делимости' },
+                    { id: 'prime_factorization', title: 'Разложение на простые множители' },
+                    { id: 'gcd', title: 'Наибольший общий делитель' },
+                    { id: 'lcm', title: 'Наименьшее общее кратное' },
+                    // Дроби
+                    { id: 'fraction_property', title: 'Основное свойство дроби' },
+                    { id: 'fraction_reduction', title: 'Сокращение дробей' },
+                    { id: 'common_denominator', title: 'Общий знаменатель' },
+                    { id: 'fraction_add_sub', title: 'Сложение и вычитание дробей' },
+                    { id: 'fraction_mul', title: 'Умножение дробей' },
+                    { id: 'fraction_div', title: 'Деление дробей' },
+                    // Отношения и пропорции
+                    { id: 'ratios', title: 'Отношения' },
                     { id: 'proportions', title: 'Пропорции' },
-                    { id: 'percentages', title: 'Проценты' },
+                    { id: 'direct_proportion', title: 'Прямая и обратная пропорциональность' },
+                    // Проценты
+                    { id: 'percent_basics', title: 'Понятие процента' },
+                    { id: 'percent_of_number', title: 'Нахождение процента от числа' },
+                    { id: 'number_by_percent', title: 'Нахождение числа по проценту' },
+                    { id: 'percent_change', title: 'Процентное изменение' },
+                    // Линейные уравнения
+                    { id: 'linear_equations_basic', title: 'Линейные уравнения' },
+                    { id: 'linear_equations_brackets', title: 'Уравнения со скобками' },
+                    { id: 'word_problems_equations', title: 'Текстовые задачи через уравнения' },
                 ],
             },
             {
                 id: 'geometry',
                 title: 'Геометрия',
                 topics: [
-                    { id: 'angles', title: 'Углы' },
-                    { id: 'circles', title: 'Окружность' },
-                    { id: 'figureArea', title: 'Площадь фигур' },
+                    { id: 'coordinate_plane', title: 'Координатная плоскость' },
+                    { id: 'quadrants', title: 'Четверти координатной плоскости' },
+                    { id: 'distance_on_axis', title: 'Расстояние на числовой оси' },
+                    { id: 'angles', title: 'Смежные и вертикальные углы' },
+                    { id: 'circles', title: 'Длина окружности и площадь круга' },
+                    { id: 'figureArea', title: 'Площадь треугольника и трапеции' },
                 ],
             },
         ],

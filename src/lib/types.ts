@@ -236,6 +236,8 @@ export interface ProblemTemplate {
   difficulties: Partial<Record<1 | 2 | 3 | 4, DifficultyConfig>>;
   relatedModule?: string;
   skills?: string[];
+  tags?: string[];        // для поиска, фильтрации и coverage-анализа
+  version?: number;       // для будущих миграций и аналитики
 }
 
 export interface GeneratedProblem {
@@ -252,13 +254,14 @@ export interface GeneratedProblem {
 
 // Legacy types for backward compatibility
 export interface GeneratedData {
-  [key: string]: number | string;
+  [key: string]: number | string | number[] | (number | string)[];
 }
 
 export interface StaticChallenge {
   type: 'static';
   id: string;
   title: string;
+  description?: string;
   category: string;
   topic: string;
   difficulty: number;
@@ -280,7 +283,6 @@ export interface GeneratedChallenge {
   validate: (data: GeneratedData, answer: string) => boolean;
   explanation?: (data: GeneratedData) => string;
 }
-}
 
 export type Challenge = StaticChallenge | GeneratedChallenge;
 
@@ -296,4 +298,23 @@ export interface TopicProgress {
 
 export interface StudentProgress {
   topics: Record<string, TopicProgress>;
+}
+
+// Curriculum structure types (used in ChallengeMode)
+export interface CurriculumTopic {
+  name: string;
+  challenges: Challenge[];
+  templates: ProblemTemplate[];
+  prerequisites?: string[];
+}
+
+export interface CurriculumSubject {
+  name: string;
+  topics: Record<string, CurriculumTopic>;
+}
+
+export interface CurriculumCategory {
+  name: string;
+  color: string;
+  subjects: Record<string, CurriculumSubject>;
 }

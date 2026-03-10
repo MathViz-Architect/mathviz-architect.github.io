@@ -14,6 +14,31 @@ export interface ProblemSession {
 }
 
 /**
+ * Weights for difficulty selection.
+ * Lower difficulties appear more often — pedagogically appropriate.
+ */
+const DIFFICULTY_WEIGHTS: Record<1 | 2 | 3 | 4, number> = {
+    1: 0.40,
+    2: 0.35,
+    3: 0.20,
+    4: 0.05,
+};
+
+/**
+ * Weighted random selection from an array of items with associated difficulties.
+ */
+function weightedRandom<T extends { difficulty: number }>(items: T[]): T {
+    const weights = items.map(item => DIFFICULTY_WEIGHTS[item.difficulty as 1 | 2 | 3 | 4] ?? 0.1);
+    const total = weights.reduce((sum, w) => sum + w, 0);
+    let rand = Math.random() * total;
+    for (let i = 0; i < items.length; i++) {
+        rand -= weights[i];
+        if (rand <= 0) return items[i];
+    }
+    return items[items.length - 1];
+}
+
+/**
  * Create initial problem session
  */
 export function createProblemSession(topic: string, difficulty: number = 1): ProblemSession {
@@ -101,12 +126,13 @@ export function selectTemplate(
     });
 
     const closestDiff = Math.abs(sortedByCloseness[0].difficulty! - session.currentDifficulty);
+    // Keep only closest-difficulty candidates for weighted selection
     const closestMatches = sortedByCloseness.filter(
         item => Math.abs(item.difficulty! - session.currentDifficulty) === closestDiff
     );
 
-    // Step 4: Random selection
-    const selected = closestMatches[Math.floor(Math.random() * closestMatches.length)];
+    // Step 4: Weighted random selection by difficulty
+    const selected = weightedRandom(closestMatches);
     return selected.template;
 }
 

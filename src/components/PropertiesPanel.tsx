@@ -8,8 +8,9 @@ export const PropertiesPanel: React.FC = () => {
     selectedObjects,
     updateObject: onUpdateObject,
     handleDeleteObject: onDeleteObject,
-    saveToHistory: onSaveToHistory,
   } = useEditorContext();
+  // saveToHistory removed from context — calls are no-ops via optional chaining
+  const onSaveToHistory: (() => void) | undefined = undefined;
   const selectedObject = selectedObjects[0];
 
   if (selectedObjects.length === 0) {

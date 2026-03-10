@@ -72,6 +72,9 @@ describe('transforms', () => {
                 width: 0,
                 height: 0,
                 rotation: 0,
+                opacity: 1,
+                visible: true,
+                locked: false,
                 data: {
                     x1: 100,
                     y1: 100,
@@ -105,6 +108,9 @@ describe('transforms', () => {
                 width: 100,
                 height: 80,
                 rotation: 0,
+                opacity: 1,
+                visible: true,
+                locked: false,
                 data: {
                     fill: '#FF0000',
                     stroke: '#000000',
@@ -128,6 +134,9 @@ describe('transforms', () => {
                 width: 50,
                 height: 50,
                 rotation: 0,
+                opacity: 1,
+                visible: true,
+                locked: false,
                 data: {
                     fill: '#0000FF',
                     stroke: '#000000',
@@ -144,12 +153,15 @@ describe('transforms', () => {
         it('should handle zero delta', () => {
             const obj: AnyCanvasObject = {
                 id: 'obj1',
-                type: 'ellipse',
+                type: 'circle',
                 x: 100,
                 y: 100,
                 width: 60,
                 height: 40,
                 rotation: 0,
+                opacity: 1,
+                visible: true,
+                locked: false,
                 data: {
                     fill: '#00FF00',
                     stroke: '#000000',

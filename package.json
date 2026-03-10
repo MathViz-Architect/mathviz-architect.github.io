@@ -1,5 +1,6 @@
 {
   "name": "mathviz-architect",
+  "homepage": "https://mathviz-architect.github.io",
   "productName": "MathViz Architect",
   "private": true,
   "version": "1.0.0",
@@ -20,7 +21,9 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:templates": "tsx scripts/testTemplates.ts",
-    "preview:templates": "tsx scripts/previewTemplates.ts"
+    "preview:templates": "tsx scripts/previewTemplates.ts",
+    "coverage:skills": "tsx scripts/coverageSkills.ts",
+    "deploy": "cross-env GITHUB_PAGES=true npm run build && gh-pages -d dist -r https://github.com/MathViz-Architect/mathviz-architect.github.io.git"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

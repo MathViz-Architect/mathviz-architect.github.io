@@ -14,6 +14,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+const { JSDOM } = require('jsdom');
 
 describe('Phase 1: Bug Condition Exploration Tests', () => {
     describe('1.1 Scroll Blocking Bug', () => {

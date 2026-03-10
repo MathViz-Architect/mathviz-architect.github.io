@@ -38,11 +38,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose }) => {
         state.objects.forEach(obj => {
             try {
                 const bbox = getBoundingBox(obj);
-                if (bbox && isFinite(bbox.x) && isFinite(bbox.y) && isFinite(bbox.width) && isFinite(bbox.height)) {
-                    minX = Math.min(minX, bbox.x);
-                    minY = Math.min(minY, bbox.y);
-                    maxX = Math.max(maxX, bbox.x + bbox.width);
-                    maxY = Math.max(maxY, bbox.y + bbox.height);
+                if (bbox && isFinite(bbox.minX) && isFinite(bbox.minY) && isFinite(bbox.maxX) && isFinite(bbox.maxY)) {
+                    minX = Math.min(minX, bbox.minX);
+                    minY = Math.min(minY, bbox.minY);
+                    maxX = Math.max(maxX, bbox.maxX);
+                    maxY = Math.max(maxY, bbox.maxY);
                 } else {
                     // Fallback for objects without proper bbox (lines, arrows)
                     minX = Math.min(minX, obj.x ?? 0);

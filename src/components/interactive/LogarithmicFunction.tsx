@@ -121,7 +121,7 @@ export const LogarithmicFunction: React.FC = () => {
 
                         <div className="text-center py-3 bg-gray-50 rounded-lg">
                             <span className="text-xl font-mono">
-                                y = {a.toFixed(1)} · log<sub>{b.toFixed(1)}</sub>(x) {c >= 0 ? '+' : '-'} {Math.abs(c.toFixed(1))}
+                                y = {a.toFixed(1)} · log<sub>{b.toFixed(1)}</sub>(x) {c >= 0 ? '+' : '-'} {Math.abs(Number(c.toFixed(1)))}
                             </span>
                         </div>
 
