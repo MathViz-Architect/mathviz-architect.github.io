@@ -5,7 +5,8 @@ import { problemTemplates } from '@/lib/problemTemplates';
 import { generateProblem, validateAnswer, checkCommonMistake } from '@/lib/templateEngine';
 import { getUnmetPrerequisites } from '@/lib/topicGraph';
 import { curriculum } from '@/lib/curriculum';
-import { createAdaptiveState, updateAdaptiveState, selectTemplate, getDifficultyLabel, AdaptiveState } from '@/lib/adaptiveEngine';
+import { createAdaptiveState, updateAdaptiveState, getDifficultyLabel, AdaptiveState } from '@/lib/adaptiveEngine';
+import { createProblemSession, selectTemplate as selectTemplateFromSession, updateSessionAfterSelection, ProblemSession } from '@/lib/problemSelector';
 import { useEditorContext } from '@/contexts/EditorContext';
 
 interface OldChallenge {
@@ -344,10 +345,6 @@ const staticChallenges: StaticChallenge[] = oldChallenges.map(c => ({
 // Combine all challenges (static challenges only, templates will be used dynamically)
 const allChallenges: Challenge[] = [...staticChallenges];
 
-// Debug: Log templates
-console.log('Problem templates:', problemTemplates.map(t => ({ id: t.id, class: t.class, subject: t.subject, topic: t.topic })));
-console.log('All challenges count:', allChallenges.length, 'Static:', staticChallenges.length, 'Templates:', problemTemplates.length);
-
 // Helper functions for student progress tracking
 function loadProgress(): StudentProgress {
   try {
@@ -443,6 +440,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   const [studentProgress, setStudentProgress] = useState<StudentProgress>(() => loadProgress());
   const [achievementMessage, setAchievementMessage] = useState<string | null>(null);
   const [adaptiveState, setAdaptiveState] = useState<AdaptiveState>(() => createAdaptiveState());
+  const [problemSession, setProblemSession] = useState<ProblemSession | null>(null);
   const [problemKey, setProblemKey] = useState(0);
 
   // Use ref to track current difficulty without triggering useEffect
@@ -456,17 +454,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   // Generate problem when a template is selected or problemKey changes
   React.useEffect(() => {
     if (activeTemplate) {
-      console.log('[ChallengeMode] useEffect triggered - generating problem', {
-        templateId: activeTemplate.id,
-        difficulty: currentDifficultyRef.current,
-        problemKey,
-      });
       const problem = generateProblem(activeTemplate, currentDifficultyRef.current);
-      console.log('[ChallengeMode] Generated problem:', {
-        templateId: problem.template_id,
-        params: problem.params,
-        answer: problem.answer,
-      });
       setGeneratedProblem(problem);
     } else {
       setGeneratedProblem(null);
@@ -550,6 +538,20 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
       // Update adaptive state
       const newAdaptiveState = updateAdaptiveState(adaptiveState, isCorrect);
       setAdaptiveState(newAdaptiveState);
+
+      // Sync session with updated adaptive state
+      if (problemSession) {
+        const topicProgress = newProgress.topics[topicKey];
+        const accuracy = topicProgress && topicProgress.attempts > 0
+          ? topicProgress.correct / topicProgress.attempts
+          : 0;
+        setProblemSession(prev => prev ? {
+          ...prev,
+          streak: topicProgress?.streak ?? 0,
+          accuracy,
+          currentDifficulty: newAdaptiveState.currentDifficulty,
+        } : null);
+      }
 
       if (isCorrect) {
         setResult('correct');
@@ -635,8 +637,6 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   };
 
   const handleNextChallenge = () => {
-    console.log('[ChallengeMode] handleNextChallenge called');
-
     // If we have an active template and we're in a topic, select next template adaptively
     if (activeTemplate && selectedTopic && selectedCategory) {
       const [subjectKey, topicKey] = selectedTopic.split('/');
@@ -648,20 +648,25 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
       const availableTemplates = topic.templates;
 
       if (availableTemplates.length > 0) {
-        // Use adaptive engine to select next template
-        const nextTemplate = selectTemplate(availableTemplates, adaptiveState.currentDifficulty) ?? activeTemplate;
+        // Initialize or update problem session
+        const currentSession = problemSession || createProblemSession(topicKey, adaptiveState.currentDifficulty);
+        const updatedSession: ProblemSession = {
+          ...currentSession,
+          topic: topicKey,
+          currentDifficulty: adaptiveState.currentDifficulty,
+        };
+
+        // Use problem selector to select next template
+        const nextTemplate = selectTemplateFromSession(availableTemplates, updatedSession) ?? activeTemplate;
 
         // Guard: ensure we have a valid template
         if (!nextTemplate) {
-          console.error('[ChallengeMode] No valid template available');
           return;
         }
 
-        console.log('[ChallengeMode] Next template selected:', {
-          currentTemplateId: activeTemplate.id,
-          nextTemplateId: nextTemplate.id,
-          templateChanged: nextTemplate !== activeTemplate,
-        });
+        // Update session with selected template
+        const newSession = updateSessionAfterSelection(updatedSession, nextTemplate.id);
+        setProblemSession(newSession);
 
         // Update template only if it changed
         if (nextTemplate !== activeTemplate) {
@@ -669,11 +674,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         }
 
         // Increment problemKey to force regeneration via useEffect
-        // This ensures a new problem is generated even if template and difficulty stay the same
-        setProblemKey(k => {
-          console.log('[ChallengeMode] Incrementing problemKey:', k, '->', k + 1);
-          return k + 1;
-        });
+        setProblemKey(k => k + 1);
 
         setUserAnswer('');
         setSelectedSign(null);
@@ -708,6 +709,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
       setGeneratedProblem(null);
       // Reset adaptive state when leaving a challenge
       setAdaptiveState(createAdaptiveState());
+      setProblemSession(null);
     } else if (selectedTopic) {
       setSelectedTopic(null);
     } else if (selectedCategory) {

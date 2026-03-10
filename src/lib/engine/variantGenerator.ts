@@ -107,12 +107,6 @@ function getDifficultyConfig(template: ProblemTemplate, difficulty: 1 | 2 | 3 | 
  * Generate a problem from a template
  */
 export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3 | 4 = 1): GeneratedProblem {
-    console.log('[generateProblem] Called with:', {
-        templateId: template.id,
-        difficulty,
-        timestamp: Date.now(),
-    });
-
     const config = getDifficultyConfig(template, difficulty);
 
     // Validate required fields
@@ -133,13 +127,6 @@ export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3
 
     // Calculate answer
     const answer = evaluateFormula(config.answer_formula, params);
-
-    console.log('[generateProblem] Generated:', {
-        templateId: template.id,
-        params,
-        answer,
-        question: question.substring(0, 50) + '...',
-    });
 
     // Generate hint if config has one
     let hint: string | undefined;
