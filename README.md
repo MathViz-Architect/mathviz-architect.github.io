@@ -70,10 +70,10 @@
 
 Полноценная адаптивная система обучения на основе шаблонов — один шаблон генерирует сотни уникальных задач.
 
-### Архитектура (7 слоёв)
+### Архитектура (8 слоёв)
 
 ```
-Curriculum → TopicGraph → ProblemTemplate → VariantGenerator → SolutionEngine → AssessmentEngine → AdaptiveEngine
+Curriculum → TopicGraph → ProblemSelector → ProblemTemplate → VariantGenerator → SolutionEngine → AssessmentEngine → AdaptiveEngine
 ```
 
 **Ключевые файлы:**
@@ -83,6 +83,7 @@ Curriculum → TopicGraph → ProblemTemplate → VariantGenerator → SolutionE
 | `src/lib/types.ts` | Типы `ProblemTemplate`, `DifficultyConfig`, `GeneratedProblem`, `SolutionStep`, `ParameterDef` |
 | `src/lib/curriculum.ts` | Структура учебной программы: классы, предметы, темы |
 | `src/lib/topicGraph.ts` | Граф зависимостей между темами (prerequisites) |
+| `src/lib/problemSelector.ts` | Выбор шаблона с учётом истории сессии (`ProblemSession`) |
 | `src/lib/templateEngine.ts` | Facade-реэкспорт (backward compatibility) |
 | `src/lib/engine/expressionParser.ts` | CSP-safe парсер выражений |
 | `src/lib/engine/variantGenerator.ts` | Генерация параметров и вариантов задач |
@@ -101,7 +102,7 @@ Curriculum → TopicGraph → ProblemTemplate → VariantGenerator → SolutionE
 ```
 Topic
  ↓
-Выбор шаблона задачи
+ProblemSelector (учитывает сессию, избегает повторов)
  ↓
 Генерация варианта (VariantGenerator)
  ↓
@@ -113,7 +114,7 @@ Topic
  ↓
 Обновление сложности (AdaptiveEngine)
  ↓
-Обновление mastery
+Обновление mastery + ProblemSession
  ↓
 Следующая задача
 ```
@@ -191,6 +192,39 @@ interface ProblemTemplate {
 ```
 
 `variantGenerator` автоматически выбирает ближайший доступный уровень сложности если запрошенный отсутствует (fallback вниз, потом вверх).
+
+---
+
+### 📦 Структура сгенерированной задачи
+
+```typescript
+interface GeneratedProblem {
+  id: string                          // уникальный ID экземпляра
+  template_id: string                 // ссылка на шаблон
+  params: Record<string, number | string>  // подставленные параметры
+  question: string                    // текст задачи с подставленными значениями
+  answer: number | string             // правильный ответ
+  answer_type: AnswerType             // тип ответа
+  hint?: string                       // подсказка с подставленными значениями
+  solution?: SolutionStep[]           // пошаговое решение
+}
+```
+
+---
+
+### 🎯 ProblemSession (сессия пользователя)
+
+```typescript
+interface ProblemSession {
+  topic: string             // текущая тема
+  currentDifficulty: number // текущий уровень сложности
+  streak: number            // серия правильных ответов
+  recentTemplateIds: string[] // последние 5 шаблонов (для избежания повторов)
+  accuracy: number          // точность за последние 10 задач
+}
+```
+
+`ProblemSelector` использует сессию чтобы не повторять недавно показанные шаблоны и выбирать шаблон подходящей сложности.
 
 ---
 
@@ -955,7 +989,8 @@ pnpm run electron
 - Иерархическая навигация: 5 классов (5–11), предметы, темы с пометкой «В разработке»
 - 30+ шаблонов задач для 5 класса (алгебра, геометрия, логика)
 - Типы задач: numeric, comparison, text; 4 уровня сложности
-- **[v2.0.0]** Архитектура уровня Khan Academy — 7 слоёв
+- **[v2.0.0]** Архитектура уровня Khan Academy — 8 слоёв
+- **[v2.0.0]** `problemSelector.ts` — выбор шаблона с учётом `ProblemSession` (история, избегание повторов)
 - **[v2.0.0]** `curriculum.ts` — централизованная структура учебной программы
 - **[v2.0.0]** `topicGraph.ts` — граф зависимостей тем с мягкими prerequisites
 - **[v2.0.0]** `adaptiveEngine.ts` — адаптивная сложность по 4 правилам
