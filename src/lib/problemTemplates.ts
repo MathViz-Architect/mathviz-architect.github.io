@@ -621,6 +621,7 @@ export const problemTemplates: ProblemTemplate[] = [
                     d: { type: 'int', min: 5, max: 12 },
                     a: { type: 'int', min: 1, max: 8 },
                     b: { type: 'int', min: 1, max: 8 },
+                    sum: { type: 'expression', value: 'a + b' },
                 },
                 constraints: ['a < d', 'b < d', 'a + b < d'],
                 answer_formula: '(a + b) / d',
@@ -628,7 +629,7 @@ export const problemTemplates: ProblemTemplate[] = [
                 hint: 'Сложите числители, знаменатель оставьте тем же: ({a} + {b})/{d}',
                 solution: [
                     { explanation: 'Складываем дроби с одинаковым знаменателем:', expression: '{a}/{d} + {b}/{d} = ({a} + {b})/{d}' },
-                    { explanation: 'Вычисляем:', expression: '{a + b}/{d} = {answer}' },
+                    { explanation: 'Вычисляем:', expression: '{sum}/{d} = {answer}' },
                 ],
                 common_mistakes: [
                     { pattern: 'a + b', feedback: 'При сложении дробей с одинаковым знаменателем складываются только числители, знаменатель остаётся прежним' },
@@ -732,6 +733,8 @@ export const problemTemplates: ProblemTemplate[] = [
                 parameters: {
                     m: { type: 'int', min: 1, max: 3 },
                     n: { type: 'int', min: 2, max: 4 },
+                    sum: { type: 'expression', value: 'm + n' },
+                    x: { type: 'expression', value: '180 / (m + n)' },
                 },
                 constraints: ['m < n', 'm + n <= 6'],
                 answer_formula: '180 * m / (m + n)',
@@ -739,9 +742,9 @@ export const problemTemplates: ProblemTemplate[] = [
                 solution: [
                     { explanation: 'Пусть углы равны {m}x и {n}x' },
                     { explanation: 'Их сумма:', expression: '{m}x + {n}x = 180°' },
-                    { explanation: 'Упрощаем:', expression: '{m + n}x = 180°' },
-                    { explanation: 'Находим x:', expression: 'x = 180° ÷ {m + n} = {180 / (m + n)}°' },
-                    { explanation: 'Меньший угол:', expression: '{m}x = {m} × {180 / (m + n)}° = {answer}°' },
+                    { explanation: 'Упрощаем:', expression: '{sum}x = 180°' },
+                    { explanation: 'Находим x:', expression: 'x = 180° ÷ {sum} = {x}°' },
+                    { explanation: 'Меньший угол:', expression: '{m}x = {m} × {x}° = {answer}°' },
                 ],
             },
         },
@@ -838,12 +841,13 @@ export const problemTemplates: ProblemTemplate[] = [
                     quantity: { type: 'int', min: 2, max: 5 },
                     extra: { type: 'int', min: 10, max: 30 },
                     paid: { type: 'expression', value: 'price * quantity + extra' },
+                    cost: { type: 'expression', value: 'price * quantity' },
                 },
                 answer_formula: 'extra',
                 hint: 'Сначала найдите стоимость покупки, затем вычтите из {paid}',
                 solution: [
-                    { explanation: 'Стоимость покупки:', expression: '{price} × {quantity} = {price * quantity} руб.' },
-                    { explanation: 'Сдача:', expression: '{paid} - {price * quantity} = {answer} руб.' },
+                    { explanation: 'Стоимость покупки:', expression: '{price} × {quantity} = {cost} руб.' },
+                    { explanation: 'Сдача:', expression: '{paid} - {cost} = {answer} руб.' },
                 ],
                 common_mistakes: [
                     { pattern: 'paid - price', feedback: 'Нужно вычесть стоимость всех ручек, а не одной' },
@@ -962,6 +966,426 @@ export const problemTemplates: ProblemTemplate[] = [
                 common_mistakes: [
                     { pattern: 'part / n', feedback: 'Нужно умножить на {n}, а не делить' },
                 ],
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Fractions Subtraction =====
+    {
+        id: 'grade5-fractions-subtract',
+        class: 5,
+        subject: 'algebra',
+        section: 'Обыкновенные дроби',
+        topic: 'fractionsIntro',
+        topic_title: 'Вычитание дробей с одинаковым знаменателем',
+        problemType: 'numeric',
+        skills: ['fraction_addition', 'fraction_of_number'],
+        difficulties: {
+            1: {
+                template: 'Вычислите: {a}/{d} − {b}/{d} = ?',
+                parameters: {
+                    d: { type: 'int', min: 4, max: 10 },
+                    a: { type: 'int', min: 2, max: 9 },
+                    b: { type: 'int', min: 1, max: 8 },
+                },
+                constraints: ['a < d', 'b < d', 'a > b'],
+                answer_formula: '(a - b) / d',
+                answer_type: 'fraction',
+                hint: 'Вычитая дроби с одинаковым знаменателем, вычитайте числители, знаменатель оставьте тем же: ({a} − {b})/{d}',
+                common_mistakes: [
+                    {
+                        pattern: 'a - b',
+                        feedback:
+                            'При вычитании дробей с одинаковым знаменателем вычитаются только числители, знаменатель остаётся прежним.',
+                    },
+                ],
+            },
+            2: {
+                template: 'Вычислите: {a}/{d} − {b}/{d} = ?',
+                parameters: {
+                    d: { type: 'int', min: 5, max: 12 },
+                    a: { type: 'int', min: 3, max: 10 },
+                    b: { type: 'int', min: 1, max: 9 },
+                    diff: { type: 'expression', value: 'a - b' },
+                },
+                constraints: ['a < d', 'b < d', 'a > b'],
+                answer_formula: '(a - b) / d',
+                answer_type: 'fraction',
+                hint: 'Вычитая дроби с одинаковым знаменателем, вычитайте числители, знаменатель оставьте тем же.',
+                solution: [
+                    {
+                        explanation: 'Вычитаем дроби с одинаковым знаменателем:',
+                        expression: '{a}/{d} − {b}/{d} = ({a} − {b})/{d}',
+                    },
+                    { explanation: 'Вычисляем:', expression: '{diff}/{d} = {answer}' },
+                ],
+                common_mistakes: [
+                    {
+                        pattern: 'a / b',
+                        feedback: 'Знаменатель не меняется, делить числитель на числитель не нужно.',
+                    },
+                ],
+            },
+            3: {
+                template: 'У Кати было {a}/{d} пирога. Она съела {b}/{d} пирога. Сколько пирога осталось?',
+                parameters: {
+                    d: { type: 'int', min: 4, max: 10 },
+                    a: { type: 'int', min: 3, max: 9 },
+                    b: { type: 'int', min: 1, max: 6 },
+                },
+                constraints: ['a < d', 'b < d', 'a > b'],
+                answer_formula: '(a - b) / d',
+                answer_type: 'fraction',
+                hint: 'Чтобы узнать, сколько осталось, вычтите съеденную часть из имеющейся: {a}/{d} − {b}/{d}.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Mixed Numbers =====
+    {
+        id: 'grade5-fractions-mixed',
+        class: 5,
+        subject: 'algebra',
+        section: 'Обыкновенные дроби',
+        topic: 'fractionsIntro',
+        topic_title: 'Смешанные числа',
+        problemType: 'numeric',
+        skills: ['fraction_of_number', 'fraction_addition'],
+        difficulties: {
+            1: {
+                template: 'Запишите смешанное число {whole} {num}/{den} в виде неправильной дроби.',
+                parameters: {
+                    whole: { type: 'int', min: 1, max: 5 },
+                    den: { type: 'choice', values: [2, 3, 4, 5, 6] },
+                    num: { type: 'int', min: 1, max: 5 },
+                },
+                constraints: ['num < den'],
+                answer_formula: '(whole * den + num) / den',
+                answer_type: 'fraction',
+                hint: 'Умножьте целую часть на знаменатель и прибавьте числитель: ({whole} × {den} + {num})/{den}.',
+                common_mistakes: [
+                    {
+                        pattern: 'whole + num / den',
+                        feedback:
+                            'Так вы записываете смешанное число, а не неправильную дробь. Нужно сначала умножить целую часть на знаменатель и прибавить числитель.',
+                    },
+                ],
+            },
+            2: {
+                template:
+                    'Неправильная дробь {imp}/{den} записана в виде смешанного числа. Сколько в нём целых частей?',
+                parameters: {
+                    den: { type: 'choice', values: [2, 3, 4, 5, 6] },
+                    whole: { type: 'int', min: 1, max: 5 },
+                    extra: { type: 'int', min: 1, max: 5 },
+                    imp: { type: 'expression', value: 'whole * den + extra' },
+                },
+                constraints: ['extra < den'],
+                answer_formula: 'whole',
+                hint: 'Целых частей столько, сколько раз знаменатель целиком содержится в числителе: ⌊{imp} ÷ {den}⌋.',
+            },
+            3: {
+                template:
+                    'Неправильная дробь {imp}/{den} записана в виде смешанного числа. Чему равен числитель дробной части?',
+                parameters: {
+                    den: { type: 'choice', values: [2, 3, 4, 5, 6] },
+                    whole: { type: 'int', min: 1, max: 5 },
+                    extra: { type: 'int', min: 1, max: 5 },
+                    imp: { type: 'expression', value: 'whole * den + extra' },
+                },
+                constraints: ['extra < den'],
+                answer_formula: 'extra',
+                hint: 'Остаток от деления {imp} на {den} — это числитель дробной части.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Divisibility (3,5,9,10) =====
+    {
+        id: 'grade5-divisibility',
+        class: 5,
+        subject: 'algebra',
+        section: 'Делимость',
+        topic: 'divisors',
+        topic_title: 'Делимость на 3, 5, 9, 10',
+        problemType: 'numeric',
+        skills: ['divisibility'],
+        difficulties: {
+            1: {
+                template: 'Число {n} делится на 3 без остатка? Ответьте 1 (да) или 0 (нет).',
+                parameters: {
+                    n: { type: 'choice', values: [12, 13, 15, 16, 21, 22, 27, 28] },
+                },
+                answer_formula:
+                    '(n === 12 || n === 15 || n === 21 || n === 27) ? 1 : 0',
+                hint: 'Число делится на 3, если сумма его цифр делится на 3.',
+            },
+            2: {
+                template: 'Число {n} делится на 5 без остатка? Ответьте 1 (да) или 0 (нет).',
+                parameters: {
+                    n: { type: 'choice', values: [20, 21, 25, 26, 30, 31, 37, 38] },
+                },
+                answer_formula:
+                    '(n === 20 || n === 25 || n === 30) ? 1 : 0',
+                hint: 'Число делится на 5, если оканчивается на 0 или 5.',
+            },
+            3: {
+                template:
+                    'Число {n} делится на одно из чисел: 9 или 10. На какое именно? Ответьте 9 или 10.',
+                parameters: {
+                    n: { type: 'choice', values: [90, 100, 180, 270] },
+                },
+                answer_formula:
+                    '(n === 90 || n === 180 || n === 270) ? 9 : 10',
+                hint: 'На 10 делятся числа, оканчивающиеся на 0. На 9 — если сумма цифр делится на 9.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Prime Numbers =====
+    {
+        id: 'grade5-prime',
+        class: 5,
+        subject: 'algebra',
+        section: 'Простые и составные числа',
+        topic: 'primeNumbers',
+        topic_title: 'Простые и составные числа',
+        problemType: 'numeric',
+        skills: ['prime_factorization', 'number_theory', 'divisibility'],
+        difficulties: {
+            1: {
+                template:
+                    'Является ли число {n} простым? Ответьте 1 (да) или 0 (нет).',
+                parameters: {
+                    n: { type: 'choice', values: [2, 3, 4, 5, 6, 7, 9, 11, 12, 13] },
+                },
+                answer_formula:
+                    '(n === 2 || n === 3 || n === 5 || n === 7 || n === 11 || n === 13) ? 1 : 0',
+                hint: 'Простое число имеет ровно два делителя: 1 и само число.',
+                common_mistakes: [
+                    {
+                        pattern: '0',
+                        feedback:
+                            'Проверь, действительно ли у числа больше двух делителей. Если делителя только 1 и само число — оно простое (ответ 1).',
+                    },
+                ],
+            },
+            2: {
+                template:
+                    'Найдите наименьший простой делитель числа {n}.',
+                parameters: {
+                    p: { type: 'choice', values: [2, 3, 5] },
+                    q: { type: 'choice', values: [3, 5, 7] },
+                    n: { type: 'expression', value: 'p * q' },
+                },
+                constraints: ['p <= q'],
+                answer_formula: 'p',
+                hint: 'Попробуйте по очереди делить число на 2, 3, 5, 7...',
+            },
+            3: {
+                template:
+                    'Сколько различных простых делителей имеет число {n}?',
+                parameters: {
+                    p: { type: 'choice', values: [2, 3] },
+                    q: { type: 'choice', values: [3, 5] },
+                    r: { type: 'choice', values: [5, 7] },
+                    n: { type: 'expression', value: 'p * q * r' },
+                },
+                answer_formula:
+                    '(p === q && q === r) ? 1 : ((p === q || p === r || q === r) ? 2 : 3)',
+                hint: 'Посмотрите, какие простые числа входят в разложение и не повторяйте одинаковые.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Percentages =====
+    {
+        id: 'grade5-percentage',
+        class: 5,
+        subject: 'algebra',
+        section: 'Текстовые задачи',
+        topic: 'percentages',
+        topic_title: 'Проценты',
+        problemType: 'numeric',
+        skills: ['percentage_concept', 'fraction_of_number', 'multiplication'],
+        difficulties: {
+            1: {
+                template: 'Найдите {p}% от числа {n}.',
+                parameters: {
+                    p: { type: 'choice', values: [10, 20, 25, 50] },
+                    k: { type: 'int', min: 2, max: 10 },
+                    n: { type: 'expression', value: '100 * k' },
+                },
+                answer_formula: '(n * p) / 100',
+                hint: '{p}% от числа — это {p} ÷ 100 части от него: умножьте {n} на {p} и разделите на 100.',
+                common_mistakes: [
+                    {
+                        pattern: 'n * p',
+                        feedback:
+                            'Вы умножили число на проценты, но не разделили на 100. Не забывайте, что 1% = 1/100.',
+                    },
+                ],
+            },
+            2: {
+                template:
+                    'Число {a} составляет {p}% от некоторого числа. Найдите это число.',
+                parameters: {
+                    p: { type: 'choice', values: [10, 20, 25, 50] },
+                    k: { type: 'int', min: 2, max: 10 },
+                    n: { type: 'expression', value: '100 * k' },
+                    a: { type: 'expression', value: '(n * p) / 100' },
+                },
+                answer_formula: 'n',
+                hint: 'Если {a} — это {p}%, то всё число в {100 / p} раз больше.',
+            },
+            3: {
+                template:
+                    'Сколько процентов составляет число {a} от числа {b}? Ответ дайте целым числом.',
+                parameters: {
+                    k: { type: 'choice', values: [10, 20, 25, 50] },
+                    b: { type: 'int', min: 2, max: 10 },
+                    a: { type: 'expression', value: 'b * k / 100' },
+                },
+                answer_formula: 'k',
+                hint: 'Используйте формулу: процент = {a} ÷ {b} × 100%.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Time Units =====
+    {
+        id: 'grade5-time',
+        class: 5,
+        subject: 'algebra',
+        section: 'Величины и единицы измерения',
+        topic: 'timeUnits',
+        topic_title: 'Единицы времени',
+        problemType: 'numeric',
+        skills: ['multiplication', 'division'],
+        difficulties: {
+            1: {
+                template: 'Сколько минут в {h} часах?',
+                parameters: {
+                    h: { type: 'int', min: 1, max: 5 },
+                },
+                answer_formula: 'h * 60',
+                hint: 'В одном часе 60 минут. Умножьте число часов на 60.',
+            },
+            2: {
+                template: 'Сколько часов в {m} минутах?',
+                parameters: {
+                    h: { type: 'int', min: 1, max: 5 },
+                    m: { type: 'expression', value: 'h * 60' },
+                },
+                answer_formula: 'h',
+                hint: 'Чтобы перевести минуты в часы, разделите на 60.',
+            },
+            3: {
+                template:
+                    'Сколько минут в {h} часах и {s} секундах, если {s} секунд = {minFromSeconds} минут?',
+                parameters: {
+                    h: { type: 'int', min: 1, max: 3 },
+                    minFromSeconds: { type: 'choice', values: [1, 2, 3] },
+                    s: { type: 'expression', value: 'minFromSeconds * 60' },
+                },
+                answer_formula: 'h * 60 + minFromSeconds',
+                hint: 'Переведите часы в минуты и прибавьте минуты, полученные из секунд.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Measure Units =====
+    {
+        id: 'grade5-units',
+        class: 5,
+        subject: 'algebra',
+        section: 'Величины и единицы измерения',
+        topic: 'measureUnits',
+        topic_title: 'Единицы длины, массы и объёма',
+        problemType: 'numeric',
+        skills: ['multiplication', 'division'],
+        difficulties: {
+            1: {
+                template: 'Сколько метров в {km} километрах?',
+                parameters: {
+                    km: { type: 'int', min: 1, max: 9 },
+                },
+                answer_formula: 'km * 1000',
+                hint: 'В одном километре 1000 метров. Умножьте число километров на 1000.',
+            },
+            2: {
+                template: 'Сколько километров в {m} метрах?',
+                parameters: {
+                    km: { type: 'int', min: 1, max: 9 },
+                    m: { type: 'expression', value: 'km * 1000' },
+                },
+                answer_formula: 'km',
+                hint: 'Чтобы перевести метры в километры, разделите на 1000.',
+            },
+            3: {
+                template:
+                    'Сколько граммов в {kg} килограммах и {g} граммах?',
+                parameters: {
+                    kg: { type: 'int', min: 1, max: 9 },
+                    g: { type: 'choice', values: [100, 200, 250, 500] },
+                },
+                answer_formula: 'kg * 1000 + g',
+                hint: '1 кг = 1000 г. Переведите килограммы в граммы и прибавьте {g}.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Average =====
+    {
+        id: 'grade5-average',
+        class: 5,
+        subject: 'algebra',
+        section: 'Текстовые задачи',
+        topic: 'average',
+        topic_title: 'Среднее арифметическое',
+        problemType: 'numeric',
+        skills: ['addition', 'division'],
+        difficulties: {
+            1: {
+                template:
+                    'Найдите среднее арифметическое чисел {a} и {b}.',
+                parameters: {
+                    avg: { type: 'int', min: 5, max: 20 },
+                    d: { type: 'int', min: 1, max: 5 },
+                    a: { type: 'expression', value: 'avg - d' },
+                    b: { type: 'expression', value: 'avg + d' },
+                },
+                answer_formula: 'avg',
+                hint: 'Сложите числа и разделите сумму на 2.',
+                solution: [
+                    { explanation: 'Среднее арифметическое двух чисел:', expression: '(a + b) ÷ 2' },
+                    { explanation: 'Подставляем значения:', expression: '({a} + {b}) ÷ 2 = {answer}' },
+                ],
+            },
+            2: {
+                template:
+                    'Найдите среднее арифметическое чисел {a}, {b} и {c}.',
+                parameters: {
+                    avg: { type: 'int', min: 5, max: 20 },
+                    a: { type: 'int', min: 1, max: 15 },
+                    b: { type: 'int', min: 1, max: 15 },
+                    c: { type: 'expression', value: '3 * avg - a - b' },
+                },
+                answer_formula: 'avg',
+                hint: 'Сложите все три числа и разделите сумму на 3.',
+            },
+            3: {
+                template:
+                    'Среднее арифметическое чисел {a}, {b}, {c} и {d} равно {avg}. Найдите число {d}.',
+                parameters: {
+                    avg: { type: 'int', min: 5, max: 20 },
+                    a: { type: 'int', min: 1, max: 15 },
+                    b: { type: 'int', min: 1, max: 15 },
+                    c: { type: 'int', min: 1, max: 15 },
+                    d: { type: 'expression', value: '4 * avg - a - b - c' },
+                },
+                answer_formula: 'd',
+                hint: 'Сумма всех четырёх чисел = среднее × 4. Найдите сумму и вычтите известные три числа.',
             },
         },
     },

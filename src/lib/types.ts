@@ -241,6 +241,7 @@ export interface ProblemTemplate {
 export interface GeneratedProblem {
   id: string;
   template_id: string;
+  seed: number;              // для воспроизводимости задачи
   params: Record<string, number | string>;
   question: string;
   answer: number | string;

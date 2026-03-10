@@ -36,6 +36,11 @@ export const curriculum: CurriculumGrade[] = [
                     { id: 'priceQuantity', title: 'Цена и стоимость' },
                     { id: 'speedTimeDistance', title: 'Скорость, время, расстояние' },
                     { id: 'parts', title: 'Задачи на части' },
+                    { id: 'percentages', title: 'Проценты' },
+                    { id: 'timeUnits', title: 'Единицы времени' },
+                    { id: 'measureUnits', title: 'Единицы измерения' },
+                    { id: 'average', title: 'Среднее арифметическое' },
+                    { id: 'primeNumbers', title: 'Простые числа' },
                 ],
             },
             {

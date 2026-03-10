@@ -183,7 +183,7 @@ interface ProblemTemplate {
   section: string
   topic: string
   topic_title: string
-  problemType: 'numeric' | 'comparison' | 'text'
+  problemType: 'numeric' | 'comparison' | 'text' | 'magicSquare'
 
   difficulties: Partial<Record<1 | 2 | 3 | 4, DifficultyConfig>>
 
@@ -199,8 +199,9 @@ interface ProblemTemplate {
 
 ```typescript
 interface GeneratedProblem {
-  id: string                          // уникальный ID экземпляра
+  id: string                          // уникальный ID экземпляра (`${templateId}-${seed}`)
   template_id: string                 // ссылка на шаблон
+  seed: number                        // seed для воспроизводимости задачи
   params: Record<string, number | string>  // подставленные параметры
   question: string                    // текст задачи с подставленными значениями
   answer: number | string             // правильный ответ
@@ -209,6 +210,8 @@ interface GeneratedProblem {
   solution?: SolutionStep[]           // пошаговое решение
 }
 ```
+
+> 💡 **Воспроизводимость:** `generateProblem(template, difficulty, seed)` принимает опциональный `seed`. Если не передан — генерируется автоматически. По `seed` можно точно восстановить любую задачу для дебага или аналитики.
 
 ---
 
@@ -1004,6 +1007,11 @@ pnpm run electron
 - **[v2.0.0]** 19 шаблонов для 5 класса: арифметика (5), дроби (2), делимость (1), геометрия (5), текстовые задачи (3), логика (3)
 - **[v2.0.0]** `skills` mapping — каждый шаблон помечен навыками которые он тренирует (для будущей аналитики прогресса)
 - **[v2.0.0]** Answer beauty validation — автоматическая проверка что ответы удобны для ввода (не более 2 знаков после запятой, не отрицательные, знаменатель дробей ≤ 12)
+- **[v2.1.0]** `seed` в `GeneratedProblem` — воспроизводимая генерация (mulberry32 PRNG), `id = ${templateId}-${seed}`
+- **[v2.1.0]** `ProblemSession` — сессия пользователя с историей шаблонов, стриком и accuracy; синхронизируется с `AdaptiveState`
+- **[v2.1.0]** Исправлена валидация дробей: сравнение через НОД, tolerance увеличен для периодических дробей
+- **[v2.1.0]** `grade5-magic` — полный магический квадрат 3×3 с визуальным рендером (`problemType: 'magicSquare'`), 3 уровня сложности
+- **[v2.1.0]** UX: кнопка «Проверить» скрыта после правильного ответа, задизейблена при пустом вводе; при неправильном ответе остаётся активной
 
 ### 🚧 В разработке
 

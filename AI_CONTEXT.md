@@ -1,61 +1,42 @@
-# AI Development Context
+# AI Context for Cursor
 
-Project: MathViz Architect
+General behavior:
 
-MathViz Architect is a desktop educational application for creating mathematical visualizations, diagrams, and teaching materials for students in grades 5–11.
+* Respond primarily in Russian.
+* Keep answers concise by default.
+* Provide detailed explanations only when explicitly requested.
 
-Tech stack:
-- React 18
-- TypeScript
-- Vite
-- TailwindCSS
-- Electron
+Development principles:
 
-Architecture principles:
+* Make the smallest possible change required to solve the task.
+* Do NOT perform large refactors unless explicitly requested.
+* Preserve the existing architecture and project structure.
+* Avoid introducing new dependencies unless clearly necessary.
 
-1. Minimal changes
-Always modify the smallest amount of code necessary to fix a bug or implement a feature.
+Token efficiency rules:
 
-2. No unexpected refactors
-Do not restructure components, rename files, or change architecture unless explicitly requested.
+* Inspect only files directly related to the task.
+* Do NOT scan the entire repository.
+* Avoid reading unrelated directories.
+* Prefer targeted file inspection instead of global search.
 
-3. Preserve project structure
-Respect the existing folder structure and component organization.
+Code change rules:
 
-4. Single responsibility
-Components should remain focused and simple.
+* Always reference the exact file where the change should be made.
+* Modify the minimal number of lines possible.
+* Do not rewrite entire components if a small patch is enough.
+* Avoid repeating unchanged code.
 
-5. Do not introduce new dependencies unless clearly necessary.
+Output format:
 
-Canvas system rules:
+* Provide only the required code modifications.
+* Include a short explanation if needed.
+* Prefer production-ready TypeScript + React patterns.
 
-- Canvas rendering is handled in Canvas.tsx
-- Object creation logic lives in ObjectCreator.tsx
-- Types are defined in src/lib/types.ts
-- Shared utilities are in src/lib/utils.ts
-- Global state is handled in hooks/useAppState.ts
+Assumptions:
 
-Interactive modules:
+* Assume this is a TypeScript + React project unless stated otherwise.
 
-Located in:
-src/components/interactive/
+Goal:
 
-Each module should:
-- keep logic self-contained
-- avoid affecting other modules
-- render clean SVG visuals
-- maintain good performance for animations
-
-Development guidelines:
-
-- Prefer small targeted fixes
-- Avoid rewriting entire components
-- Maintain existing coding style
-- Use TypeScript types consistently
-
-Debugging approach:
-
-1. Identify the minimal location of the bug.
-2. Fix the logic locally.
-3. Avoid side effects in unrelated modules.
-4. Preserve UX behavior.
+Implement the smallest safe change that solves the task while minimizing repository scanning and token usage.

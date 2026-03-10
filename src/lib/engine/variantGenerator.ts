@@ -6,22 +6,37 @@
 import { ProblemTemplate, GeneratedProblem, SolutionStep, DifficultyConfig } from '../types';
 import { evaluateFormula } from './expressionParser';
 
-// Helper to generate random integer in range [min, max]
-const randomInt = (min: number, max: number): number =>
-    Math.floor(Math.random() * (max - min + 1)) + min;
+/**
+ * Seeded pseudo-random number generator (mulberry32)
+ * Returns a function that generates deterministic floats in [0, 1)
+ */
+function createSeededRng(seed: number): () => number {
+    let s = seed >>> 0;
+    return () => {
+        s += 0x6d2b79f5;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+// Helper to generate random integer in range [min, max] using provided rng
+const seededInt = (rng: () => number, min: number, max: number): number =>
+    Math.floor(rng() * (max - min + 1)) + min;
+
 
 /**
  * Generate parameter values for a difficulty config
  */
-function generateParamsForConfig(config: DifficultyConfig): Record<string, number | string> {
+function generateParamsForConfig(config: DifficultyConfig, rng: () => number): Record<string, number | string> {
     const params: Record<string, number | string> = {};
 
     // Pass 1: generate int/choice params
     for (const [key, def] of Object.entries(config.parameters)) {
         if (def.type === 'int') {
-            params[key] = randomInt(def.min, def.max);
+            params[key] = seededInt(rng, def.min, def.max);
         } else if (def.type === 'choice') {
-            params[key] = def.values[randomInt(0, def.values.length - 1)];
+            params[key] = def.values[seededInt(rng, 0, def.values.length - 1)];
         }
     }
     // Pass 2: evaluate expressions (all int/choice values are now available)
@@ -59,9 +74,9 @@ function generateParamsForConfig(config: DifficultyConfig): Record<string, numbe
             // Regenerate params (two-pass: int/choice first, then expressions)
             for (const [key, def] of Object.entries(config.parameters)) {
                 if (def.type === 'int') {
-                    params[key] = randomInt(def.min, def.max);
+                    params[key] = seededInt(rng, def.min, def.max);
                 } else if (def.type === 'choice') {
-                    params[key] = def.values[randomInt(0, def.values.length - 1)];
+                    params[key] = def.values[seededInt(rng, 0, def.values.length - 1)];
                 }
             }
             for (const [key, def] of Object.entries(config.parameters)) {
@@ -105,8 +120,11 @@ function getDifficultyConfig(template: ProblemTemplate, difficulty: 1 | 2 | 3 | 
 
 /**
  * Generate a problem from a template
+ * @param seed — optional seed for reproducibility; if omitted, a random seed is generated
  */
-export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3 | 4 = 1): GeneratedProblem {
+export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3 | 4 = 1, seed?: number): GeneratedProblem {
+    const resolvedSeed = seed ?? (Date.now() ^ Math.floor(Math.random() * 0xffffffff));
+    const rng = createSeededRng(resolvedSeed);
     const config = getDifficultyConfig(template, difficulty);
 
     // Validate required fields
@@ -117,7 +135,7 @@ export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3
         throw new Error(`Template ${template.id}: 'answer_formula' field is missing or not a string`);
     }
 
-    const params = generateParamsForConfig(config);
+    const params = generateParamsForConfig(config, rng);
 
     // Substitute parameters in template string
     let question = config.template;
@@ -203,8 +221,9 @@ export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3
     }
 
     return {
-        id: `${template.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${template.id}-${resolvedSeed}`,
         template_id: template.id,
+        seed: resolvedSeed,
         params,
         question,
         answer,

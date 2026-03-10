@@ -19,7 +19,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:templates": "tsx scripts/testTemplates.ts"
+    "test:templates": "tsx scripts/testTemplates.ts",
+    "preview:templates": "tsx scripts/previewTemplates.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
