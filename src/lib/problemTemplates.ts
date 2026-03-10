@@ -1282,10 +1282,10 @@ export const problemTemplates: ProblemTemplate[] = [
             },
             3: {
                 template:
-                    'Сколько минут в {h} часах и {s} секундах, если {s} секунд = {minFromSeconds} минут?',
+                    'Сколько минут в {h} ч и {s} с? ({s} с = {minFromSeconds} мин)',
                 parameters: {
-                    h: { type: 'int', min: 1, max: 3 },
-                    minFromSeconds: { type: 'choice', values: [1, 2, 3] },
+                    h: { type: 'int', min: 1, max: 5 },
+                    minFromSeconds: { type: 'choice', values: [1, 2, 3, 4, 5] },
                     s: { type: 'expression', value: 'minFromSeconds * 60' },
                 },
                 answer_formula: 'h * 60 + minFromSeconds',
@@ -1306,7 +1306,7 @@ export const problemTemplates: ProblemTemplate[] = [
         skills: ['multiplication', 'division'],
         difficulties: {
             1: {
-                template: 'Сколько метров в {km} километрах?',
+                template: 'Переведите {km} км в метры. Сколько метров?',
                 parameters: {
                     km: { type: 'int', min: 1, max: 9 },
                 },
@@ -1314,7 +1314,7 @@ export const problemTemplates: ProblemTemplate[] = [
                 hint: 'В одном километре 1000 метров. Умножьте число километров на 1000.',
             },
             2: {
-                template: 'Сколько километров в {m} метрах?',
+                template: 'Переведите {m} м в километры. Сколько километров?',
                 parameters: {
                     km: { type: 'int', min: 1, max: 9 },
                     m: { type: 'expression', value: 'km * 1000' },
@@ -1324,7 +1324,7 @@ export const problemTemplates: ProblemTemplate[] = [
             },
             3: {
                 template:
-                    'Сколько граммов в {kg} килограммах и {g} граммах?',
+                    'Переведите {kg} кг {g} г в граммы. Сколько граммов?',
                 parameters: {
                     kg: { type: 'int', min: 1, max: 9 },
                     g: { type: 'choice', values: [100, 200, 250, 500] },
@@ -1376,15 +1376,16 @@ export const problemTemplates: ProblemTemplate[] = [
             },
             3: {
                 template:
-                    'Среднее арифметическое чисел {a}, {b}, {c} и {d} равно {avg}. Найдите число {d}.',
+                    'Среднее арифметическое четырёх чисел равно {avg}. Три из них: {a}, {b} и {c}. Найдите четвёртое число.',
                 parameters: {
-                    avg: { type: 'int', min: 5, max: 20 },
-                    a: { type: 'int', min: 1, max: 15 },
-                    b: { type: 'int', min: 1, max: 15 },
-                    c: { type: 'int', min: 1, max: 15 },
+                    avg: { type: 'int', min: 8, max: 15 },
+                    a: { type: 'int', min: 1, max: 8 },
+                    b: { type: 'int', min: 1, max: 8 },
+                    c: { type: 'int', min: 1, max: 8 },
                     d: { type: 'expression', value: '4 * avg - a - b - c' },
                 },
                 answer_formula: 'd',
+                constraints: ['d >= 1', 'd <= 30'],
                 hint: 'Сумма всех четырёх чисел = среднее × 4. Найдите сумму и вычтите известные три числа.',
             },
         },
