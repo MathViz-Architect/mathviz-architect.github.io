@@ -7979,28 +7979,46 @@ class BatchCommand {
 const generateId = () => {
   return `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
+const cloneObjects = (objects) => JSON.parse(JSON.stringify(objects));
+const createPage = (index) => ({
+  id: generateId(),
+  title: `Страница ${index}`,
+  objects: []
+});
+const firstPage = createPage(1);
 const initialState = {
   mode: "select",
   selectedObjectIds: [],
   objects: [],
   projectPath: null,
   projectName: "Новый проект",
-  isDirty: false
+  isDirty: false,
+  pages: [firstPage],
+  activePageId: firstPage.id
 };
 function useAppState() {
   const [state, setState] = reactExports.useState(initialState);
   const historyRef = reactExports.useRef(new CommandHistory());
   const objectsRef = reactExports.useRef(initialState.objects);
+  const pagesRef = reactExports.useRef(initialState.pages);
+  const activePageIdRef = reactExports.useRef(initialState.activePageId);
+  const pageCounterRef = reactExports.useRef(1);
+  const stateRef = reactExports.useRef(state);
+  stateRef.current = state;
   const setObjects = reactExports.useCallback((objects) => {
     objectsRef.current = objects;
+    const pageId = activePageIdRef.current;
+    const updatedPages = pagesRef.current.map(
+      (p) => p.id === pageId ? { ...p, objects } : p
+    );
+    pagesRef.current = updatedPages;
     setState((prev) => ({
       ...prev,
       objects,
-      isDirty: true
+      isDirty: true,
+      pages: updatedPages
     }));
   }, []);
-  const stateRef = reactExports.useRef(state);
-  stateRef.current = state;
   const updateObject = reactExports.useCallback((id, updates) => {
     const command = new UpdateObjectCommand(objectsRef.current, id, updates, setObjects);
     historyRef.current.execute(command);
@@ -8066,19 +8084,45 @@ function useAppState() {
     return historyRef.current.canRedo();
   }, []);
   const newProject = reactExports.useCallback(() => {
+    pageCounterRef.current = 1;
+    const page = createPage(1);
+    objectsRef.current = [];
+    pagesRef.current = [page];
+    activePageIdRef.current = page.id;
     setState({
       ...initialState,
       projectName: "Новый проект",
-      projectPath: null
+      projectPath: null,
+      pages: [page],
+      activePageId: page.id,
+      objects: []
     });
     historyRef.current.clear();
   }, []);
   const loadProject = reactExports.useCallback((project, path) => {
+    var _a;
+    let pages;
+    let activePageId;
+    if (project.pages && project.pages.length > 0) {
+      pages = project.pages;
+      activePageId = project.activePageId ?? pages[0].id;
+    } else {
+      const page = { ...createPage(1), objects: project.objects ?? [] };
+      pages = [page];
+      activePageId = page.id;
+    }
+    const activeObjects = cloneObjects(((_a = pages.find((p) => p.id === activePageId)) == null ? void 0 : _a.objects) ?? []);
+    objectsRef.current = activeObjects;
+    pagesRef.current = pages;
+    activePageIdRef.current = activePageId;
+    pageCounterRef.current = pages.length;
     setState({
       ...initialState,
-      objects: project.objects,
+      objects: activeObjects,
       projectName: project.name,
-      projectPath: path
+      projectPath: path,
+      pages,
+      activePageId
     });
     historyRef.current.clear();
   }, []);
@@ -8112,6 +8156,64 @@ function useAppState() {
       historyRef.current.execute(batchCommand);
     }
   }, [setObjects]);
+  const addPage = reactExports.useCallback(() => {
+    const savedPages = pagesRef.current.map(
+      (p) => p.id === activePageIdRef.current ? { ...p, objects: cloneObjects(objectsRef.current) } : p
+    );
+    pageCounterRef.current += 1;
+    const newPage = createPage(pageCounterRef.current);
+    const updatedPages = [...savedPages, newPage];
+    objectsRef.current = [];
+    pagesRef.current = updatedPages;
+    activePageIdRef.current = newPage.id;
+    setState((prev) => ({
+      ...prev,
+      pages: updatedPages,
+      activePageId: newPage.id,
+      objects: [],
+      selectedObjectIds: [],
+      isDirty: true
+    }));
+    historyRef.current.clear();
+  }, []);
+  const removePage = reactExports.useCallback((pageId) => {
+    var _a;
+    if (pagesRef.current.length <= 1) return;
+    const newPages = pagesRef.current.filter((p) => p.id !== pageId);
+    const newActiveId = pageId === activePageIdRef.current ? newPages[newPages.length - 1].id : activePageIdRef.current;
+    const newObjects = cloneObjects(((_a = newPages.find((p) => p.id === newActiveId)) == null ? void 0 : _a.objects) ?? []);
+    objectsRef.current = newObjects;
+    pagesRef.current = newPages;
+    activePageIdRef.current = newActiveId;
+    setState((prev) => ({
+      ...prev,
+      pages: newPages,
+      activePageId: newActiveId,
+      objects: newObjects,
+      selectedObjectIds: [],
+      isDirty: true
+    }));
+    historyRef.current.clear();
+  }, []);
+  const switchPage = reactExports.useCallback((pageId) => {
+    var _a;
+    if (pageId === activePageIdRef.current) return;
+    const savedPages = pagesRef.current.map(
+      (p) => p.id === activePageIdRef.current ? { ...p, objects: cloneObjects(objectsRef.current) } : p
+    );
+    const newObjects = cloneObjects(((_a = savedPages.find((p) => p.id === pageId)) == null ? void 0 : _a.objects) ?? []);
+    objectsRef.current = newObjects;
+    pagesRef.current = savedPages;
+    activePageIdRef.current = pageId;
+    setState((prev) => ({
+      ...prev,
+      pages: savedPages,
+      activePageId: pageId,
+      objects: newObjects,
+      selectedObjectIds: []
+    }));
+    historyRef.current.clear();
+  }, []);
   const selectedObjects = state.objects.filter(
     (obj) => state.selectedObjectIds.includes(obj.id)
   );
@@ -8134,7 +8236,10 @@ function useAppState() {
     setProjectName,
     markAsSaved,
     clearCanvas,
-    selectMultiple
+    selectMultiple,
+    addPage,
+    removePage,
+    switchPage
   };
 }
 const EditorContext = reactExports.createContext(null);
@@ -8181,6 +8286,8 @@ function EditorProvider({
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       objects: appState.state.objects,
+      pages: appState.state.pages,
+      activePageId: appState.state.activePageId,
       canvasSize: {
         width: 800,
         height: 600
@@ -8258,7 +8365,9 @@ function EditorProvider({
         id: "autosave",
         name: appState.state.projectName,
         updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        objects: appState.state.objects
+        objects: appState.state.objects,
+        pages: appState.state.pages,
+        activePageId: appState.state.activePageId
       };
       localStorage.setItem("mathviz_autosave", JSON.stringify(project));
     }, 1e3);
@@ -8267,7 +8376,7 @@ function EditorProvider({
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [appState.state.objects, appState.state.projectName]);
+  }, [appState.state.objects, appState.state.pages, appState.state.projectName]);
   reactExports.useEffect(() => {
     var _a;
     if (window.electronAPI) return;
@@ -8302,7 +8411,7 @@ function EditorProvider({
     deleteProjectFromStorage,
     interactiveModuleId,
     setInteractiveModuleId
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/contexts/EditorContext.tsx:219:4", "data-matrix-name": "EditorContext.Provider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/contexts/EditorContext.tsx", "data-component-line": "219", "data-component-file": "EditorContext.tsx", "data-component-name": "EditorContext.Provider", "data-component-content": "%7B%22value%22%3A%7B%22zoom%22%3A%22%5Bvar%3Azoom%5D%22%2C%22showGrid%22%3A%22%5Bvar%3AshowGrid%5D%22%2C%22handleZoomIn%22%3A%22%5Bvar%3AhandleZoomIn%5D%22%2C%22handleZoomOut%22%3A%22%5Bvar%3AhandleZoomOut%5D%22%2C%22handleZoomReset%22%3A%22%5Bvar%3AhandleZoomReset%5D%22%2C%22handleToggleGrid%22%3A%22%5Bvar%3AhandleToggleGrid%5D%22%2C%22handleAddObject%22%3A%22%5Bvar%3AhandleAddObject%5D%22%2C%22handleDeleteObject%22%3A%22%5Bvar%3AhandleDeleteObject%5D%22%2C%22handleSelectTemplate%22%3A%22%5Bvar%3AhandleSelectTemplate%5D%22%2C%22handleToggleVisibility%22%3A%22%5Bvar%3AhandleToggleVisibility%5D%22%2C%22handleToggleLock%22%3A%22%5Bvar%3AhandleToggleLock%5D%22%2C%22saveProjectToStorage%22%3A%22%5Bvar%3AsaveProjectToStorage%5D%22%2C%22getSavedProjects%22%3A%22%5Bvar%3AgetSavedProjects%5D%22%2C%22loadProjectFromStorage%22%3A%22%5Bvar%3AloadProjectFromStorage%5D%22%2C%22deleteProjectFromStorage%22%3A%22%5Bvar%3AdeleteProjectFromStorage%5D%22%2C%22interactiveModuleId%22%3A%22%5Bvar%3AinteractiveModuleId%5D%22%2C%22setInteractiveModuleId%22%3A%22%5Bvar%3AsetInteractiveModuleId%5D%22%7D%7D", children });
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/contexts/EditorContext.tsx:226:4", "data-matrix-name": "EditorContext.Provider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/contexts/EditorContext.tsx", "data-component-line": "226", "data-component-file": "EditorContext.tsx", "data-component-name": "EditorContext.Provider", "data-component-content": "%7B%22value%22%3A%7B%22zoom%22%3A%22%5Bvar%3Azoom%5D%22%2C%22showGrid%22%3A%22%5Bvar%3AshowGrid%5D%22%2C%22handleZoomIn%22%3A%22%5Bvar%3AhandleZoomIn%5D%22%2C%22handleZoomOut%22%3A%22%5Bvar%3AhandleZoomOut%5D%22%2C%22handleZoomReset%22%3A%22%5Bvar%3AhandleZoomReset%5D%22%2C%22handleToggleGrid%22%3A%22%5Bvar%3AhandleToggleGrid%5D%22%2C%22handleAddObject%22%3A%22%5Bvar%3AhandleAddObject%5D%22%2C%22handleDeleteObject%22%3A%22%5Bvar%3AhandleDeleteObject%5D%22%2C%22handleSelectTemplate%22%3A%22%5Bvar%3AhandleSelectTemplate%5D%22%2C%22handleToggleVisibility%22%3A%22%5Bvar%3AhandleToggleVisibility%5D%22%2C%22handleToggleLock%22%3A%22%5Bvar%3AhandleToggleLock%5D%22%2C%22saveProjectToStorage%22%3A%22%5Bvar%3AsaveProjectToStorage%5D%22%2C%22getSavedProjects%22%3A%22%5Bvar%3AgetSavedProjects%5D%22%2C%22loadProjectFromStorage%22%3A%22%5Bvar%3AloadProjectFromStorage%5D%22%2C%22deleteProjectFromStorage%22%3A%22%5Bvar%3AdeleteProjectFromStorage%5D%22%2C%22interactiveModuleId%22%3A%22%5Bvar%3AinteractiveModuleId%5D%22%2C%22setInteractiveModuleId%22%3A%22%5Bvar%3AsetInteractiveModuleId%5D%22%7D%7D", children });
 }
 function useEditorContext() {
   const ctx = reactExports.useContext(EditorContext);
@@ -17324,6 +17433,51 @@ const ExportModal = ({
     ] })
   ] }) });
 };
+function PageSwitcher({
+  pages,
+  activePageId,
+  onSwitch,
+  onAdd,
+  onRemove
+}) {
+  const activeIndex = pages.findIndex((p) => p.id === activePageId);
+  const [inputValue, setInputValue] = reactExports.useState("");
+  const goToPrev = () => {
+    if (activeIndex > 0) onSwitch(pages[activeIndex - 1].id);
+  };
+  const goToNext = () => {
+    if (activeIndex < pages.length - 1) onSwitch(pages[activeIndex + 1].id);
+  };
+  const handleInputKeyDown = (e) => {
+    if (e.key === "Enter") {
+      const num = parseInt(inputValue, 10);
+      if (!isNaN(num) && num >= 1 && num <= pages.length) {
+        onSwitch(pages[num - 1].id);
+      }
+      setInputValue("");
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 px-2 py-1 border-t bg-background shrink-0 h-9", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:35:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "35", "data-component-file": "PageSwitcher.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-1%20px-2%20py-1%20border-t%20bg-background%20shrink-0%20h-9%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "px-1.5 py-1 rounded text-sm hover:bg-muted text-muted-foreground disabled:opacity-30 transition-colors", onClick: goToPrev, disabled: activeIndex === 0, title: "Предыдущая страница", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:37:6", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "37", "data-component-file": "PageSwitcher.tsx", "data-component-name": "button", "data-component-content": "%7B%22className%22%3A%22px-1.5%20py-1%20rounded%20text-sm%20hover%3Abg-muted%20text-muted-foreground%20disabled%3Aopacity-30%20transition-colors%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%2C%22title%22%3A%22%D0%9F%D1%80%D0%B5%D0%B4%D1%8B%D0%B4%D1%83%D1%89%D0%B0%D1%8F%20%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0%22%7D", children: "‹" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", className: "w-10 text-center text-xs border rounded px-1 py-0.5 bg-background text-foreground", placeholder: String(activeIndex + 1), value: inputValue, onChange: (e) => setInputValue(e.target.value), onKeyDown: handleInputKeyDown, title: `Страница ${activeIndex + 1} из ${pages.length}. Введите номер и нажмите Enter`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:47:6", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "47", "data-component-file": "PageSwitcher.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22className%22%3A%22w-10%20text-center%20text-xs%20border%20rounded%20px-1%20py-0.5%20bg-background%20text-foreground%22%2C%22placeholder%22%3A%22%5BCallExpression%5D%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onKeyDown%22%3A%22%5BIdentifier%5D%22%2C%22title%22%3A%22%5BTemplateLiteral%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-muted-foreground", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:56:6", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "56", "data-component-file": "PageSwitcher.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-muted-foreground%22%7D", children: [
+      "/ ",
+      pages.length
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "px-1.5 py-1 rounded text-sm hover:bg-muted text-muted-foreground disabled:opacity-30 transition-colors", onClick: goToNext, disabled: activeIndex === pages.length - 1, title: "Следующая страница", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:59:6", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "59", "data-component-file": "PageSwitcher.tsx", "data-component-name": "button", "data-component-content": "%7B%22className%22%3A%22px-1.5%20py-1%20rounded%20text-sm%20hover%3Abg-muted%20text-muted-foreground%20disabled%3Aopacity-30%20transition-colors%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%2C%22title%22%3A%22%D0%A1%D0%BB%D0%B5%D0%B4%D1%83%D1%8E%D1%89%D0%B0%D1%8F%20%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0%22%7D", children: "›" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-5 bg-border mx-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:68:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "68", "data-component-file": "PageSwitcher.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-px%20h-5%20bg-border%20mx-1%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-1 overflow-x-auto", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:71:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "71", "data-component-file": "PageSwitcher.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-1%20overflow-x-auto%22%7D", children: pages.map((page) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex items-center gap-1 px-3 py-1 rounded cursor-pointer text-sm select-none whitespace-nowrap transition-colors
+              ${page.id === activePageId ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`, onClick: () => onSwitch(page.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:73:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "73", "data-component-file": "PageSwitcher.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:81:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "81", "data-component-file": "PageSwitcher.tsx", "data-component-name": "span", children: page.title }),
+      pages.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "ml-1 opacity-40 hover:opacity-100 text-xs leading-none", onClick: (e) => {
+        e.stopPropagation();
+        onRemove(page.id);
+      }, title: "Удалить страницу", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:83:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "83", "data-component-file": "PageSwitcher.tsx", "data-component-name": "button", "data-component-content": "%7B%22className%22%3A%22ml-1%20opacity-40%20hover%3Aopacity-100%20text-xs%20leading-none%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22title%22%3A%22%D0%A3%D0%B4%D0%B0%D0%BB%D0%B8%D1%82%D1%8C%20%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D1%83%22%7D", children: "✕" })
+    ] }, page.id)) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-5 bg-border mx-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:95:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "95", "data-component-file": "PageSwitcher.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-px%20h-5%20bg-border%20mx-1%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "px-2 py-1 rounded text-sm hover:bg-muted text-muted-foreground whitespace-nowrap transition-colors", onClick: onAdd, title: "Добавить страницу", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx:98:6", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PageSwitcher.tsx", "data-component-line": "98", "data-component-file": "PageSwitcher.tsx", "data-component-name": "button", "data-component-content": "%7B%22className%22%3A%22px-2%20py-1%20rounded%20text-sm%20hover%3Abg-muted%20text-muted-foreground%20whitespace-nowrap%20transition-colors%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22title%22%3A%22%D0%94%D0%BE%D0%B1%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D1%83%22%7D", children: "+ Страница" })
+  ] });
+}
 const ModuleInstructions = ({
   title,
   instructions,
@@ -21351,7 +21505,10 @@ function AppContent() {
     markAsSaved,
     newProject,
     handleSelectTemplate,
-    interactiveModuleId
+    interactiveModuleId,
+    addPage,
+    removePage,
+    switchPage
   } = useEditorContext();
   const [showWelcome, setShowWelcome] = reactExports.useState(() => {
     return !localStorage.getItem("welcomeScreenShown");
@@ -21444,6 +21601,8 @@ function AppContent() {
         createdAt: (/* @__PURE__ */ new Date()).toISOString(),
         updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
         objects: state.objects,
+        pages: state.pages,
+        activePageId: state.activePageId,
         canvasSize: {
           width: 800,
           height: 600
@@ -21462,6 +21621,8 @@ function AppContent() {
         createdAt: (/* @__PURE__ */ new Date()).toISOString(),
         updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
         objects: state.objects,
+        pages: state.pages,
+        activePageId: state.activePageId,
         canvasSize: {
           width: 800,
           height: 600
@@ -21511,6 +21672,8 @@ function AppContent() {
           createdAt: (/* @__PURE__ */ new Date()).toISOString(),
           updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
           objects: state.objects,
+          pages: state.pages,
+          activePageId: state.activePageId,
           canvasSize: {
             width: 800,
             height: 600
@@ -21530,40 +21693,41 @@ function AppContent() {
   }, [handleNew, handleSave, state, loadProject, setProjectPath, markAsSaved, undo, redo]);
   const renderMainContent = () => {
     if (state.mode === "interactive") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:241:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "241", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveLibrary, { initialModule: interactiveModuleId ?? void 0, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:242:10", "data-matrix-name": "InteractiveLibrary", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "242", "data-component-file": "App.tsx", "data-component-name": "InteractiveLibrary", "data-component-content": "%7B%22initialModule%22%3A%22%5BLogicalExpression%5D%22%7D" }) });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:251:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "251", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveLibrary, { initialModule: interactiveModuleId ?? void 0, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:252:10", "data-matrix-name": "InteractiveLibrary", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "252", "data-component-file": "App.tsx", "data-component-name": "InteractiveLibrary", "data-component-content": "%7B%22initialModule%22%3A%22%5BLogicalExpression%5D%22%7D" }) });
     }
     if (state.mode === "challenge") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:250:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "250", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChallengeMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:251:10", "data-matrix-name": "ChallengeMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "251", "data-component-file": "App.tsx", "data-component-name": "ChallengeMode" }) });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:260:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "260", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChallengeMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:261:10", "data-matrix-name": "ChallengeMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "261", "data-component-file": "App.tsx", "data-component-name": "ChallengeMode" }) });
     }
     if (state.mode === "projects") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:259:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "259", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ProjectsPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:260:10", "data-matrix-name": "ProjectsPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "260", "data-component-file": "App.tsx", "data-component-name": "ProjectsPanel" }) });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:269:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "269", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ProjectsPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:270:10", "data-matrix-name": "ProjectsPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "270", "data-component-file": "App.tsx", "data-component-name": "ProjectsPanel" }) });
     }
     if (state.mode === "library") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:268:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "268", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:278:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "278", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(Canvas, {}),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TemplateLibrary, { onSelectTemplate: handleSelectTemplate, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:270:10", "data-matrix-name": "TemplateLibrary", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "270", "data-component-file": "App.tsx", "data-component-name": "TemplateLibrary", "data-component-content": "%7B%22onSelectTemplate%22%3A%22%5BIdentifier%5D%22%7D" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TemplateLibrary, { onSelectTemplate: handleSelectTemplate, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:280:10", "data-matrix-name": "TemplateLibrary", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "280", "data-component-file": "App.tsx", "data-component-name": "TemplateLibrary", "data-component-content": "%7B%22onSelectTemplate%22%3A%22%5BIdentifier%5D%22%7D" })
       ] });
     }
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:277:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "277", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:287:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "287", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Canvas, {}),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ObjectCreator, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:279:8", "data-matrix-name": "ObjectCreator", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "279", "data-component-file": "App.tsx", "data-component-name": "ObjectCreator" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ObjectCreator, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:289:8", "data-matrix-name": "ObjectCreator", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "289", "data-component-file": "App.tsx", "data-component-name": "ObjectCreator" })
     ] });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `h-screen flex flex-col bg-gray-50 overflow-hidden ${state.mode !== "interactive" && state.mode !== "challenge" && state.mode !== "projects" ? "canvas-mode" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:285:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "285", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:288:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "288", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ToolSidebar, { onNew: handleNew, onOpen: handleOpen, onSave: handleSave, onExport: handleExport, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:290:8", "data-matrix-name": "ToolSidebar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "290", "data-component-file": "App.tsx", "data-component-name": "ToolSidebar", "data-component-content": "%7B%22onNew%22%3A%22%5BIdentifier%5D%22%2C%22onOpen%22%3A%22%5BIdentifier%5D%22%2C%22onSave%22%3A%22%5BIdentifier%5D%22%2C%22onExport%22%3A%22%5BIdentifier%5D%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:298:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "298", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20flex-col%20overflow-hidden%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TopBar, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:300:10", "data-matrix-name": "TopBar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "300", "data-component-file": "App.tsx", "data-component-name": "TopBar" }),
-        renderMainContent()
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `h-screen flex flex-col bg-gray-50 overflow-hidden ${state.mode !== "interactive" && state.mode !== "challenge" && state.mode !== "projects" ? "canvas-mode" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:295:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "295", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:298:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "298", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ToolSidebar, { onNew: handleNew, onOpen: handleOpen, onSave: handleSave, onExport: handleExport, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:300:8", "data-matrix-name": "ToolSidebar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "300", "data-component-file": "App.tsx", "data-component-name": "ToolSidebar", "data-component-content": "%7B%22onNew%22%3A%22%5BIdentifier%5D%22%2C%22onOpen%22%3A%22%5BIdentifier%5D%22%2C%22onSave%22%3A%22%5BIdentifier%5D%22%2C%22onExport%22%3A%22%5BIdentifier%5D%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:308:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "308", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20flex-col%20overflow-hidden%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TopBar, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:310:10", "data-matrix-name": "TopBar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "310", "data-component-file": "App.tsx", "data-component-name": "TopBar" }),
+        renderMainContent(),
+        state.mode !== "interactive" && state.mode !== "challenge" && state.mode !== "projects" && /* @__PURE__ */ jsxRuntimeExports.jsx(PageSwitcher, { pages: state.pages, activePageId: state.activePageId, onSwitch: switchPage, onAdd: addPage, onRemove: removePage, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:317:12", "data-matrix-name": "PageSwitcher", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "317", "data-component-file": "App.tsx", "data-component-name": "PageSwitcher", "data-component-content": "%7B%22pages%22%3A%22%5BMemberExpression%5D%22%2C%22activePageId%22%3A%22%5BMemberExpression%5D%22%2C%22onSwitch%22%3A%22%5BIdentifier%5D%22%2C%22onAdd%22%3A%22%5BIdentifier%5D%22%2C%22onRemove%22%3A%22%5BIdentifier%5D%22%7D" })
       ] }),
-      state.mode !== "interactive" && state.mode !== "challenge" && state.mode !== "library" && state.mode !== "projects" && selectedObjects.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(PropertiesPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:308:10", "data-matrix-name": "PropertiesPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "308", "data-component-file": "App.tsx", "data-component-name": "PropertiesPanel" })
+      state.mode !== "interactive" && state.mode !== "challenge" && state.mode !== "library" && state.mode !== "projects" && selectedObjects.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(PropertiesPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:329:10", "data-matrix-name": "PropertiesPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "329", "data-component-file": "App.tsx", "data-component-name": "PropertiesPanel" })
     ] }),
-    showWelcome && /* @__PURE__ */ jsxRuntimeExports.jsx(WelcomeScreen, { onClose: () => setShowWelcome(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:313:22", "data-matrix-name": "WelcomeScreen", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "313", "data-component-file": "App.tsx", "data-component-name": "WelcomeScreen", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    showExportModal && /* @__PURE__ */ jsxRuntimeExports.jsx(ExportModal, { onClose: () => setShowExportModal(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:316:26", "data-matrix-name": "ExportModal", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "316", "data-component-file": "App.tsx", "data-component-name": "ExportModal", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
+    showWelcome && /* @__PURE__ */ jsxRuntimeExports.jsx(WelcomeScreen, { onClose: () => setShowWelcome(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:334:22", "data-matrix-name": "WelcomeScreen", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "334", "data-component-file": "App.tsx", "data-component-name": "WelcomeScreen", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
+    showExportModal && /* @__PURE__ */ jsxRuntimeExports.jsx(ExportModal, { onClose: () => setShowExportModal(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:337:26", "data-matrix-name": "ExportModal", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "337", "data-component-file": "App.tsx", "data-component-name": "ExportModal", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
   ] });
 }
 function App() {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(EditorProvider, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:323:4", "data-matrix-name": "EditorProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "323", "data-component-file": "App.tsx", "data-component-name": "EditorProvider", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppContent, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:324:6", "data-matrix-name": "AppContent", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "324", "data-component-file": "App.tsx", "data-component-name": "AppContent" }) });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(EditorProvider, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:344:4", "data-matrix-name": "EditorProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "344", "data-component-file": "App.tsx", "data-component-name": "EditorProvider", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppContent, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:345:6", "data-matrix-name": "AppContent", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "345", "data-component-file": "App.tsx", "data-component-name": "AppContent" }) });
 }
 clientExports.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.StrictMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:8:2", "data-matrix-name": "StrictMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "8", "data-component-file": "main.tsx", "data-component-name": "StrictMode", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorBoundary, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:10:6", "data-matrix-name": "App", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "10", "data-component-file": "main.tsx", "data-component-name": "App" }) }) }));
-//# sourceMappingURL=index-B3NIIKRL.js.map
+//# sourceMappingURL=index-nXNKkxNp.js.map
