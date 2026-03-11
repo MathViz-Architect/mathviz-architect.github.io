@@ -44,6 +44,9 @@ interface EditorContextValue {
   loadProjectFromStorage: (id: string) => void;
   deleteProjectFromStorage: (id: string) => void;
   moveObjects: (previousObjects: AnyCanvasObject[], nextObjects: AnyCanvasObject[]) => void;
+  addPage: () => void;
+  removePage: (pageId: string) => void;
+  switchPage: (pageId: string) => void;
   interactiveModuleId: string | null;
   setInteractiveModuleId: (moduleId: string | null) => void;
 }
@@ -87,7 +90,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
   // localStorage functions (web only)
   const saveProjectToStorage = useCallback((name: string) => {
-    if (window.electronAPI) return; // Skip in Electron
+    if (window.electronAPI) return;
 
     const projectId = generateId();
     const project = {
@@ -96,6 +99,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       objects: appState.state.objects,
+      pages: appState.state.pages,
+      activePageId: appState.state.activePageId,
       canvasSize: { width: 800, height: 600 },
       backgroundColor: '#FFFFFF',
     };
@@ -187,6 +192,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         name: appState.state.projectName,
         updatedAt: new Date().toISOString(),
         objects: appState.state.objects,
+        pages: appState.state.pages,
+        activePageId: appState.state.activePageId,
       };
       localStorage.setItem('mathviz_autosave', JSON.stringify(project));
     }, 1000);
@@ -196,7 +203,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [appState.state.objects, appState.state.projectName]);
+  }, [appState.state.objects, appState.state.pages, appState.state.projectName]);
 
   // Restore autosave on mount
   useEffect(() => {

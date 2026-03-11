@@ -21,7 +21,7 @@ export interface ObjectStyle {
 
 export interface CanvasObject {
   id: string;
-  type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle' | 'polygon' | 'geoshape';
+  type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle' | 'polygon' | 'geoshape' | 'geopoint' | 'geosegment' | 'geoangle';
   x: number;
   y: number;
   width: number;
@@ -151,7 +151,45 @@ export interface GeoShapeObject extends CanvasObject {
   };
 }
 
-export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | PolygonObject | GeoShapeObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | CanvasObject;
+export interface GeoPointObject extends CanvasObject {
+  type: 'geopoint';
+  data: {
+    color: string;
+    radius: number;
+    label?: string;
+  };
+}
+
+export interface GeoSegmentObject extends CanvasObject {
+  type: 'geosegment';
+  data: {
+    pointAId: string;
+    pointBId: string;
+    color: string;
+    strokeWidth: number;
+  };
+}
+
+export interface GeoAngleObject extends CanvasObject {
+  type: 'geoangle';
+  data: {
+    // B is the vertex, A and C are the two rays
+    pointAId: string;
+    pointBId: string;
+    pointCId: string;
+    color: string;
+    arcRadius: number;   // visual radius of the arc, px
+    showLabel: boolean;
+  };
+}
+
+export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | PolygonObject | GeoShapeObject | GeoPointObject | GeoSegmentObject | GeoAngleObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | CanvasObject;
+
+export interface Page {
+  id: string;
+  title: string;
+  objects: AnyCanvasObject[];
+}
 
 export interface Project {
   id: string;
@@ -159,6 +197,8 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   objects: AnyCanvasObject[];
+  pages?: Page[];
+  activePageId?: string;
   canvasSize: Size;
   backgroundColor: string;
 }
@@ -178,7 +218,7 @@ export interface Tool {
   createObject: () => Partial<AnyCanvasObject>;
 }
 
-export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser' | 'projects';
+export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser' | 'projects' | 'geopoint' | 'geosegment' | 'geoangle';
 
 export interface AppState {
   mode: AppMode;
@@ -187,6 +227,8 @@ export interface AppState {
   projectPath: string | null;
   projectName: string;
   isDirty: boolean;
+  pages: Page[];
+  activePageId: string;
 }
 
 // Challenge types - New Template Architecture

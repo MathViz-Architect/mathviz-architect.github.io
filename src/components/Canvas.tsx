@@ -10,6 +10,7 @@ import {
   calculateArrowHeadPoints,
   calculateDistance,
 } from '@/math-core';
+import { findNearbyPoint, SNAP_RADIUS } from '@/lib/geometry';
 
 export const Canvas: React.FC = () => {
   const {
@@ -36,6 +37,7 @@ export const Canvas: React.FC = () => {
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [editingTextSize, setEditingTextSize] = useState<{ width: number; height: number } | null>(null);
   const [isDrawingArrow, setIsDrawingArrow] = useState(false);
   const [arrowStart, setArrowStart] = useState<Point | null>(null);
   const [arrowEnd, setArrowEnd] = useState<Point | null>(null);
@@ -48,6 +50,22 @@ export const Canvas: React.FC = () => {
   const [marqueeEnd, setMarqueeEnd] = useState<Point | null>(null);
   const selectMouseDownRef = useRef<{ x: number; y: number; objectId: string | null } | null>(null);
   const didMarqueeSelectionRef = useRef(false);
+
+  // Segment tool state
+  // step: 0 = waiting for point A, 1 = waiting for point B
+  const [segmentStep, setSegmentStep] = useState<0 | 1>(0);
+  const [segmentPointAId, setSegmentPointAId] = useState<string | null>(null);
+  const [segmentPreview, setSegmentPreview] = useState<Point | null>(null);
+
+  // Angle tool state
+  // step: 0 = select A, 1 = select B (vertex), 2 = select C
+  const [angleStep, setAngleStep] = useState<0 | 1 | 2>(0);
+  const [anglePointAId, setAnglePointAId] = useState<string | null>(null);
+  const [anglePointBId, setAnglePointBId] = useState<string | null>(null);
+  const [anglePreview, setAnglePreview] = useState<Point | null>(null);
+
+  // Snap indicator: shows target point while hovering in geo modes
+  const [snapTarget, setSnapTarget] = useState<{ x: number; y: number; snapped: boolean } | null>(null);
 
   // Panning state
   const [panOffset, setPanOffset] = useState<Point>({ x: 0, y: 0 });
@@ -69,6 +87,122 @@ export const Canvas: React.FC = () => {
         onDeleteObject(obj.id);
         break; // Delete only one object at a time
       }
+    }
+  };
+
+  // Returns next available uppercase letter label (A, B … Z, A1 …)
+  const nextPointLabel = (): string => {
+    const used = new Set(
+      objects
+        .filter(o => o.type === 'geopoint')
+        .map(o => (o.data as { label?: string }).label)
+        .filter(Boolean)
+    );
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (const ch of letters) {
+      if (!used.has(ch)) return ch;
+    }
+    for (let n = 1; n <= 9; n++) {
+      for (const ch of letters) {
+        const lbl = `${ch}${n}`;
+        if (!used.has(lbl)) return lbl;
+      }
+    }
+    return '';
+  };
+
+  // Snap: find existing geopoint within SNAP_RADIUS, or create a new one with auto-label
+  const snapOrCreatePoint = (x: number, y: number): string => {
+    const existing = findNearbyPoint(objects, x, y, SNAP_RADIUS);
+    if (existing) return existing.id;
+
+    const R = 5;
+    const newPoint: AnyCanvasObject = {
+      id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      type: 'geopoint',
+      x: x - R, y: y - R,
+      width: R * 2, height: R * 2,
+      rotation: 0, opacity: 1, visible: true, locked: false,
+      data: { color: '#1D4ED8', radius: R, label: nextPointLabel() },
+    };
+    onAddObject(newPoint);
+    return newPoint.id;
+  };
+
+  // Segment tool click handler
+  const handleSegmentClick = (x: number, y: number) => {
+    if (segmentStep === 0) {
+      const pointId = snapOrCreatePoint(x, y);
+      setSegmentPointAId(pointId);
+      setSegmentStep(1);
+    } else {
+      const pointBId = snapOrCreatePoint(x, y);
+      const pointA = objects.find(o => o.id === segmentPointAId);
+      if (!pointA || !segmentPointAId) { setSegmentStep(0); return; }
+
+      const ax = pointA.x + pointA.width / 2;
+      const ay = pointA.y + pointA.height / 2;
+      // pointB may have just been created — find from all objects + newly added
+      const pointB = objects.find(o => o.id === pointBId);
+      const bx = pointB ? pointB.x + pointB.width / 2 : x;
+      const by = pointB ? pointB.y + pointB.height / 2 : y;
+
+      const segment: AnyCanvasObject = {
+        id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        type: 'geosegment',
+        x: Math.min(ax, bx), y: Math.min(ay, by),
+        width: Math.abs(bx - ax), height: Math.abs(by - ay),
+        rotation: 0, opacity: 1, visible: true, locked: false,
+        data: { pointAId: segmentPointAId, pointBId, color: '#374151', strokeWidth: 2, showPoints: true },
+      };
+      onAddObject(segment);
+      setSegmentStep(0);
+      setSegmentPointAId(null);
+      setSegmentPreview(null);
+      setSnapTarget(null);
+    }
+  };
+
+  // Angle tool click handler
+  const handleAngleClick = (x: number, y: number) => {
+    if (angleStep === 0) {
+      const pointId = snapOrCreatePoint(x, y);
+      setAnglePointAId(pointId);
+      setAngleStep(1);
+    } else if (angleStep === 1) {
+      const pointId = snapOrCreatePoint(x, y);
+      setAnglePointBId(pointId);
+      setAngleStep(2);
+    } else {
+      const pointCId = snapOrCreatePoint(x, y);
+      if (!anglePointAId || !anglePointBId) { setAngleStep(0); return; }
+
+      const ptB = objects.find(o => o.id === anglePointBId);
+      if (!ptB) { setAngleStep(0); return; }
+      const bx = ptB.x + ptB.width / 2;
+      const by = ptB.y + ptB.height / 2;
+
+      const angle: AnyCanvasObject = {
+        id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        type: 'geoangle',
+        x: bx - 30, y: by - 30,
+        width: 60, height: 60,
+        rotation: 0, opacity: 1, visible: true, locked: false,
+        data: {
+          pointAId: anglePointAId,
+          pointBId: anglePointBId,
+          pointCId,
+          color: '#7C3AED',
+          arcRadius: 25,
+          showLabel: true,
+        },
+      };
+      onAddObject(angle);
+      setAngleStep(0);
+      setAnglePointAId(null);
+      setAnglePointBId(null);
+      setAnglePreview(null);
+      setSnapTarget(null);
     }
   };
 
@@ -96,6 +230,27 @@ export const Canvas: React.FC = () => {
       observer.disconnect();
     };
   }, [zoom]);
+
+  // Reset segment tool state when mode changes
+  useEffect(() => {
+    if (mode !== 'geosegment') {
+      setSegmentStep(0);
+      setSegmentPointAId(null);
+      setSegmentPreview(null);
+      setSnapTarget(null);
+    }
+  }, [mode]);
+
+  // Reset angle tool state when mode changes
+  useEffect(() => {
+    if (mode !== 'geoangle') {
+      setAngleStep(0);
+      setAnglePointAId(null);
+      setAnglePointBId(null);
+      setAnglePreview(null);
+      setSnapTarget(null);
+    }
+  }, [mode]);
 
   // Handle Space key for panning
   useEffect(() => {
@@ -127,6 +282,8 @@ export const Canvas: React.FC = () => {
   // Handle mouse down on object
   const handleObjectMouseDown = (e: React.MouseEvent, objectId: string) => {
     if (mode === 'line') return;
+    // Geo tools handle clicks via handleCanvasMouseDown — don't intercept
+    if (mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser') return;
     e.stopPropagation();
     const obj = objects.find((o) => o.id === objectId);
     if (obj?.locked) return;
@@ -175,24 +332,45 @@ export const Canvas: React.FC = () => {
   // Handle text edit completion
   const handleTextEditComplete = () => {
     if (editingTextId) {
-      onUpdateObject(editingTextId, {
+      const updates: Partial<AnyCanvasObject> = {
         data: {
           ...objects.find((o) => o.id === editingTextId)?.data,
           text: editingText,
         },
-      });
+      };
+      if (editingTextSize) {
+        updates.width = editingTextSize.width;
+        updates.height = editingTextSize.height;
+      }
+      onUpdateObject(editingTextId, updates);
     }
     setEditingTextId(null);
     setEditingText('');
+    setEditingTextSize(null);
   };
+
+  // Auto-resize textarea to content
+  const autoResizeTextarea = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta || !editingTextId) return;
+    const obj = objects.find((o) => o.id === editingTextId);
+    if (!obj) return;
+    const maxWidth = canvasSize.width - obj.x - 8;
+    ta.style.height = 'auto';
+    const newHeight = Math.max(ta.scrollHeight + 8, 32);
+    ta.style.height = `${newHeight}px`;
+    const newWidth = Math.min(Math.max(ta.scrollWidth + 8, 80), maxWidth);
+    setEditingTextSize({ width: newWidth, height: newHeight });
+  }, [editingTextId, objects, canvasSize.width]);
 
   // Auto-focus textarea when editing starts
   useEffect(() => {
     if (editingTextId && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.select();
+      setTimeout(() => autoResizeTextarea(), 0);
     }
-  }, [editingTextId]);
+  }, [editingTextId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle canvas click (deselect)
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -262,6 +440,58 @@ export const Canvas: React.FC = () => {
 
       setIsErasing(true);
       handleEraserDelete(x, y);
+      e.stopPropagation();
+    }
+
+    // Geopoint mode — create point on click
+    if (mode === 'geopoint') {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      const R = 5;
+
+      const existing = findNearbyPoint(objects, x, y, SNAP_RADIUS);
+      if (existing) {
+        onSelectObject(existing.id);
+        e.stopPropagation();
+        return;
+      }
+
+      const newPoint: AnyCanvasObject = {
+        id: `obj_${Date.now()}`,
+        type: 'geopoint',
+        x: x - R,
+        y: y - R,
+        width: R * 2,
+        height: R * 2,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: { color: '#1D4ED8', radius: R, label: nextPointLabel() },
+      };
+
+      onAddObject(newPoint);
+      e.stopPropagation();
+      setSnapTarget(null);
+    }
+
+    // Segment tool — two-click workflow
+    if (mode === 'geosegment') {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      handleSegmentClick(x, y);
+      e.stopPropagation();
+    }
+
+    // Angle tool — three-click workflow
+    if (mode === 'geoangle') {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      handleAngleClick(x, y);
       e.stopPropagation();
     }
 
@@ -338,6 +568,53 @@ export const Canvas: React.FC = () => {
       });
       setDragStart({ x, y });
       return;
+    }
+
+    // Segment preview while waiting for second point
+    if (mode === 'geosegment' && segmentStep === 1) {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      setSegmentPreview({ x, y });
+      const near = findNearbyPoint(objects, x, y, SNAP_RADIUS);
+      if (near) {
+        const nx = near.x + near.width / 2;
+        const ny = near.y + near.height / 2;
+        setSnapTarget({ x: nx, y: ny, snapped: true });
+      } else {
+        setSnapTarget({ x, y, snapped: false });
+      }
+    }
+
+    // Angle preview
+    if (mode === 'geoangle' && angleStep >= 1) {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      setAnglePreview({ x, y });
+      const near = findNearbyPoint(objects, x, y, SNAP_RADIUS);
+      if (near) {
+        const nx = near.x + near.width / 2;
+        const ny = near.y + near.height / 2;
+        setSnapTarget({ x: nx, y: ny, snapped: true });
+      } else {
+        setSnapTarget({ x, y, snapped: false });
+      }
+    }
+
+    // Geopoint mode: show snap preview
+    if (mode === 'geopoint') {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      const near = findNearbyPoint(objects, x, y, SNAP_RADIUS);
+      if (near) {
+        const nx = near.x + near.width / 2;
+        const ny = near.y + near.height / 2;
+        setSnapTarget({ x: nx, y: ny, snapped: true });
+      } else {
+        setSnapTarget(null);
+      }
     }
   };
 
@@ -1115,6 +1392,13 @@ export const Canvas: React.FC = () => {
         };
 
         const isEditing = editingTextId === obj.id;
+        const maxWidth = canvasSize.width - obj.x - 8;
+        const foWidth = isEditing
+          ? (editingTextSize?.width ?? Math.min(obj.width, maxWidth))
+          : obj.width;
+        const foHeight = isEditing
+          ? (editingTextSize?.height ?? obj.height)
+          : obj.height;
 
         return (
           <g
@@ -1123,17 +1407,21 @@ export const Canvas: React.FC = () => {
             onDoubleClick={(e) => handleTextDoubleClick(e, obj.id)}
             style={{ cursor: obj.locked ? 'not-allowed' : isEditing ? 'text' : 'move' }}
           >
-            {isEditing ? (
-              <foreignObject
-                x={obj.x}
-                y={obj.y}
-                width={obj.width}
-                height={obj.height}
-              >
+            <foreignObject
+              x={obj.x}
+              y={obj.y}
+              width={Math.max(foWidth, 40)}
+              height={Math.max(foHeight, 24)}
+              style={{ overflow: 'visible' }}
+            >
+              {isEditing ? (
                 <textarea
                   ref={textareaRef}
                   value={editingText}
-                  onChange={(e) => setEditingText(e.target.value)}
+                  onChange={(e) => {
+                    setEditingText(e.target.value);
+                    autoResizeTextarea();
+                  }}
                   onBlur={handleTextEditComplete}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1142,11 +1430,16 @@ export const Canvas: React.FC = () => {
                     } else if (e.key === 'Escape') {
                       setEditingTextId(null);
                       setEditingText('');
+                      setEditingTextSize(null);
                     }
                   }}
                   style={{
-                    width: '100%',
-                    height: '100%',
+                    display: 'block',
+                    width: `${Math.min(Math.max(foWidth, 80), maxWidth)}px`,
+                    minWidth: '80px',
+                    maxWidth: `${maxWidth}px`,
+                    height: 'auto',
+                    minHeight: '32px',
                     fontSize: `${data?.fontSize || 16}px`,
                     fontFamily: data?.fontFamily || 'sans-serif',
                     fontWeight: data?.fontWeight || 'normal',
@@ -1158,29 +1451,40 @@ export const Canvas: React.FC = () => {
                     padding: '4px',
                     resize: 'none',
                     outline: 'none',
+                    overflow: 'hidden',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    boxSizing: 'border-box',
                   }}
                 />
-              </foreignObject>
-            ) : (
-              <text
-                x={obj.x + (data?.textAlign === 'center' ? obj.width / 2 : data?.textAlign === 'right' ? obj.width : 0)}
-                y={obj.y + obj.height / 2 + (data?.fontSize || 16) / 3}
-                fontSize={data?.fontSize || 16}
-                fontFamily={data?.fontFamily || 'sans-serif'}
-                fontWeight={data?.fontWeight || 'normal'}
-                fill={data?.fill || '#1F2937'}
-                textAnchor={data?.textAlign === 'center' ? 'middle' : data?.textAlign === 'right' ? 'end' : 'start'}
-                opacity={opacity}
-              >
-                {data?.text || 'Текст'}
-              </text>
-            )}
+              ) : (
+                <div
+                  style={{
+                    fontSize: `${data?.fontSize || 16}px`,
+                    fontFamily: data?.fontFamily || 'sans-serif',
+                    fontWeight: data?.fontWeight || 'normal',
+                    color: data?.fill || '#1F2937',
+                    textAlign: (data?.textAlign as 'left' | 'center' | 'right') || 'left',
+                    opacity,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    width: '100%',
+                    padding: '4px',
+                    boxSizing: 'border-box',
+                    userSelect: 'none',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {data?.text || 'Текст'}
+                </div>
+              )}
+            </foreignObject>
             {isSelected && !isEditing && (
               <rect
                 x={obj.x - 2}
                 y={obj.y - 2}
-                width={obj.width + 4}
-                height={obj.height + 4}
+                width={foWidth + 4}
+                height={foHeight + 4}
                 fill="none"
                 stroke="#F59E0B"
                 strokeWidth={2}
@@ -1631,6 +1935,203 @@ export const Canvas: React.FC = () => {
         );
       }
 
+      case 'geopoint': {
+        const data = obj.data as { color: string; radius: number; label?: string };
+        const cx = obj.x + obj.width / 2;
+        const cy = obj.y + obj.height / 2;
+        const r = data?.radius ?? 5;
+
+        return (
+          <g
+            key={obj.id}
+            onMouseDown={(e) => handleObjectMouseDown(e, obj.id)}
+            style={{ cursor: obj.locked ? 'not-allowed' : 'move' }}
+          >
+            <circle cx={cx} cy={cy} r={r} fill={data?.color || '#1D4ED8'} opacity={opacity} />
+            {data?.label && (
+              <text
+                x={cx + r + 4}
+                y={cy - r}
+                fontSize={13}
+                fontWeight="bold"
+                fontFamily="sans-serif"
+                stroke="white"
+                strokeWidth={3}
+                strokeLinejoin="round"
+                paintOrder="stroke"
+                fill={data.color || '#1D4ED8'}
+                pointerEvents="none"
+                style={{ userSelect: 'none' }}
+              >
+                {data.label}
+              </text>
+            )}
+            {isSelected && (
+              <circle cx={cx} cy={cy} r={r + 4} fill="none" stroke="#F59E0B" strokeWidth={2} strokeDasharray="4,4" />
+            )}
+          </g>
+        );
+      }
+
+      case 'geosegment': {
+        const data = obj.data as { pointAId: string; pointBId: string; color: string; strokeWidth: number; showPoints?: boolean };
+        const ptA = objects.find(o => o.id === data.pointAId);
+        const ptB = objects.find(o => o.id === data.pointBId);
+        if (!ptA || !ptB) return null;
+
+        const ax = ptA.x + ptA.width / 2;
+        const ay = ptA.y + ptA.height / 2;
+        const bx = ptB.x + ptB.width / 2;
+        const by = ptB.y + ptB.height / 2;
+        const ptAData = ptA.data as { color?: string; label?: string };
+        const ptBData = ptB.data as { color?: string; label?: string };
+
+        return (
+          <g
+            key={obj.id}
+            onMouseDown={(e) => handleObjectMouseDown(e, obj.id)}
+            style={{ cursor: obj.locked ? 'not-allowed' : 'move' }}
+          >
+            {/* Invisible wider hit area */}
+            <line x1={ax} y1={ay} x2={bx} y2={by} stroke="transparent" strokeWidth={12} />
+            <line
+              x1={ax} y1={ay} x2={bx} y2={by}
+              stroke={data?.color || '#374151'}
+              strokeWidth={data?.strokeWidth || 2}
+              opacity={opacity}
+              strokeLinecap="round"
+            />
+            {/* Endpoint dots rendered by geopoint objects themselves — no duplicates here */}
+            {isSelected && (
+              <line
+                x1={ax} y1={ay} x2={bx} y2={by}
+                stroke="#F59E0B"
+                strokeWidth={(data?.strokeWidth || 2) + 4}
+                strokeLinecap="round"
+                opacity={0.4}
+              />
+            )}
+          </g>
+        );
+      }
+
+      case 'geoangle': {
+        const data = obj.data as {
+          pointAId: string;
+          pointBId: string;
+          pointCId: string;
+          color: string;
+          arcRadius: number;
+          showLabel: boolean;
+        };
+
+        const ptA = objects.find(o => o.id === data.pointAId);
+        const ptB = objects.find(o => o.id === data.pointBId);
+        const ptC = objects.find(o => o.id === data.pointCId);
+        if (!ptA || !ptB || !ptC) return null;
+
+        // Coordinates: B is vertex
+        const ax = ptA.x + ptA.width / 2;
+        const ay = ptA.y + ptA.height / 2;
+        const bx = ptB.x + ptB.width / 2;
+        const by = ptB.y + ptB.height / 2;
+        const cx = ptC.x + ptC.width / 2;
+        const cy = ptC.y + ptC.height / 2;
+
+        // Vectors BA and BC
+        const baX = ax - bx; const baY = ay - by;
+        const bcX = cx - bx; const bcY = cy - by;
+        const lenBA = Math.hypot(baX, baY);
+        const lenBC = Math.hypot(bcX, bcY);
+
+        if (lenBA < 1 || lenBC < 1) return null;
+
+        // Compute angle in degrees
+        const dot = baX * bcX + baY * bcY;
+        const cosA = Math.max(-1, Math.min(1, dot / (lenBA * lenBC)));
+        const angleDeg = Math.round(Math.acos(cosA) * 180 / Math.PI);
+
+        // Arc angles (from B, measuring from positive X axis)
+        const startAngle = Math.atan2(baY, baX);
+        const endAngle = Math.atan2(bcY, bcX);
+
+        // Build SVG arc path: always draw the smaller arc
+        const R = data.arcRadius ?? 25;
+
+        // Start and end points on the arc circle
+        const sx = bx + R * Math.cos(startAngle);
+        const sy = by + R * Math.sin(startAngle);
+        const ex = bx + R * Math.cos(endAngle);
+        const ey = by + R * Math.sin(endAngle);
+
+        // Determine sweep direction: use the shorter arc
+        // cross product: BA × BC — positive = counter-clockwise from BA to BC
+        const cross = baX * bcY - baY * bcX;
+        const sweepFlag = cross > 0 ? 1 : 0;
+        const largeArcFlag = 0; // always draw shorter arc
+
+        const arcPath = `M ${sx} ${sy} A ${R} ${R} 0 ${largeArcFlag} ${sweepFlag} ${ex} ${ey}`;
+
+        // Label position: midpoint angle direction from B
+        const midAngle = startAngle + (cross > 0 ? 1 : -1) * Math.acos(cosA) / 2;
+        const labelDist = R + 14;
+        const labelX = bx + labelDist * Math.cos(midAngle);
+        const labelY = by + labelDist * Math.sin(midAngle);
+
+        // Point labels for display
+        const ptALabel = (ptA.data as { label?: string }).label || 'A';
+        const ptBLabel = (ptB.data as { label?: string }).label || 'B';
+        const ptCLabel = (ptC.data as { label?: string }).label || 'C';
+
+        return (
+          <g
+            key={obj.id}
+            onMouseDown={(e) => handleObjectMouseDown(e, obj.id)}
+            style={{ cursor: obj.locked ? 'not-allowed' : 'move' }}
+            opacity={opacity}
+          >
+            {/* Arc */}
+            <path
+              d={arcPath}
+              fill="none"
+              stroke={data.color || '#7C3AED'}
+              strokeWidth={1.5}
+              strokeLinecap="round"
+            />
+            {/* Filled arc sector (light) */}
+            <path
+              d={`M ${bx} ${by} L ${sx} ${sy} A ${R} ${R} 0 ${largeArcFlag} ${sweepFlag} ${ex} ${ey} Z`}
+              fill={data.color || '#7C3AED'}
+              fillOpacity={0.1}
+              stroke="none"
+            />
+            {/* Label: ∠ABC = N° */}
+            {data.showLabel && (
+              <text
+                x={labelX}
+                y={labelY}
+                fontSize={11}
+                fill={data.color || '#7C3AED'}
+                fontFamily="sans-serif"
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                {`∠${ptALabel}${ptBLabel}${ptCLabel} = ${angleDeg}°`}
+              </text>
+            )}
+            {isSelected && (
+              <circle
+                cx={bx} cy={by} r={R + 4}
+                fill="none"
+                stroke="#F59E0B"
+                strokeWidth={2}
+                strokeDasharray="4,4"
+              />
+            )}
+          </g>
+        );
+      }
+
       default:
         return (
           <g
@@ -1686,6 +2187,7 @@ export const Canvas: React.FC = () => {
         onMouseMove={(e) => { handleCanvasMouseMove(e); }}
         onMouseUp={(e) => { handleCanvasMouseUp(e); }}
         onMouseLeave={() => {
+          setSnapTarget(null);
           if (isPanning) {
             setIsPanning(false);
             setPanStart(null);
@@ -1708,7 +2210,7 @@ export const Canvas: React.FC = () => {
           }
         }}
         style={{
-          cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : mode === 'arrow' || mode === 'line' ? 'crosshair' : mode === 'eraser' ? 'cell' : ['draw', 'fraction', 'chart'].includes(mode) ? 'crosshair' : 'default',
+          cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : mode === 'arrow' || mode === 'line' ? 'crosshair' : mode === 'eraser' ? 'cell' : ['draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle'].includes(mode) ? 'crosshair' : 'default',
         }}
       >
         <svg
@@ -1723,7 +2225,7 @@ export const Canvas: React.FC = () => {
             transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
           }}
           onMouseDown={(e: React.MouseEvent<SVGSVGElement>) => {
-            if (mode === 'line') { handleCanvasMouseDown(e as unknown as React.MouseEvent); return; }
+            if (mode === 'line' || mode === 'geosegment') { handleCanvasMouseDown(e as unknown as React.MouseEvent); return; }
             // Don't start marquee if panning or Space is pressed
             if (isPanning || isSpacePressed) return;
             // Marquee: only when clicking directly on SVG background (not on objects)
@@ -1822,8 +2324,88 @@ export const Canvas: React.FC = () => {
             );
           })()}
 
+          {/* Segment tool: preview line from point A to cursor */}
+          {mode === 'geosegment' && segmentStep === 1 && segmentPointAId && segmentPreview && (() => {
+            const ptA = objects.find(o => o.id === segmentPointAId);
+            if (!ptA) return null;
+            const ax = ptA.x + ptA.width / 2;
+            const ay = ptA.y + ptA.height / 2;
+            return (
+              <line
+                x1={ax} y1={ay}
+                x2={segmentPreview.x} y2={segmentPreview.y}
+                stroke="#374151"
+                strokeWidth={2}
+                strokeDasharray="6,4"
+                strokeLinecap="round"
+                opacity={0.5}
+              />
+            );
+          })()}
+
+          {/* Angle tool: preview lines to cursor */}
+          {mode === 'geoangle' && anglePreview && (() => {
+            if (angleStep === 1 && anglePointAId) {
+              const ptA = objects.find(o => o.id === anglePointAId);
+              if (!ptA) return null;
+              const ax = ptA.x + ptA.width / 2;
+              const ay = ptA.y + ptA.height / 2;
+              return (
+                <line
+                  x1={ax} y1={ay}
+                  x2={anglePreview.x} y2={anglePreview.y}
+                  stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4"
+                  strokeLinecap="round" opacity={0.5}
+                />
+              );
+            }
+            if (angleStep === 2 && anglePointAId && anglePointBId) {
+              const ptA = objects.find(o => o.id === anglePointAId);
+              const ptB = objects.find(o => o.id === anglePointBId);
+              if (!ptA || !ptB) return null;
+              const ax = ptA.x + ptA.width / 2; const ay = ptA.y + ptA.height / 2;
+              const bx = ptB.x + ptB.width / 2; const by = ptB.y + ptB.height / 2;
+              return (
+                <g opacity={0.5}>
+                  <line x1={ax} y1={ay} x2={bx} y2={by} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" />
+                  <line x1={bx} y1={by} x2={anglePreview.x} y2={anglePreview.y} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" />
+                </g>
+              );
+            }
+            return null;
+          })()}
+
+          {/* Snap indicator: highlight nearest point or cursor position */}
+          {snapTarget && (mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint') && (
+            <circle
+              cx={snapTarget.x}
+              cy={snapTarget.y}
+              r={snapTarget.snapped ? 9 : 5}
+              fill="none"
+              stroke={snapTarget.snapped ? '#10B981' : '#7C3AED'}
+              strokeWidth={snapTarget.snapped ? 2.5 : 1.5}
+              strokeDasharray={snapTarget.snapped ? undefined : '3,3'}
+              opacity={0.8}
+              style={{ pointerEvents: 'none' }}
+            />
+          )}
+
         </svg>
       </div>
+
+      {/* Segment tool hint overlay */}
+      {mode === 'geosegment' && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none">
+          {segmentStep === 0 ? 'Выберите первую точку' : 'Выберите вторую точку'}
+        </div>
+      )}
+
+      {/* Angle tool hint overlay */}
+      {mode === 'geoangle' && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-purple-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none">
+          {angleStep === 0 ? 'Выберите первую точку (A)' : angleStep === 1 ? 'Выберите вершину угла (B)' : 'Выберите третью точку (C)'}
+        </div>
+      )}
     </div>
   );
 };

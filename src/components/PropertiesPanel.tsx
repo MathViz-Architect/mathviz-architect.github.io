@@ -17,6 +17,81 @@ export const PropertiesPanel: React.FC = () => {
     return null;
   }
 
+  // Segment: show minimal panel with only relevant controls
+  if (selectedObject.type === 'geosegment') {
+    const data = selectedObject.data as { pointAId: string; pointBId: string; color: string; strokeWidth: number; showPoints?: boolean };
+    return (
+      <div className="w-80 bg-white border-l border-gray-200 flex flex-col overflow-y-auto overflow-x-hidden">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Отрезок</h3>
+            <button onClick={() => onDeleteObject(selectedObject.id)} className="p-1 rounded hover:bg-red-50 text-red-500" title="Удалить">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Цвет</label>
+            <div className="flex gap-2">
+              <input type="color" value={data.color || '#374151'} onChange={(e) => onUpdateObject(selectedObject.id, { data: { ...data, color: e.target.value } })} className="w-8 h-8 rounded cursor-pointer" />
+              <input type="text" value={data.color || '#374151'} onChange={(e) => onUpdateObject(selectedObject.id, { data: { ...data, color: e.target.value } })} className="flex-1 px-2 py-1 text-sm border rounded" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Толщина</label>
+            <input type="number" value={data.strokeWidth || 2} onChange={(e) => onUpdateObject(selectedObject.id, { data: { ...data, strokeWidth: parseInt(e.target.value) || 1 } })} className="w-full px-2 py-1 text-sm border rounded" min={1} max={20} />
+          </div>
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={data.showPoints !== false} onChange={(e) => onUpdateObject(selectedObject.id, { data: { ...data, showPoints: e.target.checked } })} className="rounded" />
+              <span className="text-xs text-gray-600">Показывать точки</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Angle: minimal panel
+  if (selectedObject.type === 'geoangle') {
+    const data = selectedObject.data as {
+      pointAId: string; pointBId: string; pointCId: string;
+      color: string; arcRadius: number; showLabel: boolean;
+    };
+    return (
+      <div className="w-80 bg-white border-l border-gray-200 flex flex-col overflow-y-auto overflow-x-hidden">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Угол</h3>
+            <button onClick={() => onDeleteObject(selectedObject.id)} className="p-1 rounded hover:bg-red-50 text-red-500" title="Удалить">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Цвет</label>
+            <div className="flex gap-2">
+              <input type="color" value={data.color || '#7C3AED'} onChange={(e) => onUpdateObject(selectedObject.id, { data: { ...data, color: e.target.value } })} className="w-8 h-8 rounded cursor-pointer" />
+              <input type="text" value={data.color || '#7C3AED'} onChange={(e) => onUpdateObject(selectedObject.id, { data: { ...data, color: e.target.value } })} className="flex-1 px-2 py-1 text-sm border rounded" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Радиус дуги (px)</label>
+            <input type="number" value={data.arcRadius || 25} onChange={(e) => onUpdateObject(selectedObject.id, { data: { ...data, arcRadius: parseInt(e.target.value) || 25 } })} className="w-full px-2 py-1 text-sm border rounded" min={10} max={80} />
+          </div>
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={data.showLabel !== false} onChange={(e) => onUpdateObject(selectedObject.id, { data: { ...data, showLabel: e.target.checked } })} className="rounded" />
+              <span className="text-xs text-gray-600">Показывать значение угла</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (selectedObjects.length > 1) {
     return (
       <div className="w-80 bg-white border-l border-gray-200 p-4">
@@ -675,6 +750,41 @@ export const PropertiesPanel: React.FC = () => {
         );
       }
 
+      case 'geopoint': {
+        const data = selectedObject.data as { color: string; radius: number; label?: string };
+        return (
+          <>
+            <div className="mb-3">
+              <label className="block text-xs text-gray-500 mb-1">Цвет</label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={data?.color || '#1D4ED8'}
+                  onChange={(e) => handleUpdateData('color', e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={data?.color || '#1D4ED8'}
+                  onChange={(e) => handleUpdateData('color', e.target.value)}
+                  className="flex-1 px-2 py-1 text-sm border rounded"
+                />
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-gray-500 mb-1">Метка</label>
+              <input
+                type="text"
+                value={data?.label ?? ''}
+                onChange={(e) => handleUpdateData('label', e.target.value || null)}
+                placeholder="A, B, C…"
+                className="w-full px-2 py-1 text-sm border rounded"
+              />
+            </div>
+          </>
+        );
+      }
+
       default:
         return (
           <p className="text-sm text-gray-400">Нет доступных свойств</p>
@@ -700,7 +810,7 @@ export const PropertiesPanel: React.FC = () => {
       </div>
 
       {/* Position */}
-      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && (
+      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'geopoint' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <Move size={12} /> Позиция
@@ -735,7 +845,7 @@ export const PropertiesPanel: React.FC = () => {
       )}
 
       {/* Size */}
-      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && (
+      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'geopoint' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <Maximize2 size={12} /> Размер
@@ -772,7 +882,7 @@ export const PropertiesPanel: React.FC = () => {
       )}
 
       {/* Rotation - hide for chart, line and fraction objects */}
-      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && selectedObject.type !== 'fraction' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'text' && (
+      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && selectedObject.type !== 'fraction' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'text' && selectedObject.type !== 'geopoint' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <RotateCw size={12} /> Поворот

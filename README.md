@@ -4,7 +4,7 @@
 
 Интерактивное приложение для создания математических визуализаций, диаграмм и обучающих материалов для учеников 5-11 классов. Доступно как в браузере, так и в виде desktop-приложения.
 
-![Version](https://img.shields.io/badge/version-2.2.0-blue)
+![Version](https://img.shields.io/badge/version-2.3.0-blue)
 ![React](https://img.shields.io/badge/React-18.3-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6)
 ![Electron](https://img.shields.io/badge/Electron-40.8-47848f)
@@ -23,6 +23,7 @@
 - CNAME: `www` → `bespoke-travesseiro-b99785.netlify.app`
 - SSL: автоматически через Netlify (Let's Encrypt)
 - Сборка: `pnpm run build` → папка `dist/` загружается на Netlify вручную
+- **GitHub Pages**: `npm run deploy` — собирает и публикует в `gh-pages` ветку автоматически
 
 ---
 
@@ -44,6 +45,13 @@
 - **Multi-select**: Ctrl+клик для добавления/снятия объектов из выделения
 - **Multi-drag**: перетаскивание всех выбранных объектов одновременно
 - **Backspace в тексте**: корректное удаление символов при редактировании текста
+
+### 📄 Множественные страницы (Miro/FigJam-стиль)
+- Несколько холстов внутри одного проекта
+- Добавление, удаление и переключение страниц через `PageSwitcher`
+- Каждая страница хранит собственный список объектов
+- При переключении страницы объекты текущей страницы сохраняются автоматически
+- Поддержка загрузки старых проектов (без страниц) — автоматическая миграция
 
 ### 🎓 Интерактивные модули (18 модулей)
 
@@ -95,7 +103,9 @@ Curriculum → TopicGraph → ProblemSelector → ProblemTemplate → VariantGen
 
 | Файл | Описание |
 |------|----------|
-| `src/lib/types.ts` | Типы `ProblemTemplate`, `DifficultyConfig`, `GeneratedProblem`, `SolutionStep`, `ParameterDef` |
+| `src/lib/types.ts` | Типы `ProblemTemplate`, `DifficultyConfig`, `GeneratedProblem`, `SolutionStep`, `ParameterDef`, `Page`, `AppState`, `Project` |
+| `src/hooks/useAppState.ts` | Главная логика состояния, управление страницами (`addPage`, `removePage`, `switchPage`) |
+| `src/components/PageSwitcher.tsx` | UI переключения страниц |
 | `src/lib/curriculum.ts` | Структура учебной программы: классы, предметы, темы |
 | `src/lib/topicGraph.ts` | Граф зависимостей между темами (prerequisites) |
 | `src/lib/problemSelector.ts` | Выбор шаблона с учётом истории сессии (`ProblemSession`) |
@@ -1168,6 +1178,12 @@ pnpm run electron
   - Проценты: `percent_basics`, `percent_of_number`, `number_by_percent`, `percent_change`
   - Линейные уравнения: `linear_equations_basic`, `linear_equations_brackets`, `word_problems_equations`
   - Геометрия: `coordinate_plane`, `quadrants`, `distance_on_axis`, `angles`, `circles`, `figureArea`
+- **[v2.3.0]** 📄 **Множественные страницы** — несколько холстов внутри одного проекта (Miro/FigJam-стиль)
+  - `AppState` содержит `pages[]` и `activePageId`
+  - Каждая страница (`Page`) хранит собственный `objects[]`
+  - `PageSwitcher` — UI для добавления, удаления и переключения страниц
+  - `pagesRef` / `activePageIdRef` — защита от stale closures внутри команд
+  - Обратная совместимость: старые проекты (без страниц) автоматически мигрируются
 
 ### 🚧 В разработке
 

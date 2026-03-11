@@ -10,6 +10,7 @@ import { ChallengeMode } from './components/challenge/ChallengeMode';
 import { WelcomeScreen } from './components/interactive/WelcomeScreen';
 import { ProjectsPanel } from './components/ProjectsPanel';
 import { ExportModal } from './components/ExportModal';
+import { PageSwitcher } from './components/PageSwitcher';
 import { EditorProvider, useEditorContext } from './contexts/EditorContext';
 import { generateId } from './hooks/useAppState';
 import { Project } from './lib/types';
@@ -31,6 +32,9 @@ function AppContent() {
     newProject,
     handleSelectTemplate,
     interactiveModuleId,
+    addPage,
+    removePage,
+    switchPage,
   } = useEditorContext();
 
   const [showWelcome, setShowWelcome] = useState(() => {
@@ -141,6 +145,8 @@ function AppContent() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         objects: state.objects,
+        pages: state.pages,
+        activePageId: state.activePageId,
         canvasSize: { width: 800, height: 600 },
         backgroundColor: '#FFFFFF',
       };
@@ -158,6 +164,8 @@ function AppContent() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         objects: state.objects,
+        pages: state.pages,
+        activePageId: state.activePageId,
         canvasSize: { width: 800, height: 600 },
         backgroundColor: '#FFFFFF',
       };
@@ -214,6 +222,8 @@ function AppContent() {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             objects: state.objects,
+            pages: state.pages,
+            activePageId: state.activePageId,
             canvasSize: { width: 800, height: 600 },
             backgroundColor: '#FFFFFF',
           };
@@ -272,11 +282,10 @@ function AppContent() {
       );
     }
 
-    // Default mode - canvas with object creator
+    // Default mode - canvas only
     return (
       <div className="flex-1 flex overflow-hidden">
         <Canvas />
-        <ObjectCreator />
       </div>
     );
   };
@@ -301,6 +310,17 @@ function AppContent() {
 
           {/* Main content */}
           {renderMainContent()}
+
+          {/* Page switcher - only in canvas modes */}
+          {state.mode !== 'interactive' && state.mode !== 'challenge' && state.mode !== 'projects' && (
+            <PageSwitcher
+              pages={state.pages}
+              activePageId={state.activePageId}
+              onSwitch={switchPage}
+              onAdd={addPage}
+              onRemove={removePage}
+            />
+          )}
         </div>
 
         {/* Right panel - Properties (hidden in interactive/challenge/library/projects mode and when nothing selected) */}

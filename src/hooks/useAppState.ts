@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { AnyCanvasObject, AppMode, AppState, Project } from '@/lib/types';
+import { AnyCanvasObject, AppMode, AppState, Page, Project } from '@/lib/types';
 import { CommandHistory } from '@/lib/commandHistory';
 import {
   AddObjectCommand,
@@ -14,6 +14,18 @@ export const generateId = (): string => {
   return `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
+// Deep copy objects array to prevent shared references between pages
+const cloneObjects = (objects: AnyCanvasObject[]): AnyCanvasObject[] =>
+  JSON.parse(JSON.stringify(objects));
+
+const createPage = (index: number): Page => ({
+  id: generateId(),
+  title: `Страница ${index}`,
+  objects: [],
+});
+
+const firstPage = createPage(1);
+
 // Initial state
 const initialState: AppState = {
   mode: 'select',
@@ -22,27 +34,36 @@ const initialState: AppState = {
   projectPath: null,
   projectName: 'Новый проект',
   isDirty: false,
+  pages: [firstPage],
+  activePageId: firstPage.id,
 };
 
 export function useAppState() {
   const [state, setState] = useState<AppState>(initialState);
   const historyRef = useRef(new CommandHistory());
-  // Keep a ref to always-current objects to avoid stale closures in commands
   const objectsRef = useRef<AnyCanvasObject[]>(initialState.objects);
+  // Refs for page state — always current, no stale closures
+  const pagesRef = useRef<Page[]>(initialState.pages);
+  const activePageIdRef = useRef<string>(initialState.activePageId);
+  const pageCounterRef = useRef(1);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
-  // Internal setter for commands — always reads from ref, not closed-over state
+  // Internal setter for commands — reads from refs, never stale
   const setObjects = useCallback((objects: AnyCanvasObject[]) => {
     objectsRef.current = objects;
+    const pageId = activePageIdRef.current;
+    const updatedPages = pagesRef.current.map(p =>
+      p.id === pageId ? { ...p, objects } : p
+    );
+    pagesRef.current = updatedPages;
     setState((prev) => ({
       ...prev,
       objects,
       isDirty: true,
+      pages: updatedPages,
     }));
   }, []);
-
-  // Keep objectsRef in sync with state.objects
-  const stateRef = useRef(state);
-  stateRef.current = state;
 
   // Update object in state (for final changes only - end of drag, resize, text edit)
   const updateObject = useCallback((id: string, updates: Partial<AnyCanvasObject>) => {
@@ -131,21 +152,50 @@ export function useAppState() {
 
   // New project
   const newProject = useCallback(() => {
+    pageCounterRef.current = 1;
+    const page = createPage(1);
+    objectsRef.current = [];
+    pagesRef.current = [page];
+    activePageIdRef.current = page.id;
     setState({
       ...initialState,
       projectName: 'Новый проект',
       projectPath: null,
+      pages: [page],
+      activePageId: page.id,
+      objects: [],
     });
     historyRef.current.clear();
   }, []);
 
   // Load project
   const loadProject = useCallback((project: Project, path: string) => {
+    // Support both old format (objects only) and new format (pages)
+    let pages: Page[];
+    let activePageId: string;
+
+    if (project.pages && project.pages.length > 0) {
+      pages = project.pages;
+      activePageId = project.activePageId ?? pages[0].id;
+    } else {
+      const page = { ...createPage(1), objects: project.objects ?? [] };
+      pages = [page];
+      activePageId = page.id;
+    }
+
+    const activeObjects = cloneObjects(pages.find(p => p.id === activePageId)?.objects ?? []);
+    objectsRef.current = activeObjects;
+    pagesRef.current = pages;
+    activePageIdRef.current = activePageId;
+    pageCounterRef.current = pages.length;
+
     setState({
       ...initialState,
-      objects: project.objects,
+      objects: activeObjects,
       projectName: project.name,
       projectPath: path,
+      pages,
+      activePageId,
     });
     historyRef.current.clear();
   }, []);
@@ -190,6 +240,77 @@ export function useAppState() {
     }
   }, [setObjects]);
 
+  // Page management
+  const addPage = useCallback(() => {
+    // Save current objects to current page first
+    const savedPages = pagesRef.current.map(p =>
+      p.id === activePageIdRef.current ? { ...p, objects: cloneObjects(objectsRef.current) } : p
+    );
+    pageCounterRef.current += 1;
+    const newPage = createPage(pageCounterRef.current);
+    const updatedPages = [...savedPages, newPage];
+
+    objectsRef.current = [];
+    pagesRef.current = updatedPages;
+    activePageIdRef.current = newPage.id;
+
+    setState(prev => ({
+      ...prev,
+      pages: updatedPages,
+      activePageId: newPage.id,
+      objects: [],
+      selectedObjectIds: [],
+      isDirty: true,
+    }));
+    historyRef.current.clear();
+  }, []);
+
+  const removePage = useCallback((pageId: string) => {
+    if (pagesRef.current.length <= 1) return;
+    const newPages = pagesRef.current.filter(p => p.id !== pageId);
+    const newActiveId = pageId === activePageIdRef.current
+      ? newPages[newPages.length - 1].id
+      : activePageIdRef.current;
+    const newObjects = cloneObjects(newPages.find(p => p.id === newActiveId)?.objects ?? []);
+
+    objectsRef.current = newObjects;
+    pagesRef.current = newPages;
+    activePageIdRef.current = newActiveId;
+
+    setState(prev => ({
+      ...prev,
+      pages: newPages,
+      activePageId: newActiveId,
+      objects: newObjects,
+      selectedObjectIds: [],
+      isDirty: true,
+    }));
+    historyRef.current.clear();
+  }, []);
+
+  const switchPage = useCallback((pageId: string) => {
+    if (pageId === activePageIdRef.current) return;
+
+    // Save current objects to current page using refs (no stale state)
+    const savedPages = pagesRef.current.map(p =>
+      p.id === activePageIdRef.current ? { ...p, objects: cloneObjects(objectsRef.current) } : p
+    );
+    const newObjects = cloneObjects(savedPages.find(p => p.id === pageId)?.objects ?? []);
+
+    objectsRef.current = newObjects;
+    pagesRef.current = savedPages;
+    activePageIdRef.current = pageId;
+
+    setState(prev => ({
+      ...prev,
+      pages: savedPages,
+      activePageId: pageId,
+      objects: newObjects,
+      selectedObjectIds: [],
+    }));
+    historyRef.current.clear();
+  }, []);
+
   // Get selected objects
   const selectedObjects = state.objects.filter((obj) =>
     state.selectedObjectIds.includes(obj.id)
@@ -215,5 +336,8 @@ export function useAppState() {
     markAsSaved,
     clearCanvas,
     selectMultiple,
+    addPage,
+    removePage,
+    switchPage,
   };
 }
