@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useEditorContext } from '@/contexts/EditorContext';
+import { SmartShapeToolbar } from './SmartShapeToolbar';
 import { AnyCanvasObject, Point } from '@/lib/types';
 import {
   isPointInObject,
@@ -24,6 +25,7 @@ export const Canvas: React.FC = () => {
     handleDeleteObject: onDeleteObject,
     moveObjects: onMoveObjects,
     penSettings,
+    shapeType,
   } = useEditorContext();
   const objects = state.objects;
   const selectedObjectIds = state.selectedObjectIds;
@@ -45,6 +47,9 @@ export const Canvas: React.FC = () => {
   const [isDrawingLine, setIsDrawingLine] = useState(false);
   const [lineStart, setLineStart] = useState<Point | null>(null);
   const [lineEnd, setLineEnd] = useState<Point | null>(null);
+  const [isDrawingShape, setIsDrawingShape] = useState(false);
+  const [shapeDrawStart, setShapeDrawStart] = useState<Point | null>(null);
+  const [shapeDrawEnd, setShapeDrawEnd] = useState<Point | null>(null);
   const [isErasing, setIsErasing] = useState(false);
   const [isMarqueeSelecting, setIsMarqueeSelecting] = useState(false);
   const [marqueeStart, setMarqueeStart] = useState<Point | null>(null);
@@ -531,6 +536,17 @@ export const Canvas: React.FC = () => {
       e.stopPropagation();
     }
 
+    // Shape mode — drag-to-draw start
+    if (mode === 'shape') {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      setIsDrawingShape(true);
+      setShapeDrawStart({ x, y });
+      setShapeDrawEnd({ x, y });
+      e.stopPropagation();
+    }
+
     // Select mode marquee is handled directly on the SVG element below
   };
 
@@ -663,6 +679,15 @@ export const Canvas: React.FC = () => {
       } else {
         setSnapTarget(null);
       }
+    }
+
+    // Shape drag preview
+    if (mode === 'shape' && isDrawingShape) {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      setShapeDrawEnd({ x, y });
+      return;
     }
 
     // Freehand: append point if distance threshold exceeded
@@ -807,6 +832,45 @@ export const Canvas: React.FC = () => {
     // Eraser mode cleanup
     if (isErasing) {
       setIsErasing(false);
+      return;
+    }
+
+    // Shape drag-to-draw completion
+    if (isDrawingShape && shapeDrawStart && shapeDrawEnd) {
+      const x = Math.min(shapeDrawStart.x, shapeDrawEnd.x);
+      const y = Math.min(shapeDrawStart.y, shapeDrawEnd.y);
+      const w = Math.abs(shapeDrawEnd.x - shapeDrawStart.x);
+      const h = Math.abs(shapeDrawEnd.y - shapeDrawStart.y);
+
+      setIsDrawingShape(false);
+      setShapeDrawStart(null);
+      setShapeDrawEnd(null);
+
+      if (w > 5 && h > 5) {
+        const id = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        let newShape: AnyCanvasObject;
+        switch (shapeType) {
+          case 'circle':
+            newShape = { id, type: 'circle', x, y, width: w, height: w, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: '#10B981', stroke: '#047857', strokeWidth: 2 } };
+            break;
+          case 'triangle':
+            newShape = { id, type: 'triangle', x, y, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: '#F59E0B', stroke: '#D97706', strokeWidth: 2 } };
+            break;
+          case 'geoshape-circle':
+            newShape = { id, type: 'geoshape', x, y, width: w, height: w, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'circle', radius: Math.round(w / 2), stroke: '#374151', strokeWidth: 2 } };
+            break;
+          case 'geoshape-triangle':
+            newShape = { id, type: 'geoshape', x, y, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'triangle', sideA: Math.round(w), sideB: Math.round(w), sideC: Math.round(w), stroke: '#374151', strokeWidth: 2 } };
+            break;
+          case 'geoshape-quad':
+            newShape = { id, type: 'geoshape', x, y, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'quadrilateral', sideAB: Math.round(w), sideBC: Math.round(h), sideCD: Math.round(w), sideDA: Math.round(h), stroke: '#374151', strokeWidth: 2 } };
+            break;
+          default:
+            newShape = { id, type: 'rectangle', x, y, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: '#4F46E5', stroke: '#312E81', strokeWidth: 2, cornerRadius: 0 } };
+        }
+        onAddObject(newShape);
+        onSelectObject(newShape.id);
+      }
       return;
     }
 
@@ -2308,7 +2372,7 @@ export const Canvas: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 bg-gray-100 overflow-hidden">
+    <div className="flex-1 bg-gray-100 overflow-hidden relative">
       <div
         ref={canvasRef}
         className="w-full h-full overflow-auto select-none"
@@ -2345,7 +2409,7 @@ export const Canvas: React.FC = () => {
           }
         }}
         style={{
-          cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : mode === 'arrow' || mode === 'line' ? 'crosshair' : mode === 'eraser' ? 'cell' : ['draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle', 'freehand'].includes(mode) ? 'crosshair' : 'default',
+          cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : mode === 'arrow' || mode === 'line' ? 'crosshair' : mode === 'eraser' ? 'cell' : ['draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle', 'freehand', 'shape'].includes(mode) ? 'crosshair' : 'default',
         }}
       >
         <svg
@@ -2360,7 +2424,7 @@ export const Canvas: React.FC = () => {
             transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
           }}
           onMouseDown={(e: React.MouseEvent<SVGSVGElement>) => {
-            if (mode === 'line' || mode === 'geosegment') { handleCanvasMouseDown(e as unknown as React.MouseEvent); return; }
+            if (mode === 'line' || mode === 'geosegment' || mode === 'shape') { handleCanvasMouseDown(e as unknown as React.MouseEvent); return; }
             // Don't start marquee if panning or Space is pressed
             if (isPanning || isSpacePressed) return;
             // Marquee: only when clicking directly on SVG background (not on objects)
@@ -2455,6 +2519,24 @@ export const Canvas: React.FC = () => {
                 stroke="#3b82f6"
                 strokeDasharray="4,4"
                 strokeWidth={1}
+              />
+            );
+          })()}
+
+          {/* Shape drag-to-draw preview */}
+          {isDrawingShape && shapeDrawStart && shapeDrawEnd && (() => {
+            const x = Math.min(shapeDrawStart.x, shapeDrawEnd.x);
+            const y = Math.min(shapeDrawStart.y, shapeDrawEnd.y);
+            const w = Math.abs(shapeDrawEnd.x - shapeDrawStart.x);
+            const h = Math.abs(shapeDrawEnd.y - shapeDrawStart.y);
+            return (
+              <rect
+                x={x} y={y} width={w} height={h}
+                fill="rgba(79,70,229,0.08)"
+                stroke="#4F46E5"
+                strokeWidth={1.5}
+                strokeDasharray="6,3"
+                style={{ pointerEvents: 'none' }}
               />
             );
           })()}
@@ -2555,6 +2637,9 @@ export const Canvas: React.FC = () => {
           {angleStep === 0 ? 'Выберите первую точку (A)' : angleStep === 1 ? 'Выберите вершину угла (B)' : 'Выберите третью точку (C)'}
         </div>
       )}
+      {/* Smart Shape Toolbar — floating panel above selected shape */}
+      <SmartShapeToolbar />
+
     </div>
   );
 };

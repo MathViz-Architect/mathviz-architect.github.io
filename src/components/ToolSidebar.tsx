@@ -20,6 +20,8 @@ import {
   Spline,
   Triangle,
   Pencil,
+  Circle,
+  Pentagon,
   LucideIcon,
 } from 'lucide-react';
 import { AppMode } from '@/lib/types';
@@ -78,7 +80,12 @@ const TOOL_GROUPS: ToolGroup[] = [
     name: 'Фигуры',
     icon: Square,
     tools: [
-      { id: 'shape', name: 'Фигуры', icon: Square, mode: 'shape' },
+      { id: 'shape-rect', name: 'Прямоугольник', icon: Square, mode: 'shape' },
+      { id: 'shape-circle', name: 'Круг', icon: Circle, mode: 'shape' },
+      { id: 'shape-triangle', name: 'Треугольник', icon: Triangle, mode: 'shape' },
+      { id: 'shape-geo-circle', name: 'Окружность', icon: Circle, mode: 'shape' },
+      { id: 'shape-geo-triangle', name: '△ с параметрами', icon: Triangle, mode: 'shape' },
+      { id: 'shape-geo-quad', name: '□ с параметрами', icon: Pentagon, mode: 'shape' },
     ],
   },
   {
@@ -148,12 +155,21 @@ interface ToolSidebarProps {
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 export const ToolSidebar: React.FC<ToolSidebarProps> = ({ onNew, onOpen, onSave, onExport }) => {
-  const { state, setMode, undo, redo, canUndo, canRedo, clearCanvas, selectedObjects } = useEditorContext();
+  const { state, setMode, undo, redo, canUndo, canRedo, clearCanvas, selectedObjects, setShapeType } = useEditorContext();
   const mode = state.mode;
   const canUndoAction = canUndo();
   const canRedoAction = canRedo();
   const isDirty = state.isDirty;
   const hasSelection = selectedObjects.length > 0;
+
+  const shapeToolToType: Record<string, Parameters<typeof setShapeType>[0]> = {
+    'shape-rect': 'rectangle',
+    'shape-circle': 'circle',
+    'shape-triangle': 'triangle',
+    'shape-geo-circle': 'geoshape-circle',
+    'shape-geo-triangle': 'geoshape-triangle',
+    'shape-geo-quad': 'geoshape-quad',
+  };
 
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -181,6 +197,9 @@ export const ToolSidebar: React.FC<ToolSidebarProps> = ({ onNew, onOpen, onSave,
   };
 
   const handleToolClick = (tool: ToolDef) => {
+    if (tool.id in shapeToolToType) {
+      setShapeType(shapeToolToType[tool.id]);
+    }
     setMode(tool.mode);
     setOpenGroupId(null);
   };

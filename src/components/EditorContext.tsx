@@ -63,7 +63,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [showGrid, setShowGrid] = useState(true);
   const [interactiveModuleId, setInteractiveModuleId] = useState<string | null>(null);
   const [penSettings, setPenSettingsState] = useState<{ width: number; color: string }>({ width: 3, color: '#374151' });
-  const [shapeType, setShapeType] = useState<'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad'>('rectangle');
+  const [shapeType, setShapeType] = useState<EditorContextValue['shapeType']>('rectangle');
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const setPenSettings = useCallback((settings: Partial<{ width: number; color: string }>) => {
