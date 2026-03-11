@@ -19,6 +19,7 @@ import {
   Dot,
   Spline,
   Triangle,
+  Pencil,
   LucideIcon,
 } from 'lucide-react';
 import { AppMode } from '@/lib/types';
@@ -62,6 +63,14 @@ const TOOL_GROUPS: ToolGroup[] = [
       { id: 'geosegment', name: 'Отрезок', icon: Spline, mode: 'geosegment' },
       { id: 'line', name: 'Линия', icon: Minus, mode: 'line' },
       { id: 'geoangle', name: 'Угол', icon: Triangle, mode: 'geoangle' },
+    ],
+  },
+  {
+    id: 'freehand',
+    name: 'Карандаш',
+    icon: Pencil,
+    tools: [
+      { id: 'freehand', name: 'Карандаш', icon: Pencil, mode: 'freehand' },
     ],
   },
   {

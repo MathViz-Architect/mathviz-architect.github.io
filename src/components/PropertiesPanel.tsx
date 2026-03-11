@@ -5,13 +5,59 @@ import { AnyCanvasObject } from '@/lib/types';
 
 export const PropertiesPanel: React.FC = () => {
   const {
+    state,
     selectedObjects,
     updateObject: onUpdateObject,
     handleDeleteObject: onDeleteObject,
+    penSettings,
+    setPenSettings,
   } = useEditorContext();
   // saveToHistory removed from context — calls are no-ops via optional chaining
   const onSaveToHistory: (() => void) | undefined = undefined;
   const selectedObject = selectedObjects[0];
+  const mode = state.mode;
+
+  // When pen tool is active — show pen settings, not object properties
+  if (mode === 'freehand') {
+    return (
+      <div className="w-80 bg-white border-l border-gray-200 flex flex-col overflow-y-auto overflow-x-hidden">
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-700">Карандаш</h3>
+          <p className="text-xs text-gray-400 mt-1">Настройки инструмента</p>
+        </div>
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Цвет</label>
+            <div className="flex gap-2">
+              <input
+                type="color"
+                value={penSettings.color}
+                onChange={(e) => setPenSettings({ color: e.target.value })}
+                className="w-8 h-8 rounded cursor-pointer"
+              />
+              <input
+                type="text"
+                value={penSettings.color}
+                onChange={(e) => setPenSettings({ color: e.target.value })}
+                className="flex-1 px-2 py-1 text-sm border rounded"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Толщина: {penSettings.width}</label>
+            <input
+              type="range"
+              value={penSettings.width}
+              onChange={(e) => setPenSettings({ width: parseInt(e.target.value) })}
+              className="w-full"
+              min={1}
+              max={20}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedObjects.length === 0) {
     return null;
@@ -785,6 +831,12 @@ export const PropertiesPanel: React.FC = () => {
         );
       }
 
+      case 'freehand': {
+        return (
+          <p className="text-sm text-gray-400">Выберите инструмент Карандаш для настройки.</p>
+        );
+      }
+
       default:
         return (
           <p className="text-sm text-gray-400">Нет доступных свойств</p>
@@ -810,7 +862,7 @@ export const PropertiesPanel: React.FC = () => {
       </div>
 
       {/* Position */}
-      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'geopoint' && (
+      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'geopoint' && selectedObject.type !== 'freehand' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <Move size={12} /> Позиция
@@ -845,7 +897,7 @@ export const PropertiesPanel: React.FC = () => {
       )}
 
       {/* Size */}
-      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'geopoint' && (
+      {selectedObject.type !== 'line' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'geopoint' && selectedObject.type !== 'freehand' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <Maximize2 size={12} /> Размер
@@ -882,7 +934,7 @@ export const PropertiesPanel: React.FC = () => {
       )}
 
       {/* Rotation - hide for chart, line and fraction objects */}
-      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && selectedObject.type !== 'fraction' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'text' && selectedObject.type !== 'geopoint' && (
+      {selectedObject.type !== 'chart' && selectedObject.type !== 'line' && selectedObject.type !== 'fraction' && selectedObject.type !== 'geoshape' && selectedObject.type !== 'text' && selectedObject.type !== 'geopoint' && selectedObject.type !== 'freehand' && (
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <RotateCw size={12} /> Поворот

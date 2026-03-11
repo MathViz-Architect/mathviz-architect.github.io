@@ -23,6 +23,7 @@ export const Canvas: React.FC = () => {
     handleAddObject: onAddObject,
     handleDeleteObject: onDeleteObject,
     moveObjects: onMoveObjects,
+    penSettings,
   } = useEditorContext();
   const objects = state.objects;
   const selectedObjectIds = state.selectedObjectIds;
@@ -66,6 +67,11 @@ export const Canvas: React.FC = () => {
 
   // Snap indicator: shows target point while hovering in geo modes
   const [snapTarget, setSnapTarget] = useState<{ x: number; y: number; snapped: boolean } | null>(null);
+
+  // Freehand drawing state
+  const [isDrawingFreehand, setIsDrawingFreehand] = useState(false);
+  const [freehandPoints, setFreehandPoints] = useState<{ x: number; y: number }[]>([]);
+  const freehandLastPointRef = useRef<{ x: number; y: number } | null>(null);
 
   // Panning state
   const [panOffset, setPanOffset] = useState<Point>({ x: 0, y: 0 });
@@ -284,6 +290,8 @@ export const Canvas: React.FC = () => {
     if (mode === 'line') return;
     // Geo tools handle clicks via handleCanvasMouseDown — don't intercept
     if (mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser') return;
+    // Freehand draws on canvas, never selects objects
+    if (mode === 'freehand') return;
     e.stopPropagation();
     const obj = objects.find((o) => o.id === objectId);
     if (obj?.locked) return;
@@ -371,6 +379,22 @@ export const Canvas: React.FC = () => {
       setTimeout(() => autoResizeTextarea(), 0);
     }
   }, [editingTextId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Freehand: build smoothed SVG path using quadratic bezier midpoints
+  const buildSmoothPath = (pts: { x: number; y: number }[]): string => {
+    if (pts.length === 0) return '';
+    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+    if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i].x + pts[i + 1].x) / 2;
+      const my = (pts[i].y + pts[i + 1].y) / 2;
+      d += ` Q ${pts[i].x} ${pts[i].y} ${mx} ${my}`;
+    }
+    const last = pts[pts.length - 1];
+    d += ` L ${last.x} ${last.y}`;
+    return d;
+  };
 
   // Handle canvas click (deselect)
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -495,6 +519,18 @@ export const Canvas: React.FC = () => {
       e.stopPropagation();
     }
 
+    // Freehand drawing — start path
+    if (mode === 'freehand') {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      setIsDrawingFreehand(true);
+      const firstPoint = { x, y };
+      setFreehandPoints([firstPoint]);
+      freehandLastPointRef.current = firstPoint;
+      e.stopPropagation();
+    }
+
     // Select mode marquee is handled directly on the SVG element below
   };
 
@@ -563,8 +599,20 @@ export const Canvas: React.FC = () => {
       idsToMove.forEach((id) => {
         const obj = objects.find((o) => o.id === id);
         if (!obj) return;
-        const updates = applyDelta(obj, dx, dy);
-        onUpdateObject(id, updates);
+        if (obj.type === 'freehand') {
+          const fData = obj.data as { points: { x: number; y: number }[]; color: string; width: number };
+          onUpdateObject(id, {
+            x: obj.x + dx,
+            y: obj.y + dy,
+            data: {
+              ...fData,
+              points: fData.points.map(p => ({ x: p.x + dx, y: p.y + dy })),
+            },
+          });
+        } else {
+          const updates = applyDelta(obj, dx, dy);
+          onUpdateObject(id, updates);
+        }
       });
       setDragStart({ x, y });
       return;
@@ -614,6 +662,19 @@ export const Canvas: React.FC = () => {
         setSnapTarget({ x: nx, y: ny, snapped: true });
       } else {
         setSnapTarget(null);
+      }
+    }
+
+    // Freehand: append point if distance threshold exceeded
+    if (mode === 'freehand' && isDrawingFreehand) {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height);
+      const last = freehandLastPointRef.current;
+      if (!last || Math.hypot(x - last.x, y - last.y) > 2) {
+        const pt = { x, y };
+        setFreehandPoints(prev => [...prev, pt]);
+        freehandLastPointRef.current = pt;
       }
     }
   };
@@ -746,6 +807,40 @@ export const Canvas: React.FC = () => {
     // Eraser mode cleanup
     if (isErasing) {
       setIsErasing(false);
+      return;
+    }
+
+    // Freehand drawing completion
+    if (isDrawingFreehand) {
+      setIsDrawingFreehand(false);
+      freehandLastPointRef.current = null;
+      if (freehandPoints.length >= 2) {
+        const xs = freehandPoints.map(p => p.x);
+        const ys = freehandPoints.map(p => p.y);
+        const minX = Math.min(...xs);
+        const minY = Math.min(...ys);
+        const maxX = Math.max(...xs);
+        const maxY = Math.max(...ys);
+        const newPath: AnyCanvasObject = {
+          id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          type: 'freehand',
+          x: minX,
+          y: minY,
+          width: Math.max(maxX - minX, 1),
+          height: Math.max(maxY - minY, 1),
+          rotation: 0,
+          opacity: 1,
+          visible: true,
+          locked: false,
+          data: {
+            points: freehandPoints,
+            color: penSettings.color,
+            width: penSettings.width,
+          },
+        };
+        onAddObject(newPath);
+      }
+      setFreehandPoints([]);
       return;
     }
 
@@ -2132,6 +2227,42 @@ export const Canvas: React.FC = () => {
         );
       }
 
+      case 'freehand': {
+        const data = obj.data as { points: { x: number; y: number }[]; color: string; width: number };
+        const d = buildSmoothPath(data.points);
+        if (!d) return null;
+        return (
+          <g
+            key={obj.id}
+            onMouseDown={(e) => handleObjectMouseDown(e, obj.id)}
+            style={{ cursor: obj.locked ? 'not-allowed' : 'move' }}
+          >
+            {/* Invisible wider hit area for easier selection */}
+            <path d={d} stroke="transparent" strokeWidth={Math.max((data.width || 2) * 3, 10)} fill="none" />
+            <path
+              d={d}
+              stroke={data.color || '#374151'}
+              strokeWidth={data.width || 2}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={opacity}
+            />
+            {isSelected && (
+              <path
+                d={d}
+                stroke="#F59E0B"
+                strokeWidth={(data.width || 2) + 4}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={0.4}
+              />
+            )}
+          </g>
+        );
+      }
+
       default:
         return (
           <g
@@ -2201,6 +2332,10 @@ export const Canvas: React.FC = () => {
             setLineEnd(null);
           } else if (isErasing) {
             setIsErasing(false);
+          } else if (isDrawingFreehand) {
+            setIsDrawingFreehand(false);
+            setFreehandPoints([]);
+            freehandLastPointRef.current = null;
           } else if (isMarqueeSelecting) {
             setIsMarqueeSelecting(false);
             setMarqueeStart(null);
@@ -2210,7 +2345,7 @@ export const Canvas: React.FC = () => {
           }
         }}
         style={{
-          cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : mode === 'arrow' || mode === 'line' ? 'crosshair' : mode === 'eraser' ? 'cell' : ['draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle'].includes(mode) ? 'crosshair' : 'default',
+          cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : mode === 'arrow' || mode === 'line' ? 'crosshair' : mode === 'eraser' ? 'cell' : ['draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle', 'freehand'].includes(mode) ? 'crosshair' : 'default',
         }}
       >
         <svg
@@ -2386,6 +2521,20 @@ export const Canvas: React.FC = () => {
               strokeWidth={snapTarget.snapped ? 2.5 : 1.5}
               strokeDasharray={snapTarget.snapped ? undefined : '3,3'}
               opacity={0.8}
+              style={{ pointerEvents: 'none' }}
+            />
+          )}
+
+          {/* Freehand preview path while drawing */}
+          {isDrawingFreehand && freehandPoints.length >= 2 && (
+            <path
+              d={buildSmoothPath(freehandPoints)}
+              stroke={penSettings.color}
+              strokeWidth={penSettings.width}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.7}
               style={{ pointerEvents: 'none' }}
             />
           )}

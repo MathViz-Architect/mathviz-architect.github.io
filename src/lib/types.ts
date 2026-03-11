@@ -21,7 +21,7 @@ export interface ObjectStyle {
 
 export interface CanvasObject {
   id: string;
-  type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle' | 'polygon' | 'geoshape' | 'geopoint' | 'geosegment' | 'geoangle';
+  type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle' | 'polygon' | 'geoshape' | 'geopoint' | 'geosegment' | 'geoangle' | 'freehand';
   x: number;
   y: number;
   width: number;
@@ -183,7 +183,16 @@ export interface GeoAngleObject extends CanvasObject {
   };
 }
 
-export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | PolygonObject | GeoShapeObject | GeoPointObject | GeoSegmentObject | GeoAngleObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | CanvasObject;
+export interface FreehandPathObject extends CanvasObject {
+  type: 'freehand';
+  data: {
+    points: { x: number; y: number }[];
+    color: string;
+    width: number;
+  };
+}
+
+export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | PolygonObject | GeoShapeObject | GeoPointObject | GeoSegmentObject | GeoAngleObject | FreehandPathObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | CanvasObject;
 
 export interface Page {
   id: string;
@@ -218,7 +227,7 @@ export interface Tool {
   createObject: () => Partial<AnyCanvasObject>;
 }
 
-export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser' | 'projects' | 'geopoint' | 'geosegment' | 'geoangle';
+export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser' | 'projects' | 'geopoint' | 'geosegment' | 'geoangle' | 'freehand';
 
 export interface AppState {
   mode: AppMode;

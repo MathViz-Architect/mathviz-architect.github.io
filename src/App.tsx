@@ -26,6 +26,7 @@ function AppContent() {
     removeObject,
     undo,
     redo,
+    setMode,
     loadProject,
     setProjectPath,
     markAsSaved,
@@ -75,11 +76,35 @@ function AppContent() {
         e.preventDefault();
         selectedObjects.forEach((obj) => removeObject(obj.id));
       }
+
+      // Tool hotkeys — use e.code to work regardless of keyboard layout
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        const activeTag = (e.target as HTMLElement).tagName.toLowerCase();
+        const isEditable = activeTag === 'input' || activeTag === 'textarea' ||
+          (e.target as HTMLElement).isContentEditable;
+        if (!isEditable) {
+          const toolMap: Record<string, string> = {
+            KeyV: 'select',
+            KeyE: 'eraser',
+            KeyP: 'geopoint',
+            KeyS: 'geosegment',
+            KeyL: 'line',
+            KeyA: 'geoangle',
+            KeyF: 'freehand',
+            KeyT: 'text',
+          };
+          const tool = toolMap[e.code];
+          if (tool) {
+            e.preventDefault();
+            setMode(tool as Parameters<typeof setMode>[0]);
+          }
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedObjects, removeObject, undo, redo]);
+  }, [selectedObjects, removeObject, undo, redo, setMode]);
 
   // File operations
   const handleNew = useCallback(() => {
@@ -323,8 +348,8 @@ function AppContent() {
           )}
         </div>
 
-        {/* Right panel - Properties (hidden in interactive/challenge/library/projects mode and when nothing selected) */}
-        {state.mode !== 'interactive' && state.mode !== 'challenge' && state.mode !== 'library' && state.mode !== 'projects' && selectedObjects.length > 0 && (
+        {/* Right panel - Properties */}
+        {state.mode !== 'interactive' && state.mode !== 'challenge' && state.mode !== 'library' && state.mode !== 'projects' && (selectedObjects.length > 0 || state.mode === 'freehand' || state.mode === 'shape' || state.mode === 'text') && (
           <PropertiesPanel />
         )}
       </div>

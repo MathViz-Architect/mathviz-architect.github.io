@@ -49,6 +49,8 @@ interface EditorContextValue {
   switchPage: (pageId: string) => void;
   interactiveModuleId: string | null;
   setInteractiveModuleId: (moduleId: string | null) => void;
+  penSettings: { width: number; color: string };
+  setPenSettings: (settings: Partial<{ width: number; color: string }>) => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -58,7 +60,12 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
   const [interactiveModuleId, setInteractiveModuleId] = useState<string | null>(null);
+  const [penSettings, setPenSettingsState] = useState<{ width: number; color: string }>({ width: 3, color: '#374151' });
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const setPenSettings = useCallback((settings: Partial<{ width: number; color: string }>) => {
+    setPenSettingsState(prev => ({ ...prev, ...settings }));
+  }, []);
 
   const handleZoomIn = useCallback(() => setZoom(z => Math.min(z + 0.1, 2)), []);
   const handleZoomOut = useCallback(() => setZoom(z => Math.max(z - 0.1, 0.5)), []);
@@ -242,6 +249,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       deleteProjectFromStorage,
       interactiveModuleId,
       setInteractiveModuleId,
+      penSettings,
+      setPenSettings,
     }}>
       {children}
     </EditorContext.Provider>
