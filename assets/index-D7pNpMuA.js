@@ -20778,6 +20778,863 @@ const problemTemplates = [
         ]
       }
     }
+  },
+  // ===== GRADE 8 - ALGEBRA: Квадратный трёхчлен =====
+  {
+    id: "grade8-quadraticTrinomial-1",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратный трёхчлен",
+    topic: "quadraticTrinomial",
+    topic_title: "Квадратный трёхчлен",
+    problemType: "numeric",
+    skills: ["quadratic", "polynomials"],
+    difficulties: {
+      1: {
+        template: "Запишите коэффициенты a, b, c трёхчлена {a}x² + {b}x + {c}. Чему равен коэффициент b?",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -6, max: 6 },
+          c: { type: "int", min: -6, max: 6 }
+        },
+        constraints: ["b !== 0"],
+        answer_formula: "b",
+        hint: "Коэффициент b стоит перед x в первой степени",
+        solution: [
+          { explanation: "В трёхчлене ax² + bx + c коэффициент b стоит при x¹" },
+          { explanation: "Читаем коэффициент при x:", result: "{b}" }
+        ]
+      },
+      2: {
+        template: "Вычислите значение трёхчлена {a}x² + {b}x + {c} при x = {x}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -5, max: 5 },
+          c: { type: "int", min: -8, max: 8 },
+          x: { type: "int", min: -3, max: 3 }
+        },
+        answer_formula: "a * x * x + b * x + c",
+        hint: "Подставьте x = {x} в каждое слагаемое поочерёдно",
+        solution: [
+          { explanation: "Подставляем x = {x}:", expression: "{a}·({x})² + {b}·({x}) + {c}" },
+          { explanation: "Вычисляем степень:", expression: "{a}·{x*x} + {b}·{x} + {c}" },
+          { explanation: "Ответ:", result: "{answer}" }
+        ]
+      },
+      3: {
+        template: "При каком значении x трёхчлен {a}x² + {b}x + {c} равен {target}?",
+        parameters: {
+          a: { type: "int", min: 1, max: 2 },
+          x: { type: "int", min: -4, max: 4 },
+          b: { type: "int", min: -4, max: 4 },
+          c: { type: "int", min: -6, max: 6 },
+          target: { type: "expression", value: "a*x*x + b*x + c" }
+        },
+        answer_formula: "x",
+        hint: "Составьте уравнение {a}x² + {b}x + {c} = {target} и решите его"
+      }
+    }
+  },
+  // ===== GRADE 8 - ALGEBRA: Разложение трёхчлена =====
+  {
+    id: "grade8-trinomialFactoring-1",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратный трёхчлен",
+    topic: "trinomialFactoring",
+    topic_title: "Разложение трёхчлена на множители",
+    problemType: "numeric",
+    skills: ["factoring", "quadratic"],
+    difficulties: {
+      1: {
+        template: "Разложите на множители: x² + {s}x + {p}. Найдите меньший корень.",
+        parameters: {
+          r1: { type: "int", min: 1, max: 5 },
+          r2: { type: "int", min: 1, max: 5 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        answer_formula: "-Math.max(r1, r2)",
+        hint: "Подберите два числа, сумма которых равна {s}, а произведение — {p}",
+        solution: [
+          { explanation: "Ищем числа с суммой {s} и произведением {p}" },
+          { explanation: "Это числа {r1} и {r2}" },
+          { explanation: "Разложение: (x + {r1})(x + {r2}), корни: x = −{r1}, x = −{r2}" }
+        ]
+      },
+      2: {
+        template: "Разложите на множители: x² + {b}x + {c}. Найдите больший корень.",
+        parameters: {
+          r1: { type: "int", min: -6, max: -1 },
+          r2: { type: "int", min: 1, max: 6 },
+          b: { type: "expression", value: "r1 + r2" },
+          c: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "Math.max(-r1, -r2)",
+        hint: "Один корень положительный, другой отрицательный. Произведение < 0.",
+        solution: [
+          { explanation: "c = {c} < 0, значит корни разных знаков" },
+          { explanation: "Подбираем: {r1} + {r2} = {b}, {r1} · {r2} = {c}" },
+          { explanation: "Разложение: (x − {-r1})(x − {-r2})" }
+        ]
+      },
+      3: {
+        template: "Разложите на множители: {a}x² + {b}x + {c}. Найдите произведение корней.",
+        parameters: {
+          a: { type: "int", min: 2, max: 4 },
+          r1: { type: "int", min: -4, max: -1 },
+          r2: { type: "int", min: 1, max: 4 },
+          b: { type: "expression", value: "a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        answer_formula: "r1 * r2",
+        hint: "По теореме Виета произведение корней = c/a",
+        solution: [
+          { explanation: "По теореме Виета: x₁·x₂ = c/a = {c}/{a}", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - ALGEBRA: Неполные квадратные уравнения =====
+  {
+    id: "grade8-quadraticIncomplete-1",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные уравнения",
+    topic: "quadraticIncomplete",
+    topic_title: "Неполные квадратные уравнения",
+    problemType: "numeric",
+    skills: ["quadratic", "squareRoot"],
+    difficulties: {
+      1: {
+        template: "Решите уравнение: x² = {c}. Найдите положительный корень.",
+        parameters: {
+          x: { type: "int", min: 1, max: 8 },
+          c: { type: "expression", value: "x * x" }
+        },
+        answer_formula: "x",
+        hint: "x² = {c} означает x = ±√{c}",
+        solution: [
+          { explanation: "Из уравнения x² = {c}" },
+          { explanation: "x = ±√{c}", result: "x = ±{x}" }
+        ],
+        common_mistakes: [
+          { pattern: "-x", feedback: "Верно! Но задание просит положительный корень." }
+        ]
+      },
+      2: {
+        template: "Решите уравнение: {a}x² − {c} = 0. Найдите положительный корень.",
+        parameters: {
+          a: { type: "int", min: 2, max: 5 },
+          x: { type: "int", min: 1, max: 6 },
+          c: { type: "expression", value: "a * x * x" }
+        },
+        answer_formula: "x",
+        hint: "Перенесите {c} вправо: {a}x² = {c}, затем x² = {c}/{a}",
+        solution: [
+          { explanation: "Переносим: {a}x² = {c}" },
+          { explanation: "x² = {c} ÷ {a} = {x*x}" },
+          { explanation: "x = ±{x}" }
+        ]
+      },
+      3: {
+        template: "Решите уравнение: {a}x² + {b}x = 0. Найдите все корни через запятую.",
+        parameters: {
+          a: { type: "int", min: 1, max: 4 },
+          b: { type: "int", min: -8, max: 8 }
+        },
+        constraints: ["b !== 0"],
+        answer_formula: "-b / a",
+        hint: "Вынесите x за скобку: x({a}x + {b}) = 0",
+        solution: [
+          { explanation: "Выносим x: x·({a}x + {b}) = 0" },
+          { explanation: "x = 0  или  {a}x + {b} = 0" },
+          { explanation: "Второй корень: x = −{b}/{a} = {answer}" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - ALGEBRA: Формула дискриминанта =====
+  {
+    id: "grade8-quadraticFormula-1",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные уравнения",
+    topic: "quadraticFormula",
+    topic_title: "Формула корней квадратного уравнения",
+    problemType: "numeric",
+    skills: ["quadratic", "discriminant"],
+    difficulties: {
+      1: {
+        template: "Вычислите дискриминант уравнения x² + {b}x + {c} = 0.",
+        parameters: {
+          b: { type: "int", min: -6, max: 6 },
+          c: { type: "int", min: -8, max: 8 }
+        },
+        answer_formula: "b * b - 4 * c",
+        hint: "D = b² − 4ac. Здесь a = 1, b = {b}, c = {c}",
+        solution: [
+          { explanation: "D = b² − 4·a·c" },
+          { explanation: "D = ({b})² − 4·1·({c})", expression: "{b*b} − {4*c}" },
+          { explanation: "D =", result: "{answer}" }
+        ],
+        common_mistakes: [
+          { pattern: "b * b + 4 * c", feedback: "Знак неверный: D = b² − 4ac, не плюс." }
+        ]
+      },
+      2: {
+        template: "Решите уравнение x² + {b}x + {c} = 0. Найдите меньший корень.",
+        parameters: {
+          r1: { type: "int", min: -7, max: -1 },
+          r2: { type: "int", min: -7, max: -1 },
+          b: { type: "expression", value: "r1 + r2" },
+          c: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "Math.min(r1, r2)",
+        hint: "Вычислите D = {b}² − 4·{c}, затем x = (−{b} ± √D) / 2",
+        solution: [
+          { explanation: "D = ({b})² − 4·({c}) = {b*b - 4*c}" },
+          { explanation: "x₁ = (−{b} − √D) / 2, x₂ = (−{b} + √D) / 2" },
+          { explanation: "Меньший корень:", result: "{answer}" }
+        ]
+      },
+      3: {
+        template: "Решите уравнение {a}x² + {b}x + {c} = 0. Найдите сумму корней.",
+        parameters: {
+          a: { type: "int", min: 2, max: 4 },
+          r1: { type: "int", min: -5, max: 5 },
+          r2: { type: "int", min: -5, max: 5 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "r1 + r2",
+        hint: "По теореме Виета сумма корней = −b/a",
+        solution: [
+          { explanation: "По теореме Виета: x₁ + x₂ = −b/a = −({b})/{a}", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - ALGEBRA: Теорема Виета =====
+  {
+    id: "grade8-vietasTheorem-1",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные уравнения",
+    topic: "vietasTheorem",
+    topic_title: "Теорема Виета",
+    problemType: "numeric",
+    skills: ["quadratic", "vietasTheorem"],
+    difficulties: {
+      1: {
+        template: "Корни уравнения x² + bx + c = 0 равны {r1} и {r2}. Найдите b.",
+        parameters: {
+          r1: { type: "int", min: 1, max: 6 },
+          r2: { type: "int", min: 1, max: 6 }
+        },
+        answer_formula: "-(r1 + r2)",
+        hint: "По теореме Виета: b = −(x₁ + x₂)",
+        solution: [
+          { explanation: "x₁ + x₂ = {r1} + {r2} = {r1+r2}" },
+          { explanation: "b = −(x₁ + x₂) =", result: "{answer}" }
+        ]
+      },
+      2: {
+        template: "Составьте квадратное уравнение с корнями {r1} и {r2} (при a=1). Найдите c.",
+        parameters: {
+          r1: { type: "int", min: -6, max: 6 },
+          r2: { type: "int", min: -6, max: 6 }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0"],
+        answer_formula: "r1 * r2",
+        hint: "c = x₁ · x₂",
+        solution: [
+          { explanation: "c = x₁ · x₂ = {r1} · {r2}", result: "{answer}" },
+          { explanation: "Уравнение: x² + {-(r1+r2)}x + {r1*r2} = 0" }
+        ]
+      },
+      3: {
+        template: "Корни уравнения {a}x² + {b}x + {c} = 0 равны r₁ и r₂. Найдите r₁² + r₂².",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          r1: { type: "int", min: -4, max: 4 },
+          r2: { type: "int", min: -4, max: 4 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "r1*r1 + r2*r2",
+        hint: "r₁² + r₂² = (r₁+r₂)² − 2r₁r₂. Используйте теорему Виета.",
+        solution: [
+          { explanation: "По теореме Виета: r₁+r₂ = −b/a, r₁·r₂ = c/a" },
+          { explanation: "r₁²+r₂² = (r₁+r₂)² − 2r₁r₂", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - ALGEBRA: Задачи на квадратные уравнения =====
+  {
+    id: "grade8-quadraticWordProblems-1",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные уравнения",
+    topic: "quadraticWordProblems",
+    topic_title: "Задачи на квадратные уравнения",
+    problemType: "numeric",
+    skills: ["quadratic", "wordProblems"],
+    difficulties: {
+      1: {
+        template: "Прямоугольник имеет площадь {area} см². Его длина на {d} см больше ширины. Найдите ширину.",
+        parameters: {
+          w: { type: "int", min: 3, max: 9 },
+          d: { type: "int", min: 1, max: 5 },
+          area: { type: "expression", value: "w * (w + d)" }
+        },
+        answer_formula: "w",
+        hint: "Пусть ширина = x, тогда длина = x + {d}. Площадь: x·(x+{d}) = {area}",
+        solution: [
+          { explanation: "Обозначим ширину x, длину x+{d}" },
+          { explanation: "Уравнение: x·(x+{d}) = {area}" },
+          { explanation: "x² + {d}x − {area} = 0" },
+          { explanation: "Ширина:", result: "{w} см" }
+        ]
+      },
+      2: {
+        template: "Найдите два числа, если их сумма равна {s}, а произведение равно {p}.",
+        parameters: {
+          r1: { type: "int", min: 2, max: 8 },
+          r2: { type: "int", min: 2, max: 8 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 < r2"],
+        answer_formula: "r1",
+        hint: "Составьте уравнение x² − {s}x + {p} = 0",
+        solution: [
+          { explanation: "Пусть числа x и {s}−x" },
+          { explanation: "x·({s}−x) = {p}  →  x² − {s}x + {p} = 0" },
+          { explanation: "Меньшее число:", result: "{r1}" }
+        ]
+      },
+      3: {
+        template: "Поезд прошёл {dist} км. Если бы скорость была на {dv} км/ч больше, он затратил бы на {dt} ч меньше. Найдите скорость поезда.",
+        parameters: {
+          v: { type: "int", min: 40, max: 80 },
+          dv: { type: "int", min: 10, max: 20 },
+          dt: { type: "int", min: 1, max: 3 },
+          dist: { type: "expression", value: "v * (dist / v)" }
+        },
+        answer_formula: "v",
+        hint: "Время₁ = dist/v, Время₂ = dist/(v+{dv}). Разность = {dt}"
+      }
+    }
+  },
+  // ===== GRADE 8 - ALGEBRA: Квадратичная функция — парабола =====
+  {
+    id: "grade8-parabolaBasics-1",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратичная функция",
+    topic: "parabolaBasics",
+    topic_title: "Парабола: вершина и ось симметрии",
+    problemType: "numeric",
+    skills: ["quadraticFunction", "parabola"],
+    difficulties: {
+      1: {
+        template: "Найдите x-координату вершины параболы y = x² + {b}x + {c}.",
+        parameters: {
+          b: { type: "int", min: -8, max: 8 },
+          c: { type: "int", min: -6, max: 6 }
+        },
+        constraints: ["b !== 0"],
+        answer_formula: "-b / 2",
+        hint: "x₀ = −b / (2a). Здесь a = 1, b = {b}",
+        solution: [
+          { explanation: "Формула вершины: x₀ = −b/(2a)" },
+          { explanation: "x₀ = −({b}) / (2·1) =", result: "{answer}" }
+        ]
+      },
+      2: {
+        template: "Найдите координаты вершины параболы y = {a}x² + {b}x + {c}. Введите y-координату.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -6, max: 6 },
+          c: { type: "int", min: -6, max: 6 }
+        },
+        constraints: ["b !== 0"],
+        answer_formula: "c - b*b / (4*a)",
+        hint: "Сначала x₀ = −b/(2a), затем y₀ = подставьте x₀ в формулу",
+        solution: [
+          { explanation: "x₀ = −{b} / (2·{a}) = {-b/(2*a)}" },
+          { explanation: "y₀ = {a}·({-b/(2*a)})² + {b}·({-b/(2*a)}) + {c}", result: "{answer}" }
+        ]
+      },
+      3: {
+        template: "При каком a парабола y = ax² − 4x + {c} имеет вершину при x = 1?",
+        parameters: {
+          c: { type: "int", min: -4, max: 6 }
+        },
+        answer_formula: "2",
+        hint: "x₀ = −b/(2a) = 1. Здесь b = −4, значит −(−4)/(2a) = 1",
+        solution: [
+          { explanation: "4/(2a) = 1  →  2a = 4  →  a = 2" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - ALGEBRA: Неравенства =====
+  {
+    id: "grade8-linearInequality-1",
+    class: 8,
+    subject: "algebra",
+    section: "Неравенства",
+    topic: "linearInequality",
+    topic_title: "Линейные неравенства",
+    problemType: "numeric",
+    skills: ["inequalities", "linearEquations"],
+    difficulties: {
+      1: {
+        template: "Решите неравенство: x + {b} > {c}. Найдите наименьшее целое решение.",
+        parameters: {
+          b: { type: "int", min: -6, max: 6 },
+          c: { type: "int", min: -8, max: 8 }
+        },
+        answer_formula: "c - b + 1",
+        hint: "Перенесите {b} в правую часть: x > {c} − {b}",
+        solution: [
+          { explanation: "x > {c} − ({b})" },
+          { explanation: "x > {c-b}" },
+          { explanation: "Наименьшее целое:", result: "{answer}" }
+        ],
+        common_mistakes: [
+          { pattern: "c - b", feedback: "Это граница промежутка, она не включается. Наименьшее целое = {c-b+1}" }
+        ]
+      },
+      2: {
+        template: "Решите неравенство: {a}x − {b} ≤ {c}. Найдите наибольшее целое решение.",
+        parameters: {
+          a: { type: "int", min: 1, max: 4 },
+          b: { type: "int", min: 1, max: 8 },
+          c: { type: "int", min: 0, max: 20 },
+          x: { type: "expression", value: "Math.floor((c + b) / a)" }
+        },
+        answer_formula: "Math.floor((c + b) / a)",
+        hint: "Перенесите: {a}x ≤ {c} + {b}, затем разделите на {a}",
+        solution: [
+          { explanation: "{a}x ≤ {c+b}" },
+          { explanation: "x ≤ {(c+b)/a}" },
+          { explanation: "Наибольшее целое:", result: "{answer}" }
+        ]
+      },
+      3: {
+        template: "Решите неравенство: {a}x + {b} > {c}x + {d}. Найдите наименьшее целое решение.",
+        parameters: {
+          a: { type: "int", min: 2, max: 6 },
+          b: { type: "int", min: -8, max: 8 },
+          c: { type: "int", min: 1, max: 4 },
+          d: { type: "int", min: -8, max: 8 }
+        },
+        constraints: ["a > c"],
+        answer_formula: "Math.floor((d - b) / (a - c)) + 1",
+        hint: "Перенесите x-члены влево, свободные — вправо. Затем делите на ({a}−{c}) > 0",
+        solution: [
+          { explanation: "({a}−{c})x > {d}−{b}" },
+          { explanation: "x > {(d-b)/(a-c)}" },
+          { explanation: "Наименьшее целое:", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - ALGEBRA: Уравнения с модулем =====
+  {
+    id: "grade8-absoluteValueEq-1",
+    class: 8,
+    subject: "algebra",
+    section: "Уравнения с модулем",
+    topic: "absoluteValueEq",
+    topic_title: "Уравнения вида |f(x)| = a",
+    problemType: "numeric",
+    skills: ["absoluteValue", "linearEquations"],
+    difficulties: {
+      1: {
+        template: "Решите уравнение: |x + {b}| = {c}. Найдите наибольший корень.",
+        parameters: {
+          b: { type: "int", min: -5, max: 5 },
+          c: { type: "int", min: 1, max: 8 }
+        },
+        answer_formula: "c - b",
+        hint: "|x + {b}| = {c} означает x + {b} = {c} или x + {b} = −{c}",
+        solution: [
+          { explanation: "Случай 1: x + {b} = {c}  →  x = {c-b}" },
+          { explanation: "Случай 2: x + {b} = −{c}  →  x = {-c-b}" },
+          { explanation: "Наибольший корень:", result: "{answer}" }
+        ]
+      },
+      2: {
+        template: "Решите уравнение: |{a}x − {b}| = {c}. Найдите сумму корней.",
+        parameters: {
+          a: { type: "int", min: 1, max: 4 },
+          b: { type: "int", min: 1, max: 8 },
+          c: { type: "int", min: 1, max: 10 }
+        },
+        answer_formula: "2 * b / a",
+        hint: "Два случая: {a}x − {b} = ±{c}. Сумма корней = 2b/a",
+        solution: [
+          { explanation: "{a}x = {b} + {c} = {b+c}  →  x₁ = {(b+c)/a}" },
+          { explanation: "{a}x = {b} − {c} = {b-c}  →  x₂ = {(b-c)/a}" },
+          { explanation: "Сумма:", result: "{answer}" }
+        ]
+      },
+      3: {
+        template: "Решите уравнение: |x² − {s}| = {d}. Найдите количество корней.",
+        parameters: {
+          r: { type: "int", min: 2, max: 5 },
+          s: { type: "expression", value: "r * r" },
+          d: { type: "int", min: 1, max: 6 }
+        },
+        answer_formula: "4",
+        hint: "Два случая: x² = {s} + {d} и x² = {s} − {d}. Сколько решений каждый даёт?",
+        solution: [
+          { explanation: "x² = {s+d}  →  2 корня (если > 0)" },
+          { explanation: "x² = {s-d}  →  2 корня (если > 0), 1 (если = 0), 0 (если < 0)" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - ALGEBRA: Алгебраические дроби =====
+  {
+    id: "grade8-rationalExpression-1",
+    class: 8,
+    subject: "algebra",
+    section: "Алгебраические дроби",
+    topic: "rationalExpression",
+    topic_title: "Алгебраические дроби: ОДЗ и сокращение",
+    problemType: "numeric",
+    skills: ["fractions", "factoring"],
+    difficulties: {
+      1: {
+        template: "Сократите дробь (x² − {a2}) / (x + {a}). При каком x она не определена?",
+        parameters: {
+          a: { type: "int", min: 1, max: 6 },
+          a2: { type: "expression", value: "a * a" }
+        },
+        answer_formula: "-a",
+        hint: "x² − {a2} = (x−{a})(x+{a}). Сократите (x+{a}).",
+        solution: [
+          { explanation: "Числитель: x² − {a2} = (x−{a})(x+{a})" },
+          { explanation: "Сокращаем (x+{a}): результат = x − {a}" },
+          { explanation: "ОДЗ: x ≠ −{a}", result: "x ≠ {answer}" }
+        ]
+      },
+      2: {
+        template: "Упростите: (x² + {b}x) / ({a}x). Найдите значение при x = {xv}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 4 },
+          b: { type: "int", min: -6, max: 6 },
+          xv: { type: "int", min: 1, max: 5 }
+        },
+        constraints: ["b !== 0"],
+        answer_formula: "(xv + b) / a",
+        hint: "Вынесите x в числителе: x(x+{b}). Сократите x.",
+        solution: [
+          { explanation: "x(x+{b}) / ({a}x) = (x+{b})/{a}, при x ≠ 0" },
+          { explanation: "При x = {xv}: ({xv}+{b})/{a}", result: "{answer}" }
+        ]
+      },
+      3: {
+        template: "Сократите дробь ({a}x² + {b}x + {c}) / (x − {r}). Найдите свободный член результата.",
+        parameters: {
+          a: { type: "int", min: 1, max: 2 },
+          r: { type: "int", min: 1, max: 4 },
+          q: { type: "int", min: -4, max: 4 },
+          b: { type: "expression", value: "a * (-r + q)" },
+          c: { type: "expression", value: "a * (-r) * q" }
+        },
+        answer_formula: "a * q",
+        hint: "Разложите числитель: {a}(x−{r})(x−{q}), затем сократите (x−{r})",
+        solution: [
+          { explanation: "Числитель = {a}(x−{r})(x+{-q})" },
+          { explanation: "После сокращения: {a}(x+{-q})", result: "свободный член = {answer}" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - GEOMETRY: Теорема Пифагора =====
+  {
+    id: "grade8-pythagoreanTheorem-1",
+    class: 8,
+    subject: "geometry",
+    section: "Теорема Пифагора",
+    topic: "pythagoreanTheorem",
+    topic_title: "Теорема Пифагора",
+    problemType: "numeric",
+    skills: ["pythagorean", "squareRoot"],
+    difficulties: {
+      1: {
+        template: "Катеты прямоугольного треугольника равны {a} и {b}. Найдите гипотенузу.",
+        parameters: {
+          a: { type: "int", min: 3, max: 8 },
+          b: { type: "int", min: 3, max: 8 },
+          c: { type: "expression", value: "Math.round(Math.sqrt(a*a + b*b) * 100) / 100" }
+        },
+        answer_formula: "Math.round(Math.sqrt(a*a + b*b) * 100) / 100",
+        hint: "c = √(a² + b²) = √({a*a} + {b*b})",
+        solution: [
+          { explanation: "По теореме Пифагора: c² = a² + b²" },
+          { explanation: "c² = {a}² + {b}² = {a*a+b*b}" },
+          { explanation: "c = √{a*a+b*b} =", result: "{answer}" }
+        ],
+        common_mistakes: [
+          { pattern: "a + b", feedback: "Это сумма катетов, не гипотенуза. Нужно: √(a²+b²)" }
+        ]
+      },
+      2: {
+        template: "Гипотенуза прямоугольного треугольника равна {c}, один катет равен {a}. Найдите другой катет.",
+        parameters: {
+          a: { type: "int", min: 3, max: 9 },
+          b: { type: "int", min: 3, max: 9 },
+          c: { type: "expression", value: "Math.round(Math.sqrt(a*a + b*b))" }
+        },
+        constraints: ["a*a + b*b === c*c"],
+        answer_formula: "b",
+        hint: "b = √(c² − a²) = √({c*c} − {a*a})",
+        solution: [
+          { explanation: "b² = c² − a² = {c*c} − {a*a} = {c*c-a*a}" },
+          { explanation: "b = √{c*c-a*a} =", result: "{b}" }
+        ]
+      },
+      3: {
+        template: "Диагональ прямоугольника равна {d}, одна сторона равна {a}. Найдите площадь прямоугольника.",
+        parameters: {
+          a: { type: "int", min: 3, max: 8 },
+          b: { type: "int", min: 3, max: 8 },
+          d: { type: "expression", value: "Math.round(Math.sqrt(a*a + b*b))" }
+        },
+        constraints: ["a*a + b*b === d*d"],
+        answer_formula: "a * b",
+        hint: "Из теоремы Пифагора: b = √(d²−a²). Площадь = a·b",
+        solution: [
+          { explanation: "b = √({d*d}−{a*a}) = {b}" },
+          { explanation: "Площадь = {a} · {b} =", result: "{answer} см²" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - GEOMETRY: Подобие треугольников =====
+  {
+    id: "grade8-triangleSimilarityAA-1",
+    class: 8,
+    subject: "geometry",
+    section: "Подобие треугольников",
+    topic: "triangleSimilarityAA",
+    topic_title: "Подобие треугольников (признак AA)",
+    problemType: "numeric",
+    skills: ["similarity", "proportions"],
+    difficulties: {
+      1: {
+        template: "Треугольники подобны с коэффициентом k = {k}. Сторона меньшего треугольника равна {a}. Найдите соответственную сторону большего.",
+        parameters: {
+          k: { type: "int", min: 2, max: 5 },
+          a: { type: "int", min: 3, max: 8 }
+        },
+        answer_formula: "k * a",
+        hint: "Соответственные стороны подобных треугольников относятся как k : 1",
+        solution: [
+          { explanation: "Сторона большего = k · сторона меньшего" },
+          { explanation: "= {k} · {a} =", result: "{answer}" }
+        ]
+      },
+      2: {
+        template: "В треугольнике ABC и A₁B₁C₁: AB = {ab}, A₁B₁ = {a1b1}, BC = {bc}. Найдите B₁C₁.",
+        parameters: {
+          ab: { type: "int", min: 4, max: 10 },
+          k: { type: "int", min: 2, max: 4 },
+          a1b1: { type: "expression", value: "ab * k" },
+          bc: { type: "int", min: 3, max: 8 }
+        },
+        answer_formula: "bc * k",
+        hint: "k = A₁B₁/AB = {a1b1}/{ab}. B₁C₁ = k · BC",
+        solution: [
+          { explanation: "k = {a1b1} / {ab} = {k}" },
+          { explanation: "B₁C₁ = {k} · {bc} =", result: "{answer}" }
+        ]
+      },
+      3: {
+        template: "Высота в прямоугольном треугольнике делит гипотенузу на отрезки {p} и {q}. Найдите высоту.",
+        parameters: {
+          p: { type: "int", min: 2, max: 6 },
+          q: { type: "int", min: 2, max: 8 }
+        },
+        answer_formula: "Math.round(Math.sqrt(p * q) * 100) / 100",
+        hint: "По свойству высоты: h² = p·q",
+        solution: [
+          { explanation: "h² = p·q = {p}·{q} = {p*q}" },
+          { explanation: "h = √{p*q} =", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - GEOMETRY: Площади четырёхугольников =====
+  {
+    id: "grade8-quadrilateralArea-1",
+    class: 8,
+    subject: "geometry",
+    section: "Четырёхугольники",
+    topic: "quadrilateralArea",
+    topic_title: "Площади четырёхугольников",
+    problemType: "numeric",
+    skills: ["area", "quadrilaterals"],
+    difficulties: {
+      1: {
+        template: "Параллелограмм имеет основание {base} см и высоту {h} см. Найдите его площадь.",
+        parameters: {
+          base: { type: "int", min: 4, max: 12 },
+          h: { type: "int", min: 3, max: 10 }
+        },
+        answer_formula: "base * h",
+        hint: "Площадь параллелограмма = основание × высота",
+        solution: [
+          { explanation: "S = a · h = {base} · {h} =", result: "{answer} см²" }
+        ],
+        common_mistakes: [
+          { pattern: "2*(base+h)", feedback: "Это периметр, а не площадь. S = основание × высота." }
+        ]
+      },
+      2: {
+        template: "Трапеция имеет основания {a} и {b} см, высоту {h} см. Найдите площадь.",
+        parameters: {
+          a: { type: "int", min: 4, max: 10 },
+          b: { type: "int", min: 6, max: 14 },
+          h: { type: "int", min: 3, max: 8 }
+        },
+        constraints: ["a < b"],
+        answer_formula: "(a + b) * h / 2",
+        hint: "S = (a + b) / 2 · h",
+        solution: [
+          { explanation: "S = (a + b)/2 · h = ({a}+{b})/2 · {h}" },
+          { explanation: "= {(a+b)/2} · {h} =", result: "{answer} см²" }
+        ]
+      },
+      3: {
+        template: "Ромб имеет диагонали {d1} и {d2} см. Найдите его площадь.",
+        parameters: {
+          d1: { type: "int", min: 4, max: 12 },
+          d2: { type: "int", min: 4, max: 12 }
+        },
+        constraints: ["d1 !== d2"],
+        answer_formula: "d1 * d2 / 2",
+        hint: "S = d₁ · d₂ / 2",
+        solution: [
+          { explanation: "S = d₁ · d₂ / 2 = {d1} · {d2} / 2 =", result: "{answer} см²" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - GEOMETRY: Вписанный угол =====
+  {
+    id: "grade8-inscribedAngle-1",
+    class: 8,
+    subject: "geometry",
+    section: "Окружность",
+    topic: "inscribedAngle",
+    topic_title: "Вписанный угол",
+    problemType: "numeric",
+    skills: ["circles", "angles"],
+    difficulties: {
+      1: {
+        template: "Центральный угол AOB = {central}°. Найдите вписанный угол ACB, опирающийся на ту же дугу.",
+        parameters: {
+          central: { type: "int", min: 40, max: 160 }
+        },
+        answer_formula: "central / 2",
+        hint: "Вписанный угол равен половине центрального угла, опирающегося на ту же дугу",
+        solution: [
+          { explanation: "По теореме о вписанном угле: ∠ACB = ∠AOB / 2" },
+          { explanation: "∠ACB = {central} / 2 =", result: "{answer}°" }
+        ],
+        common_mistakes: [
+          { pattern: "central", feedback: "Вписанный угол в два раза меньше центрального." },
+          { pattern: "central * 2", feedback: "Это центральный угол умножен на 2. Вписанный = центральный / 2." }
+        ]
+      },
+      2: {
+        template: "Вписанный угол ACB = {inscribed}°. Найдите центральный угол AOB.",
+        parameters: {
+          inscribed: { type: "int", min: 20, max: 80 }
+        },
+        answer_formula: "inscribed * 2",
+        hint: "Центральный угол вдвое больше вписанного",
+        solution: [
+          { explanation: "∠AOB = 2 · ∠ACB = 2 · {inscribed} =", result: "{answer}°" }
+        ]
+      },
+      3: {
+        template: "Угол, вписанный в полукруг (опирается на диаметр). Чему он равен?",
+        parameters: {},
+        answer_formula: "90",
+        hint: "Это следствие теоремы: угол, вписанный в полукруг, всегда равен 90°",
+        solution: [
+          { explanation: "Центральный угол на диаметре = 180°" },
+          { explanation: "Вписанный = 180°/2 =", result: "90°" }
+        ]
+      }
+    }
+  },
+  // ===== GRADE 8 - GEOMETRY: Расстояние по координатам =====
+  {
+    id: "grade8-distanceFormula-1",
+    class: 8,
+    subject: "geometry",
+    section: "Координатная геометрия",
+    topic: "distanceFormula",
+    topic_title: "Расстояние между двумя точками",
+    problemType: "numeric",
+    skills: ["pythagorean", "coordinatePlane"],
+    difficulties: {
+      1: {
+        template: "Найдите расстояние между точками A({x1}; 0) и B({x2}; 0).",
+        parameters: {
+          x1: { type: "int", min: -5, max: 0 },
+          x2: { type: "int", min: 1, max: 6 }
+        },
+        answer_formula: "x2 - x1",
+        hint: "На оси OX расстояние = |x₂ − x₁|",
+        solution: [
+          { explanation: "|{x2} − ({x1})| = |{x2-x1}| =", result: "{answer}" }
+        ]
+      },
+      2: {
+        template: "Найдите расстояние между точками A({x1}; {y1}) и B({x2}; {y2}).",
+        parameters: {
+          x1: { type: "int", min: -4, max: 4 },
+          y1: { type: "int", min: -4, max: 4 },
+          x2: { type: "int", min: -4, max: 4 },
+          y2: { type: "int", min: -4, max: 4 }
+        },
+        answer_formula: "Math.round(Math.sqrt((x2-x1)**2 + (y2-y1)**2) * 100) / 100",
+        hint: "AB = √((x₂−x₁)² + (y₂−y₁)²)",
+        solution: [
+          { explanation: "AB = √(({x2}−{x1})² + ({y2}−{y1})²)" },
+          { explanation: "= √({(x2-x1)**2} + {(y2-y1)**2})", result: "{answer}" }
+        ]
+      },
+      3: {
+        template: "Периметр треугольника с вершинами A({x1};{y1}), B({x2};{y2}), C({x3};{y3}). Округлите до целых.",
+        parameters: {
+          x1: { type: "int", min: -3, max: 3 },
+          y1: { type: "int", min: -3, max: 3 },
+          x2: { type: "int", min: -3, max: 3 },
+          y2: { type: "int", min: -3, max: 3 },
+          x3: { type: "int", min: -3, max: 3 },
+          y3: { type: "int", min: -3, max: 3 }
+        },
+        answer_formula: "Math.round(Math.sqrt((x2-x1)**2+(y2-y1)**2) + Math.sqrt((x3-x2)**2+(y3-y2)**2) + Math.sqrt((x1-x3)**2+(y1-y3)**2))",
+        hint: "Найдите длины всех трёх сторон по формуле расстояния, затем сложите"
+      }
+    }
   }
 ];
 function tokenize(expr) {
@@ -21846,6 +22703,7 @@ const LANES = [{
 function deriveState(topic, progress) {
   const explicit = progress[topic.id];
   if (explicit) return explicit;
+  if (topic.prerequisites.length === 0) return "unlocked";
   const allMet = topic.prerequisites.every((p) => progress[p] === "completed");
   return allMet ? "unlocked" : "locked";
 }
@@ -21899,21 +22757,21 @@ function SkillTree({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
     width: "100%",
     fontFamily: "inherit"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:181:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "181", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22width%22%3A%22100%25%22%2C%22fontFamily%22%3A%22inherit%22%7D%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:184:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "184", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22width%22%3A%22100%25%22%2C%22fontFamily%22%3A%22inherit%22%7D%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "flex",
       alignItems: "center",
       gap: 12,
       marginBottom: 16,
       flexWrap: "wrap"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:184:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "184", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A12%2C%22marginBottom%22%3A16%2C%22flexWrap%22%3A%22wrap%22%7D%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ProgressBar, { pct: progressPct, completed: completedCount, total: totalCount, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:188:8", "data-matrix-name": "ProgressBar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "188", "data-component-file": "SkillTree.tsx", "data-component-name": "ProgressBar", "data-component-content": "%7B%22pct%22%3A%22%5BIdentifier%5D%22%2C%22completed%22%3A%22%5BIdentifier%5D%22%2C%22total%22%3A%22%5BIdentifier%5D%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(StateLegend, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:189:8", "data-matrix-name": "StateLegend", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "189", "data-component-file": "SkillTree.tsx", "data-component-name": "StateLegend" })
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:187:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "187", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A12%2C%22marginBottom%22%3A16%2C%22flexWrap%22%3A%22wrap%22%7D%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ProgressBar, { pct: progressPct, completed: completedCount, total: totalCount, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:191:8", "data-matrix-name": "ProgressBar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "191", "data-component-file": "SkillTree.tsx", "data-component-name": "ProgressBar", "data-component-content": "%7B%22pct%22%3A%22%5BIdentifier%5D%22%2C%22completed%22%3A%22%5BIdentifier%5D%22%2C%22total%22%3A%22%5BIdentifier%5D%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StateLegend, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:192:8", "data-matrix-name": "StateLegend", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "192", "data-component-file": "SkillTree.tsx", "data-component-name": "StateLegend" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
       overflowX: "auto",
       paddingBottom: 4
-    }, role: "region", "aria-label": "Карта навыков", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:194:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "194", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22overflowX%22%3A%22auto%22%2C%22paddingBottom%22%3A4%7D%2C%22role%22%3A%22region%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+    }, role: "region", "aria-label": "Карта навыков", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:197:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "197", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22overflowX%22%3A%22auto%22%2C%22paddingBottom%22%3A4%7D%2C%22role%22%3A%22region%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "grid",
       // minmax(160px,1fr) makes columns shrink gracefully on tablet/mobile
       gridTemplateColumns: `repeat(${colCount}, minmax(160px, 1fr))`,
@@ -21921,16 +22779,16 @@ function SkillTree({
       alignItems: "start",
       // Prevent the grid from squeezing below readable width
       minWidth: `${colCount * 170}px`
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:199:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "199", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22grid%22%2C%22gridTemplateColumns%22%3A%22%5BTemplateLiteral%5D%22%2C%22gap%22%3A10%2C%22alignItems%22%3A%22start%22%2C%22minWidth%22%3A%22%5BTemplateLiteral%5D%22%7D%7D", children: [
-      activeLanes.map((lane) => /* @__PURE__ */ jsxRuntimeExports.jsx(LaneColumn, { label: lane.label, color: lane.color, topics: lane.topics, progress, selected, nextTopicId, onSelect: handleSelect, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:209:12", "data-matrix-name": "LaneColumn", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "209", "data-component-file": "SkillTree.tsx", "data-component-name": "LaneColumn", "data-component-content": "%7B%22label%22%3A%22%5BMemberExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22topics%22%3A%22%5BMemberExpression%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22selected%22%3A%22%5BIdentifier%5D%22%2C%22nextTopicId%22%3A%22%5BIdentifier%5D%22%2C%22onSelect%22%3A%22%5BIdentifier%5D%22%7D" }, lane.id)),
-      unassigned.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(LaneColumn, { label: "Другое", color: "#888780", topics: unassigned, progress, selected, nextTopicId, onSelect: handleSelect, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:221:12", "data-matrix-name": "LaneColumn", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "221", "data-component-file": "SkillTree.tsx", "data-component-name": "LaneColumn", "data-component-content": "%7B%22label%22%3A%22%D0%94%D1%80%D1%83%D0%B3%D0%BE%D0%B5%22%2C%22color%22%3A%22%23888780%22%2C%22topics%22%3A%22%5BIdentifier%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22selected%22%3A%22%5BIdentifier%5D%22%2C%22nextTopicId%22%3A%22%5BIdentifier%5D%22%2C%22onSelect%22%3A%22%5BIdentifier%5D%22%7D" })
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:202:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "202", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22grid%22%2C%22gridTemplateColumns%22%3A%22%5BTemplateLiteral%5D%22%2C%22gap%22%3A10%2C%22alignItems%22%3A%22start%22%2C%22minWidth%22%3A%22%5BTemplateLiteral%5D%22%7D%7D", children: [
+      activeLanes.map((lane) => /* @__PURE__ */ jsxRuntimeExports.jsx(LaneColumn, { label: lane.label, color: lane.color, topics: lane.topics, progress, selected, nextTopicId, onSelect: handleSelect, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:212:12", "data-matrix-name": "LaneColumn", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "212", "data-component-file": "SkillTree.tsx", "data-component-name": "LaneColumn", "data-component-content": "%7B%22label%22%3A%22%5BMemberExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22topics%22%3A%22%5BMemberExpression%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22selected%22%3A%22%5BIdentifier%5D%22%2C%22nextTopicId%22%3A%22%5BIdentifier%5D%22%2C%22onSelect%22%3A%22%5BIdentifier%5D%22%7D" }, lane.id)),
+      unassigned.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(LaneColumn, { label: "Другое", color: "#888780", topics: unassigned, progress, selected, nextTopicId, onSelect: handleSelect, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:224:12", "data-matrix-name": "LaneColumn", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "224", "data-component-file": "SkillTree.tsx", "data-component-name": "LaneColumn", "data-component-content": "%7B%22label%22%3A%22%D0%94%D1%80%D1%83%D0%B3%D0%BE%D0%B5%22%2C%22color%22%3A%22%23888780%22%2C%22topics%22%3A%22%5BIdentifier%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22selected%22%3A%22%5BIdentifier%5D%22%2C%22nextTopicId%22%3A%22%5BIdentifier%5D%22%2C%22onSelect%22%3A%22%5BIdentifier%5D%22%7D" })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: infoPanelRef, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:235:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "235", "data-component-file": "SkillTree.tsx", "data-component-name": "div", children: selectedTopic ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoPanel, { topic: selectedTopic, state: selectedState, titleOf, onStart: () => onTopicClick == null ? void 0 : onTopicClick(selectedTopic.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:237:10", "data-matrix-name": "InfoPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "237", "data-component-file": "SkillTree.tsx", "data-component-name": "InfoPanel", "data-component-content": "%7B%22topic%22%3A%22%5BIdentifier%5D%22%2C%22state%22%3A%22%5BTSNonNullExpression%5D%22%2C%22titleOf%22%3A%22%5BIdentifier%5D%22%2C%22onStart%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: infoPanelRef, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:238:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "238", "data-component-file": "SkillTree.tsx", "data-component-name": "div", children: selectedTopic ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoPanel, { topic: selectedTopic, state: selectedState, titleOf, onStart: () => onTopicClick == null ? void 0 : onTopicClick(selectedTopic.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:240:10", "data-matrix-name": "InfoPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "240", "data-component-file": "SkillTree.tsx", "data-component-name": "InfoPanel", "data-component-content": "%7B%22topic%22%3A%22%5BIdentifier%5D%22%2C%22state%22%3A%22%5BTSNonNullExpression%5D%22%2C%22titleOf%22%3A%22%5BIdentifier%5D%22%2C%22onStart%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
       marginTop: 8,
       fontSize: 11,
       color: "var(--color-text-tertiary)",
       textAlign: "right"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:244:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "244", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22marginTop%22%3A8%2C%22fontSize%22%3A11%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22textAlign%22%3A%22right%22%7D%7D", children: "Нажмите на тему, чтобы узнать подробности" }) })
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:247:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "247", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22marginTop%22%3A8%2C%22fontSize%22%3A11%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22textAlign%22%3A%22right%22%7D%7D", children: "Нажмите на тему, чтобы узнать подробности" }) })
   ] });
 }
 function LaneColumn({
@@ -21949,7 +22807,7 @@ function LaneColumn({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
     display: "flex",
     flexDirection: "column"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:275:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "275", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexDirection%22%3A%22column%22%7D%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:278:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "278", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexDirection%22%3A%22column%22%7D%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       position: "sticky",
       top: 0,
@@ -21963,20 +22821,20 @@ function LaneColumn({
       // Subtle backdrop so sticky header stays readable when scrolling
       backdropFilter: "blur(8px)",
       WebkitBackdropFilter: "blur(8px)"
-    }, role: "columnheader", "aria-label": `${label}: ${completedCount} из ${topics.length} пройдено`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:278:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "278", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22position%22%3A%22sticky%22%2C%22top%22%3A0%2C%22zIndex%22%3A10%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22borderRadius%22%3A10%2C%22border%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderTop%22%3A%22%5BTemplateLiteral%5D%22%2C%22padding%22%3A%2210px%2012px%209px%22%2C%22marginBottom%22%3A6%2C%22backdropFilter%22%3A%22blur(8px)%22%2C%22WebkitBackdropFilter%22%3A%22blur(8px)%22%7D%2C%22role%22%3A%22columnheader%22%7D", children: [
+    }, role: "columnheader", "aria-label": `${label}: ${completedCount} из ${topics.length} пройдено`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:281:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "281", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22position%22%3A%22sticky%22%2C%22top%22%3A0%2C%22zIndex%22%3A10%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22borderRadius%22%3A10%2C%22border%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderTop%22%3A%22%5BTemplateLiteral%5D%22%2C%22padding%22%3A%2210px%2012px%209px%22%2C%22marginBottom%22%3A6%2C%22backdropFilter%22%3A%22blur(8px)%22%2C%22WebkitBackdropFilter%22%3A%22blur(8px)%22%7D%2C%22role%22%3A%22columnheader%22%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: 7
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:297:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "297", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22justifyContent%22%3A%22space-between%22%2C%22marginBottom%22%3A7%7D%7D", children: [
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:300:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "300", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22justifyContent%22%3A%22space-between%22%2C%22marginBottom%22%3A7%7D%7D", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
           fontSize: 11,
           fontWeight: 700,
           color,
           letterSpacing: "0.05em",
           textTransform: "uppercase"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:298:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "298", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A11%2C%22fontWeight%22%3A700%2C%22color%22%3A%22%5Bvar%3Acolor%5D%22%2C%22letterSpacing%22%3A%220.05em%22%2C%22textTransform%22%3A%22uppercase%22%7D%7D", children: label }),
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:301:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "301", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A11%2C%22fontWeight%22%3A700%2C%22color%22%3A%22%5Bvar%3Acolor%5D%22%2C%22letterSpacing%22%3A%220.05em%22%2C%22textTransform%22%3A%22uppercase%22%7D%7D", children: label }),
         isComplete ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
           fontSize: 9,
           fontWeight: 700,
@@ -21985,7 +22843,7 @@ function LaneColumn({
           border: "1px solid #97C459",
           borderRadius: 10,
           padding: "2px 6px"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:305:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "305", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A9%2C%22fontWeight%22%3A700%2C%22background%22%3A%22%23EAF3DE%22%2C%22color%22%3A%22%233B6D11%22%2C%22border%22%3A%221px%20solid%20%2397C459%22%2C%22borderRadius%22%3A10%2C%22padding%22%3A%222px%206px%22%7D%7D", children: "✓ Готово" }) : unlockedCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:308:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "308", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A9%2C%22fontWeight%22%3A700%2C%22background%22%3A%22%23EAF3DE%22%2C%22color%22%3A%22%233B6D11%22%2C%22border%22%3A%221px%20solid%20%2397C459%22%2C%22borderRadius%22%3A10%2C%22padding%22%3A%222px%206px%22%7D%7D", children: "✓ Готово" }) : unlockedCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
           fontSize: 9,
           fontWeight: 600,
           background: "#FAEEDA",
@@ -21993,7 +22851,7 @@ function LaneColumn({
           border: "1px solid #EF9F27",
           borderRadius: 10,
           padding: "2px 6px"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:312:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "312", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A9%2C%22fontWeight%22%3A600%2C%22background%22%3A%22%23FAEEDA%22%2C%22color%22%3A%22%23854F0B%22%2C%22border%22%3A%221px%20solid%20%23EF9F27%22%2C%22borderRadius%22%3A10%2C%22padding%22%3A%222px%206px%22%7D%7D", children: [
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:315:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "315", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A9%2C%22fontWeight%22%3A600%2C%22background%22%3A%22%23FAEEDA%22%2C%22color%22%3A%22%23854F0B%22%2C%22border%22%3A%221px%20solid%20%23EF9F27%22%2C%22borderRadius%22%3A10%2C%22padding%22%3A%222px%206px%22%7D%7D", children: [
           unlockedCount,
           " открыто"
         ] }) : null
@@ -22002,27 +22860,27 @@ function LaneColumn({
         display: "flex",
         alignItems: "center",
         gap: 7
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:322:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "322", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A7%7D%7D", children: [
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:325:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "325", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A7%7D%7D", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
           flex: 1,
           height: 5,
           borderRadius: 3,
           background: "var(--color-border-tertiary)",
           overflow: "hidden"
-        }, role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `${pct}% пройдено`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:323:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "323", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22height%22%3A5%2C%22borderRadius%22%3A3%2C%22background%22%3A%22var(--color-border-tertiary)%22%2C%22overflow%22%3A%22hidden%22%7D%2C%22role%22%3A%22progressbar%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+        }, role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `${pct}% пройдено`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:326:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "326", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22height%22%3A5%2C%22borderRadius%22%3A3%2C%22background%22%3A%22var(--color-border-tertiary)%22%2C%22overflow%22%3A%22hidden%22%7D%2C%22role%22%3A%22progressbar%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
           height: "100%",
           width: `${pct}%`,
           background: isComplete ? "#639922" : `linear-gradient(90deg, ${color}bb, ${color})`,
           borderRadius: 3,
           transition: "width 0.5s ease"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:334:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "334", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A%22100%25%22%2C%22width%22%3A%22%5BTemplateLiteral%5D%22%2C%22background%22%3A%22%5BConditionalExpression%5D%22%2C%22borderRadius%22%3A3%2C%22transition%22%3A%22width%200.5s%20ease%22%7D%7D" }) }),
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:337:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "337", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A%22100%25%22%2C%22width%22%3A%22%5BTemplateLiteral%5D%22%2C%22background%22%3A%22%5BConditionalExpression%5D%22%2C%22borderRadius%22%3A3%2C%22transition%22%3A%22width%200.5s%20ease%22%7D%7D" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
           fontSize: 10,
           color: "var(--color-text-tertiary)",
           flexShrink: 0,
           minWidth: 28,
           textAlign: "right"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:343:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "343", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A10%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22flexShrink%22%3A0%2C%22minWidth%22%3A28%2C%22textAlign%22%3A%22right%22%7D%7D", children: [
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:346:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "346", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A10%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22flexShrink%22%3A0%2C%22minWidth%22%3A28%2C%22textAlign%22%3A%22right%22%7D%7D", children: [
           pct,
           "%"
         ] })
@@ -22033,9 +22891,9 @@ function LaneColumn({
       flexDirection: "column",
       gap: 5,
       padding: "2px 2px 6px"
-    }, role: "list", "aria-label": `Темы: ${label}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:353:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "353", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexDirection%22%3A%22column%22%2C%22gap%22%3A5%2C%22padding%22%3A%222px%202px%206px%22%7D%2C%22role%22%3A%22list%22%7D", children: topics.map((topic) => {
+    }, role: "list", "aria-label": `Темы: ${label}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:356:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "356", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexDirection%22%3A%22column%22%2C%22gap%22%3A5%2C%22padding%22%3A%222px%202px%206px%22%7D%2C%22role%22%3A%22list%22%7D", children: topics.map((topic) => {
       const state = deriveState(topic, progress);
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(TopicNode, { topic, state, accentColor: color, isSelected: selected === topic.id, isNext: topic.id === nextTopicId, onClick: () => onSelect(topic.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:364:12", "data-matrix-name": "TopicNode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "364", "data-component-file": "SkillTree.tsx", "data-component-name": "TopicNode", "data-component-content": "%7B%22topic%22%3A%22%5BIdentifier%5D%22%2C%22state%22%3A%22%5BIdentifier%5D%22%2C%22accentColor%22%3A%22%5BIdentifier%5D%22%2C%22isSelected%22%3A%22%5BBinaryExpression%5D%22%2C%22isNext%22%3A%22%5BBinaryExpression%5D%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }, topic.id);
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(TopicNode, { topic, state, accentColor: color, isSelected: selected === topic.id, isNext: topic.id === nextTopicId, onClick: () => onSelect(topic.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:367:12", "data-matrix-name": "TopicNode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "367", "data-component-file": "SkillTree.tsx", "data-component-name": "TopicNode", "data-component-content": "%7B%22topic%22%3A%22%5BIdentifier%5D%22%2C%22state%22%3A%22%5BIdentifier%5D%22%2C%22accentColor%22%3A%22%5BIdentifier%5D%22%2C%22isSelected%22%3A%22%5BBinaryExpression%5D%22%2C%22isNext%22%3A%22%5BBinaryExpression%5D%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }, topic.id);
     }) })
   ] });
 }
@@ -22098,7 +22956,7 @@ function TopicNode({
   const borderColor = isSelected ? cfg.borderSelected : isNext ? "#EF9F27" : cfg.border;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { role: "listitem", style: {
     animation: state === "unlocked" ? "st-fadein 0.3s ease both" : "none"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:459:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "459", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22role%22%3A%22listitem%22%2C%22style%22%3A%7B%22animation%22%3A%22%5BConditionalExpression%5D%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: interactive ? onClick : void 0, onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false), disabled: state === "locked", "aria-pressed": isSelected, "aria-label": `${topic.title}, ${cfg.ariaState}${topic.prerequisites.length > 0 ? `, требуется: ${topic.prerequisites.join(", ")}` : ""}`, "aria-disabled": state === "locked", style: {
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:462:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "462", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22role%22%3A%22listitem%22%2C%22style%22%3A%7B%22animation%22%3A%22%5BConditionalExpression%5D%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: interactive ? onClick : void 0, onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false), disabled: state === "locked", "aria-pressed": isSelected, "aria-label": `${topic.title}, ${cfg.ariaState}${topic.prerequisites.length > 0 ? `, требуется: ${topic.prerequisites.join(", ")}` : ""}`, "aria-disabled": state === "locked", style: {
     display: "flex",
     alignItems: "flex-start",
     gap: 10,
@@ -22126,7 +22984,7 @@ function TopicNode({
     e.currentTarget.style.boxShadow = `0 0 0 3px ${accentColor}80`;
   }, onBlur: (e) => {
     e.currentTarget.style.boxShadow = isSelected ? `0 0 0 2px ${accentColor}60, 0 2px 6px rgba(0,0,0,0.08)` : isNext ? "0 0 0 0 rgba(239,159,39,0.5), 0 2px 6px rgba(0,0,0,0.06)" : "0 1px 2px rgba(0,0,0,0.04)";
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:463:6", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "463", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BConditionalExpression%5D%22%2C%22onMouseEnter%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%2C%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22flex-start%22%2C%22gap%22%3A10%2C%22width%22%3A%22100%25%22%2C%22padding%22%3A%2210px%2010px%2010px%208px%22%2C%22background%22%3A%22%5Bvar%3Abg%5D%22%2C%22borderLeft%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderTop%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderRight%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderBottom%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderRadius%22%3A8%2C%22cursor%22%3A%22%5BConditionalExpression%5D%22%2C%22opacity%22%3A%22%5BMemberExpression%5D%22%2C%22textAlign%22%3A%22left%22%2C%22transition%22%3A%22background%200.12s%2C%20border-color%200.12s%2C%20box-shadow%200.15s%22%2C%22boxShadow%22%3A%22%5BConditionalExpression%5D%22%2C%22animation%22%3A%22%5BConditionalExpression%5D%22%2C%22outline%22%3A%22none%22%7D%2C%22onFocus%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onBlur%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:466:6", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "466", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BConditionalExpression%5D%22%2C%22onMouseEnter%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%2C%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22flex-start%22%2C%22gap%22%3A10%2C%22width%22%3A%22100%25%22%2C%22padding%22%3A%2210px%2010px%2010px%208px%22%2C%22background%22%3A%22%5Bvar%3Abg%5D%22%2C%22borderLeft%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderTop%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderRight%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderBottom%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderRadius%22%3A8%2C%22cursor%22%3A%22%5BConditionalExpression%5D%22%2C%22opacity%22%3A%22%5BMemberExpression%5D%22%2C%22textAlign%22%3A%22left%22%2C%22transition%22%3A%22background%200.12s%2C%20border-color%200.12s%2C%20box-shadow%200.15s%22%2C%22boxShadow%22%3A%22%5BConditionalExpression%5D%22%2C%22animation%22%3A%22%5BConditionalExpression%5D%22%2C%22outline%22%3A%22none%22%7D%2C%22onFocus%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onBlur%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", style: {
       width: 26,
       height: 26,
@@ -22139,11 +22997,11 @@ function TopicNode({
       flexShrink: 0,
       color: cfg.iconColor,
       marginTop: 1
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:510:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "510", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22width%22%3A26%2C%22height%22%3A26%2C%22borderRadius%22%3A%2250%25%22%2C%22background%22%3A%22%5BMemberExpression%5D%22%2C%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22justifyContent%22%3A%22center%22%2C%22fontSize%22%3A%22%5BConditionalExpression%5D%22%2C%22flexShrink%22%3A0%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22marginTop%22%3A1%7D%7D", children: cfg.iconChar }),
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:513:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "513", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22width%22%3A26%2C%22height%22%3A26%2C%22borderRadius%22%3A%2250%25%22%2C%22background%22%3A%22%5BMemberExpression%5D%22%2C%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22justifyContent%22%3A%22center%22%2C%22fontSize%22%3A%22%5BConditionalExpression%5D%22%2C%22flexShrink%22%3A0%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22marginTop%22%3A1%7D%7D", children: cfg.iconChar }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
       flex: 1,
       minWidth: 0
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:527:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "527", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22minWidth%22%3A0%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:530:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "530", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22minWidth%22%3A0%7D%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         display: "block",
         fontSize: 12,
@@ -22151,7 +23009,7 @@ function TopicNode({
         color: cfg.text,
         lineHeight: 1.35,
         wordBreak: "break-word"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:528:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "528", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22block%22%2C%22fontSize%22%3A12%2C%22fontWeight%22%3A%22%5BConditionalExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22lineHeight%22%3A1.35%2C%22wordBreak%22%3A%22break-word%22%7D%7D", children: topic.title }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:531:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "531", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22block%22%2C%22fontSize%22%3A12%2C%22fontWeight%22%3A%22%5BConditionalExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22lineHeight%22%3A1.35%2C%22wordBreak%22%3A%22break-word%22%7D%7D", children: topic.title }),
       isNext && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         display: "inline-flex",
         alignItems: "center",
@@ -22163,7 +23021,7 @@ function TopicNode({
         background: "#FAC775",
         borderRadius: 4,
         padding: "1px 5px"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:540:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "540", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22inline-flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A3%2C%22marginTop%22%3A3%2C%22fontSize%22%3A10%2C%22fontWeight%22%3A700%2C%22color%22%3A%22%23854F0B%22%2C%22background%22%3A%22%23FAC775%22%2C%22borderRadius%22%3A4%2C%22padding%22%3A%221px%205px%22%7D%7D", children: "→ Следующая" })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:543:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "543", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22inline-flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A3%2C%22marginTop%22%3A3%2C%22fontSize%22%3A10%2C%22fontWeight%22%3A700%2C%22color%22%3A%22%23854F0B%22%2C%22background%22%3A%22%23FAC775%22%2C%22borderRadius%22%3A4%2C%22padding%22%3A%221px%205px%22%7D%7D", children: "→ Следующая" })
     ] })
   ] }) });
 }
@@ -22201,13 +23059,13 @@ function InfoPanel({
     border: "1px solid var(--color-border-secondary)",
     borderRadius: 12,
     animation: "st-fadein 0.2s ease both"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:576:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "576", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22role%22%3A%22region%22%2C%22style%22%3A%7B%22marginTop%22%3A12%2C%22padding%22%3A%2214px%2016px%22%2C%22background%22%3A%22var(--color-background-primary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-secondary)%22%2C%22borderRadius%22%3A12%2C%22animation%22%3A%22st-fadein%200.2s%20ease%20both%22%7D%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:579:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "579", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22role%22%3A%22region%22%2C%22style%22%3A%7B%22marginTop%22%3A12%2C%22padding%22%3A%2214px%2016px%22%2C%22background%22%3A%22var(--color-background-primary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-secondary)%22%2C%22borderRadius%22%3A12%2C%22animation%22%3A%22st-fadein%200.2s%20ease%20both%22%7D%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "flex",
       alignItems: "flex-start",
       gap: 10,
       marginBottom: 10
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:589:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "589", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22flex-start%22%2C%22gap%22%3A10%2C%22marginBottom%22%3A10%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:592:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "592", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22flex-start%22%2C%22gap%22%3A10%2C%22marginBottom%22%3A10%7D%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         background: tag.bg,
         color: tag.text,
@@ -22218,17 +23076,17 @@ function InfoPanel({
         borderRadius: 8,
         flexShrink: 0,
         whiteSpace: "nowrap"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:590:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "590", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22background%22%3A%22%5BMemberExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22border%22%3A%22%5BTemplateLiteral%5D%22%2C%22fontSize%22%3A11%2C%22fontWeight%22%3A700%2C%22padding%22%3A%223px%209px%22%2C%22borderRadius%22%3A8%2C%22flexShrink%22%3A0%2C%22whiteSpace%22%3A%22nowrap%22%7D%7D", children: tag.label }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:593:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "593", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22background%22%3A%22%5BMemberExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22border%22%3A%22%5BTemplateLiteral%5D%22%2C%22fontSize%22%3A11%2C%22fontWeight%22%3A700%2C%22padding%22%3A%223px%209px%22%2C%22borderRadius%22%3A8%2C%22flexShrink%22%3A0%2C%22whiteSpace%22%3A%22nowrap%22%7D%7D", children: tag.label }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         fontSize: 15,
         fontWeight: 700,
         color: "var(--color-text-primary)",
         lineHeight: 1.3
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:598:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "598", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A15%2C%22fontWeight%22%3A700%2C%22color%22%3A%22var(--color-text-primary)%22%2C%22lineHeight%22%3A1.3%7D%7D", children: topic.title })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:601:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "601", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A15%2C%22fontWeight%22%3A700%2C%22color%22%3A%22var(--color-text-primary)%22%2C%22lineHeight%22%3A1.3%7D%7D", children: topic.title })
     ] }),
     topic.prerequisites.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       marginBottom: 12
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:609:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "609", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22marginBottom%22%3A12%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:612:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "612", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22marginBottom%22%3A12%7D%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
         fontSize: 11,
         fontWeight: 600,
@@ -22236,26 +23094,26 @@ function InfoPanel({
         textTransform: "uppercase",
         letterSpacing: "0.05em",
         marginBottom: 5
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:610:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "610", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A11%2C%22fontWeight%22%3A600%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22textTransform%22%3A%22uppercase%22%2C%22letterSpacing%22%3A%220.05em%22%2C%22marginBottom%22%3A5%7D%7D", children: "Требуется:" }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:613:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "613", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A11%2C%22fontWeight%22%3A600%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22textTransform%22%3A%22uppercase%22%2C%22letterSpacing%22%3A%220.05em%22%2C%22marginBottom%22%3A5%7D%7D", children: "Требуется:" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
         display: "flex",
         flexWrap: "wrap",
         gap: 5
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:618:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "618", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexWrap%22%3A%22wrap%22%2C%22gap%22%3A5%7D%7D", children: topic.prerequisites.map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:621:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "621", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexWrap%22%3A%22wrap%22%2C%22gap%22%3A5%7D%7D", children: topic.prerequisites.map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         fontSize: 12,
         background: "var(--color-background-secondary)",
         border: "1px solid var(--color-border-tertiary)",
         borderRadius: 6,
         padding: "3px 9px",
         color: "var(--color-text-secondary)"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:620:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "620", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-tertiary)%22%2C%22borderRadius%22%3A6%2C%22padding%22%3A%223px%209px%22%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: titleOf(id) }, id)) })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:623:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "623", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-tertiary)%22%2C%22borderRadius%22%3A6%2C%22padding%22%3A%223px%209px%22%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: titleOf(id) }, id)) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "flex",
       gap: 8,
       alignItems: "center",
       flexWrap: "wrap"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:635:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "635", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22gap%22%3A8%2C%22alignItems%22%3A%22center%22%2C%22flexWrap%22%3A%22wrap%22%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:638:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "638", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22gap%22%3A8%2C%22alignItems%22%3A%22center%22%2C%22flexWrap%22%3A%22wrap%22%7D%7D", children: [
       state === "unlocked" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onStart, "aria-label": `Начать тему: ${topic.title}`, style: {
         padding: "8px 18px",
         background: "#EF9F27",
@@ -22272,7 +23130,7 @@ function InfoPanel({
       }, onMouseLeave: (e) => {
         e.currentTarget.style.background = "#EF9F27";
         e.currentTarget.style.color = "#412402";
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:637:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "637", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22style%22%3A%7B%22padding%22%3A%228px%2018px%22%2C%22background%22%3A%22%23EF9F27%22%2C%22color%22%3A%22%23412402%22%2C%22border%22%3A%221px%20solid%20%23BA7517%22%2C%22borderRadius%22%3A8%2C%22fontSize%22%3A13%2C%22fontWeight%22%3A700%2C%22cursor%22%3A%22pointer%22%2C%22transition%22%3A%22background%200.1s%22%7D%2C%22onMouseEnter%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: "Начать →" }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:640:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "640", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22style%22%3A%7B%22padding%22%3A%228px%2018px%22%2C%22background%22%3A%22%23EF9F27%22%2C%22color%22%3A%22%23412402%22%2C%22border%22%3A%221px%20solid%20%23BA7517%22%2C%22borderRadius%22%3A8%2C%22fontSize%22%3A13%2C%22fontWeight%22%3A700%2C%22cursor%22%3A%22pointer%22%2C%22transition%22%3A%22background%200.1s%22%7D%2C%22onMouseEnter%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: "Начать →" }),
       state === "completed" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onStart, "aria-label": `Повторить тему: ${topic.title}`, style: {
         padding: "8px 18px",
         background: "#EAF3DE",
@@ -22282,11 +23140,11 @@ function InfoPanel({
         fontSize: 13,
         fontWeight: 600,
         cursor: "pointer"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:657:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "657", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22style%22%3A%7B%22padding%22%3A%228px%2018px%22%2C%22background%22%3A%22%23EAF3DE%22%2C%22color%22%3A%22%2327500A%22%2C%22border%22%3A%221px%20solid%20%23639922%22%2C%22borderRadius%22%3A8%2C%22fontSize%22%3A13%2C%22fontWeight%22%3A600%2C%22cursor%22%3A%22pointer%22%7D%7D", children: "↺ Повторить" }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:660:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "660", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22style%22%3A%7B%22padding%22%3A%228px%2018px%22%2C%22background%22%3A%22%23EAF3DE%22%2C%22color%22%3A%22%2327500A%22%2C%22border%22%3A%221px%20solid%20%23639922%22%2C%22borderRadius%22%3A8%2C%22fontSize%22%3A13%2C%22fontWeight%22%3A600%2C%22cursor%22%3A%22pointer%22%7D%7D", children: "↺ Повторить" }),
       state === "locked" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         fontSize: 12,
         color: "var(--color-text-tertiary)"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:674:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "674", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-tertiary)%22%7D%7D", children: "Пройдите предыдущие темы, чтобы открыть" })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:677:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "677", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-tertiary)%22%7D%7D", children: "Пройдите предыдущие темы, чтобы открыть" })
     ] })
   ] });
 }
@@ -22303,22 +23161,22 @@ function ProgressBar({
     border: "1px solid var(--color-border-tertiary)",
     borderRadius: 12,
     padding: "8px 14px"
-  }, role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `Общий прогресс: ${pct}%`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:687:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "687", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22minWidth%22%3A200%2C%22maxWidth%22%3A360%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-tertiary)%22%2C%22borderRadius%22%3A12%2C%22padding%22%3A%228px%2014px%22%7D%2C%22role%22%3A%22progressbar%22%7D", children: [
+  }, role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `Общий прогресс: ${pct}%`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:690:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "690", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22minWidth%22%3A200%2C%22maxWidth%22%3A360%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-tertiary)%22%2C%22borderRadius%22%3A12%2C%22padding%22%3A%228px%2014px%22%7D%2C%22role%22%3A%22progressbar%22%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "baseline",
       marginBottom: 5
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:697:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "697", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22justifyContent%22%3A%22space-between%22%2C%22alignItems%22%3A%22baseline%22%2C%22marginBottom%22%3A5%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:700:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "700", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22justifyContent%22%3A%22space-between%22%2C%22alignItems%22%3A%22baseline%22%2C%22marginBottom%22%3A5%7D%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         fontSize: 12,
         fontWeight: 600,
         color: "var(--color-text-secondary)"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:701:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "701", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22fontWeight%22%3A600%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: "Общий прогресс" }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:704:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "704", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22fontWeight%22%3A600%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: "Общий прогресс" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
         fontSize: 12,
         color: "var(--color-text-tertiary)"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:704:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "704", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-tertiary)%22%7D%7D", children: [
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:707:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "707", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-tertiary)%22%7D%7D", children: [
         completed,
         " / ",
         total,
@@ -22330,13 +23188,13 @@ function ProgressBar({
       borderRadius: 4,
       background: "var(--color-border-tertiary)",
       overflow: "hidden"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:708:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "708", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A7%2C%22borderRadius%22%3A4%2C%22background%22%3A%22var(--color-border-tertiary)%22%2C%22overflow%22%3A%22hidden%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:711:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "711", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A7%2C%22borderRadius%22%3A4%2C%22background%22%3A%22var(--color-border-tertiary)%22%2C%22overflow%22%3A%22hidden%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
       height: "100%",
       width: `${pct}%`,
       background: pct === 100 ? "#639922" : `linear-gradient(90deg, #639922 0%, #97C459 100%)`,
       borderRadius: 4,
       transition: "width 0.5s ease"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:713:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "713", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A%22100%25%22%2C%22width%22%3A%22%5BTemplateLiteral%5D%22%2C%22background%22%3A%22%5BConditionalExpression%5D%22%2C%22borderRadius%22%3A4%2C%22transition%22%3A%22width%200.5s%20ease%22%7D%7D" }) })
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:716:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "716", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A%22100%25%22%2C%22width%22%3A%22%5BTemplateLiteral%5D%22%2C%22background%22%3A%22%5BConditionalExpression%5D%22%2C%22borderRadius%22%3A4%2C%22transition%22%3A%22width%200.5s%20ease%22%7D%7D" }) })
   ] });
 }
 function StateLegend() {
@@ -22345,7 +23203,7 @@ function StateLegend() {
     gap: 14,
     alignItems: "center",
     flexWrap: "wrap"
-  }, "aria-label": "Обозначения", role: "note", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:731:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "731", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22gap%22%3A14%2C%22alignItems%22%3A%22center%22%2C%22flexWrap%22%3A%22wrap%22%7D%2C%22role%22%3A%22note%22%7D", children: [{
+  }, "aria-label": "Обозначения", role: "note", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:734:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "734", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22gap%22%3A14%2C%22alignItems%22%3A%22center%22%2C%22flexWrap%22%3A%22wrap%22%7D%2C%22role%22%3A%22note%22%7D", children: [{
     icon: "🔒",
     label: "Закрыто",
     color: "#B4B2A9"
@@ -22367,10 +23225,10 @@ function StateLegend() {
     gap: 5,
     fontSize: 12,
     color: "var(--color-text-secondary)"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:741:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "741", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A5%2C%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:744:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "744", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A5%2C%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", style: {
       color
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:745:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "745", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22color%22%3A%22%5Bvar%3Acolor%5D%22%7D%7D", children: icon }),
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:748:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "748", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22color%22%3A%22%5Bvar%3Acolor%5D%22%7D%7D", children: icon }),
     label
   ] }, label)) });
 }
@@ -23289,9 +24147,10 @@ const ChallengeMode = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1494:10", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1494", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-500%20mt-1%22%7D", children: "Выберите предмет и тему для изучения" })
       ] }),
       (() => {
+        var _a3;
         const skillTopics = Object.entries(category.subjects).flatMap(([, subject]) => Object.entries(subject.topics).map(([topicKey, topic]) => {
-          var _a3;
-          const node = (_a3 = topicGraph == null ? void 0 : topicGraph.find) == null ? void 0 : _a3.call(topicGraph, (n) => n.id === topicKey);
+          var _a4;
+          const node = (_a4 = topicGraph == null ? void 0 : topicGraph.find) == null ? void 0 : _a4.call(topicGraph, (n) => n.id === topicKey);
           return {
             id: topicKey,
             title: topic.name,
@@ -23299,25 +24158,35 @@ const ChallengeMode = ({
           };
         }));
         const gradeNum = (selectedCategory == null ? void 0 : selectedCategory.replace("grade", "")) ?? "";
+        const currentGradeTopicIds = new Set(Object.values(category.subjects).flatMap((s) => Object.keys(s.topics)));
+        const globalMasteredIds = new Set(Object.entries(studentProgress.topics).filter(([, v]) => v.level === "proficient" || v.level === "mastered").map(([k]) => {
+          const parts = k.split("-");
+          return parts.length >= 3 && /^\d+$/.test(parts[0]) ? parts.slice(2).join("-") : k;
+        }));
+        const resolvedMasteredIds = new Set(globalMasteredIds);
+        for (const topicId of currentGradeTopicIds) {
+          const node = (_a3 = topicGraph == null ? void 0 : topicGraph.find) == null ? void 0 : _a3.call(topicGraph, (n) => n.id === topicId);
+          if (node) {
+            for (const prereqId of node.prerequisites) {
+              if (!currentGradeTopicIds.has(prereqId)) {
+                resolvedMasteredIds.add(prereqId);
+              }
+            }
+          }
+        }
         const skillProgress = {};
         for (const [subjectKey, subject] of Object.entries(category.subjects)) {
           for (const topicKey of Object.keys(subject.topics)) {
             const key = `${gradeNum}-${subjectKey}-${topicKey}`;
             const tp = studentProgress.topics[key];
             const hasContent = subject.topics[topicKey].challenges.length + subject.topics[topicKey].templates.length > 0;
-            if (!hasContent) {
-              skillProgress[topicKey] = "locked";
-            } else if (!tp || tp.level === "not_started") {
-              const masteredTopics = Object.entries(studentProgress.topics).filter(([, v]) => v.level === "proficient" || v.level === "mastered").map(([k]) => {
-                const p = k.split("-");
-                return p.length >= 3 ? p.slice(2).join("-") : p[p.length - 1];
-              });
-              const unmet = getUnmetPrerequisites(topicKey, masteredTopics);
-              skillProgress[topicKey] = unmet.length === 0 ? "unlocked" : "locked";
-            } else if (tp.level === "mastered" || tp.level === "proficient") {
+            if (tp && (tp.level === "mastered" || tp.level === "proficient")) {
               skillProgress[topicKey] = "completed";
+            } else if (!hasContent) {
+              skillProgress[topicKey] = "locked";
             } else {
-              skillProgress[topicKey] = "unlocked";
+              const unmet = getUnmetPrerequisites(topicKey, Array.from(resolvedMasteredIds));
+              skillProgress[topicKey] = unmet.length === 0 ? "unlocked" : "locked";
             }
           }
         }
@@ -23331,43 +24200,43 @@ const ChallengeMode = ({
             }
           }
         };
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(SkillTree, { topics: skillTopics, progress: skillProgress, onTopicClick: handleSkillTopicClick, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1552:12", "data-matrix-name": "SkillTree", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1552", "data-component-file": "ChallengeMode.tsx", "data-component-name": "SkillTree", "data-component-content": "%7B%22topics%22%3A%22%5BIdentifier%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22onTopicClick%22%3A%22%5BIdentifier%5D%22%7D" });
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(SkillTree, { topics: skillTopics, progress: skillProgress, onTopicClick: handleSkillTopicClick, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1581:12", "data-matrix-name": "SkillTree", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1581", "data-component-file": "ChallengeMode.tsx", "data-component-name": "SkillTree", "data-component-content": "%7B%22topics%22%3A%22%5BIdentifier%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22onTopicClick%22%3A%22%5BIdentifier%5D%22%7D" });
       })()
     ] });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1565:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1565", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1567:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1567", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1568:8", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1568", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: "Задачи и упражнения" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1569:8", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1569", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-500%20mt-1%22%7D", children: "Решайте математические задачи и проверяйте свои знания" })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1594:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1594", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1596:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1596", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1597:8", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1597", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: "Задачи и упражнения" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1598:8", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1598", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-500%20mt-1%22%7D", children: "Решайте математические задачи и проверяйте свои знания" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 p-4 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1575:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1575", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%20p-4%20bg-gray-50%20rounded-xl%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1576:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1576", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-between%20items-center%20mb-2%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1577:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1577", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%20font-medium%20text-gray-700%22%7D", children: "Общий прогресс" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1578:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1578", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 p-4 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1604:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1604", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%20p-4%20bg-gray-50%20rounded-xl%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1605:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1605", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-between%20items-center%20mb-2%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1606:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1606", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%20font-medium%20text-gray-700%22%7D", children: "Общий прогресс" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1607:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1607", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%22%7D", children: [
           completedChallenges.length,
           " / ",
           allChallenges.length + problemTemplates.length,
           " задач"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-200 rounded-full h-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1582:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1582", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-full%20bg-gray-200%20rounded-full%20h-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-indigo-600 h-2 rounded-full transition-all", style: {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-200 rounded-full h-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1611:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1611", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-full%20bg-gray-200%20rounded-full%20h-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-indigo-600 h-2 rounded-full transition-all", style: {
         width: `${completedChallenges.length / (allChallenges.length + problemTemplates.length) * 100}%`
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1583:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1583", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-indigo-600%20h-2%20rounded-full%20transition-all%22%2C%22style%22%3A%7B%22width%22%3A%22%5BTemplateLiteral%5D%22%7D%7D" }) })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1612:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1612", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-indigo-600%20h-2%20rounded-full%20transition-all%22%2C%22style%22%3A%7B%22width%22%3A%22%5BTemplateLiteral%5D%22%7D%7D" }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1591:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1591", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: Object.entries(categoryStructure).map(([categoryKey, category]) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1620:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1620", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: Object.entries(categoryStructure).map(([categoryKey, category]) => {
       const allChallenges2 = Object.values(category.subjects).flatMap((s) => Object.values(s.topics).flatMap((t) => t.challenges));
       const allTemplates = Object.values(category.subjects).flatMap((s) => Object.values(s.topics).flatMap((t) => t.templates));
       const completed = allChallenges2.filter((c) => completedChallenges.includes(c.id)).length + allTemplates.filter((t) => completedChallenges.includes(t.id)).length;
       const total = allChallenges2.length + allTemplates.length;
       const progress = total > 0 ? completed / total * 100 : 0;
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => setSelectedCategory(categoryKey), className: "w-full p-5 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1601:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1601", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20p-5%20border%20border-gray-200%20rounded-xl%20hover%3Aborder-indigo-500%20hover%3Abg-indigo-50%20transition-all%20text-left%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1606:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1606", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-start%20justify-between%20mb-3%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1607:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1607", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1608:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1608", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20mb-1%22%7D", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-3 h-3 bg-${category.color}-500 rounded-full`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1609:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1609", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-lg text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1610:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1610", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-lg%20text-gray-800%22%7D", children: category.name })
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => setSelectedCategory(categoryKey), className: "w-full p-5 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1630:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1630", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20p-5%20border%20border-gray-200%20rounded-xl%20hover%3Aborder-indigo-500%20hover%3Abg-indigo-50%20transition-all%20text-left%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1635:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1635", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-start%20justify-between%20mb-3%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1636:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1636", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1637:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1637", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20mb-1%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-3 h-3 bg-${category.color}-500 rounded-full`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1638:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1638", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-lg text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1639:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1639", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-lg%20text-gray-800%22%7D", children: category.name })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1612:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1612", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1641:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1641", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%22%7D", children: [
               Object.values(category.subjects).reduce((sum, s) => sum + Object.keys(s.topics).length, 0),
               " тем • ",
               completed,
@@ -23376,14 +24245,14 @@ const ChallengeMode = ({
               " задач выполнено"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 24, className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1616:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1616", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A24%2C%22className%22%3A%22text-gray-400%22%7D" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 24, className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1645:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1645", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A24%2C%22className%22%3A%22text-gray-400%22%7D" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-200 rounded-full h-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1619:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1619", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-full%20bg-gray-200%20rounded-full%20h-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `bg-${category.color}-600 h-2 rounded-full transition-all`, style: {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-200 rounded-full h-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1648:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1648", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-full%20bg-gray-200%20rounded-full%20h-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `bg-${category.color}-600 h-2 rounded-full transition-all`, style: {
           width: `${progress}%`
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1620:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1620", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22style%22%3A%7B%22width%22%3A%22%5BTemplateLiteral%5D%22%7D%7D" }) })
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1649:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1649", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22style%22%3A%7B%22width%22%3A%22%5BTemplateLiteral%5D%22%7D%7D" }) })
       ] }, categoryKey);
     }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-8 p-4 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1631:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1631", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-8%20p-4%20bg-gray-50%20rounded-xl%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500 text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1632:8", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1632", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%20text-center%22%7D", children: "📝 В разработке: больше задач по тригонометрии, графикам функций и стереометрии" }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-8 p-4 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1660:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1660", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-8%20p-4%20bg-gray-50%20rounded-xl%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500 text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1661:8", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1661", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%20text-center%22%7D", children: "📝 В разработке: больше задач по тригонометрии, графикам функций и стереометрии" }) })
   ] });
 };
 const features = [{
@@ -28132,4 +29001,4 @@ const queryClient = new QueryClient({
   }
 });
 clientExports.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.StrictMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:18:2", "data-matrix-name": "StrictMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "18", "data-component-file": "main.tsx", "data-component-name": "StrictMode", children: /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:19:4", "data-matrix-name": "QueryClientProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "19", "data-component-file": "main.tsx", "data-component-name": "QueryClientProvider", "data-component-content": "%7B%22client%22%3A%22%5BIdentifier%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorBoundary, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:21:8", "data-matrix-name": "App", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "21", "data-component-file": "main.tsx", "data-component-name": "App" }) }) }) }));
-//# sourceMappingURL=index-B9TtMOwO.js.map
+//# sourceMappingURL=index-D7pNpMuA.js.map
