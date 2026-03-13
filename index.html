@@ -5,10 +5,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Приложение для развития визуального мышления на уроках математики" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;" />
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://*.supabase.co
+      wss://*.supabase.co
+      wss://signaling.yjs.dev
+      ws://localhost:*
+      http://localhost:*;
+  " />
   <title>MathViz Architect</title>
-  <script type="module" crossorigin src="/assets/index-BCOTX_u8.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CxlCIeBv.css">
+  <script type="module" crossorigin src="/assets/index--7brKxpE.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DOrRQ6mG.css">
 </head>
 
 <body>
