@@ -22192,6 +22192,7 @@ function checkCommonMistake(problem, template, userAnswer, difficulty = 1) {
   return null;
 }
 const topicGraph = [
+  // ===== Grade 5 =====
   { id: "comparison", prerequisites: [] },
   { id: "arithmetic", prerequisites: ["comparison"] },
   { id: "divisors", prerequisites: ["arithmetic"] },
@@ -22234,7 +22235,8 @@ const topicGraph = [
   { id: "circles", prerequisites: ["perimeter"] },
   { id: "figureArea", prerequisites: ["area"] },
   // ===== Grade 7 - Algebra: Блок 1 — Степени =====
-  { id: "powerOfNumber", prerequisites: ["arithmetic"] },
+  { id: "powerOfNumber", prerequisites: [] },
+  // entry topic
   { id: "productOfPowers", prerequisites: ["powerOfNumber"] },
   { id: "powerOfPower", prerequisites: ["powerOfNumber"] },
   { id: "divisionOfPowers", prerequisites: ["powerOfNumber"] },
@@ -22253,21 +22255,23 @@ const topicGraph = [
   { id: "diffOfSquares", prerequisites: ["polyMultiply"] },
   { id: "factoringApply", prerequisites: ["squareOfSum", "squareOfDiff", "diffOfSquares"] },
   // ===== Grade 7 - Algebra: Блок 5 — Линейные уравнения =====
-  { id: "linearEqSimple", prerequisites: ["linear_equations_basic"] },
+  { id: "linearEqSimple", prerequisites: ["monomialStdForm"] },
   { id: "linearEqTranspose", prerequisites: ["linearEqSimple"] },
   { id: "linearEqBrackets", prerequisites: ["linearEqSimple"] },
   // ===== Grade 7 - Algebra: Блок 6 — Функции =====
-  { id: "funcValue", prerequisites: ["linearEqSimple", "coordinate_plane"] },
+  { id: "funcValue", prerequisites: ["linearEqSimple"] },
   { id: "funcCoefficients", prerequisites: ["funcValue"] },
   // ===== Grade 7 - Algebra: Блок 7 — Системы уравнений =====
   { id: "systemsSubstitution", prerequisites: ["funcValue"] },
   { id: "systemsElimination", prerequisites: ["linearEqTranspose"] },
   // ===== Grade 7 - Geometry: Параллельные прямые =====
-  { id: "corrAngles", prerequisites: ["triangles"] },
+  { id: "corrAngles", prerequisites: [] },
+  // entry topic
   { id: "altAngles", prerequisites: ["corrAngles"] },
   { id: "coInteriorAngles", prerequisites: ["corrAngles"] },
   // ===== Grade 7 - Geometry: Треугольники =====
-  { id: "triangleAngles", prerequisites: ["triangles"] },
+  { id: "triangleAngles", prerequisites: [] },
+  // entry topic
   { id: "exteriorAngle", prerequisites: ["triangleAngles"] },
   { id: "congruenceSSS", prerequisites: ["triangleAngles"] },
   { id: "congruenceSAS", prerequisites: ["triangleAngles"] },
@@ -29001,4 +29005,4 @@ const queryClient = new QueryClient({
   }
 });
 clientExports.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.StrictMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:18:2", "data-matrix-name": "StrictMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "18", "data-component-file": "main.tsx", "data-component-name": "StrictMode", children: /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:19:4", "data-matrix-name": "QueryClientProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "19", "data-component-file": "main.tsx", "data-component-name": "QueryClientProvider", "data-component-content": "%7B%22client%22%3A%22%5BIdentifier%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorBoundary, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:21:8", "data-matrix-name": "App", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "21", "data-component-file": "main.tsx", "data-component-name": "App" }) }) }) }));
-//# sourceMappingURL=index-D7pNpMuA.js.map
+//# sourceMappingURL=index-BvcCRE-2.js.map
