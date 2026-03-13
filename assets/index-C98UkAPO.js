@@ -14186,7 +14186,7 @@ const InteractiveLibrary = ({
     ] })
   ] });
 };
-const problemTemplates = [
+const grade5Templates = [
   // ===== ALGEBRA - Comparison =====
   {
     id: "grade5-comparison",
@@ -15740,7 +15740,9 @@ const problemTemplates = [
         ]
       }
     }
-  },
+  }
+];
+const grade6Templates = [
   // =====================================================================
   // GRADE 6
   // =====================================================================
@@ -18128,7 +18130,9 @@ const problemTemplates = [
         ]
       }
     }
-  },
+  }
+];
+const grade7Templates = [
   // =========================================================================
   // ===== GRADE 7 - ALGEBRA ================================================
   // =========================================================================
@@ -21157,12 +21161,11 @@ const problemTemplates = [
       3: {
         template: "Поезд прошёл {dist} км. Если бы скорость была на {dv} км/ч больше, он затратил бы на {dt} ч меньше. Найдите скорость поезда.",
         parameters: {
-          v: { type: "int", min: 40, max: 80 },
+          dist: { type: "int", min: 200, max: 400 },
           dv: { type: "int", min: 10, max: 20 },
-          dt: { type: "int", min: 1, max: 3 },
-          dist: { type: "expression", value: "v * (dist / v)" }
+          dt: { type: "int", min: 1, max: 3 }
         },
-        answer_formula: "v",
+        answer_formula: "(-dv + sqrt(dv*dv + 4*dist*dv/dt)) / 2",
         hint: "Время₁ = dist/v, Время₂ = dist/(v+{dv}). Разность = {dt}"
       }
     }
@@ -21671,6 +21674,2779 @@ const problemTemplates = [
       }
     }
   }
+];
+const grade8QuadraticTemplates = [
+  // ===== 1. Квадратный трёхчлен =====
+  {
+    id: "grade8-quadraticTrinomial",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратный трёхчлен",
+    topic: "quadraticTrinomial",
+    topic_title: "Квадратный трёхчлен",
+    problemType: "numeric",
+    skills: ["quadratic", "polynomials"],
+    difficulties: {
+      // Уровень 1 — назвать коэффициент b (параметры a,b,c независимые, задача на понятие)
+      1: {
+        template: "Запишите коэффициент b трёхчлена {a}x² + {b}x + {c}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 4 },
+          b: { type: "int", min: -9, max: 9 },
+          c: { type: "int", min: -9, max: 9 }
+        },
+        constraints: ["b !== 0", "c !== 0"],
+        answer_formula: "b",
+        hint: "Коэффициент b — это число при x в первой степени",
+        solution: [
+          { explanation: "В трёхчлене ax² + bx + c: a = {a}, b = {b}, c = {c}" },
+          { explanation: "Ответ:", result: "{b}" }
+        ],
+        common_mistakes: [
+          { pattern: "a", feedback: "Это коэффициент a (при x²). Нужен коэффициент b (при x)." },
+          { pattern: "c", feedback: "Это свободный член c. Нужен коэффициент b (при x)." }
+        ]
+      },
+      // Уровень 2 — вычислить значение трёхчлена
+      2: {
+        template: "Вычислите значение трёхчлена {a}x² + {b}x + {c} при x = {x}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          r1: { type: "int", min: -4, max: 4 },
+          r2: { type: "int", min: -4, max: 4 },
+          b: { type: "expression", value: "-(r1 + r2)" },
+          c: { type: "expression", value: "r1 * r2" },
+          x: { type: "int", min: -3, max: 3 }
+        },
+        constraints: ["r1 !== r2", "x !== 0", "x !== r1", "x !== r2"],
+        answer_formula: "a * x * x + b * x + c",
+        hint: "Подставьте x = {x}: {a}·({x})² + {b}·({x}) + {c}",
+        solution: [
+          { explanation: "{a}·({x})² = {a*x*x}" },
+          { explanation: "{b}·({x}) = {b*x}" },
+          { explanation: "Сумма: {a*x*x} + {b*x} + {c} =", result: "{answer}" }
+        ]
+      },
+      // Уровень 3 — вычислить дискриминант (строим через корни → D = (r1-r2)²)
+      3: {
+        template: "Вычислите дискриминант трёхчлена {a}x² + {b}x + {c}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          r1: { type: "int", min: -5, max: 5 },
+          r2: { type: "int", min: -5, max: 5 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "b * b - 4 * a * c",
+        hint: "D = b² − 4ac",
+        solution: [
+          { explanation: "D = ({b})² − 4·{a}·({c})" },
+          { explanation: "D = {b*b} − {4*a*c} =", result: "{answer}" }
+        ]
+      },
+      // Уровень 4 — a≠1, найти b² (восстановление через D)
+      4: {
+        template: "Трёхчлен {a}x² + {b}x + {c} имеет D = {d}. Найдите b².",
+        parameters: {
+          a: { type: "int", min: 2, max: 4 },
+          r1: { type: "int", min: -6, max: -1 },
+          r2: { type: "int", min: 1, max: 6 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" },
+          d: { type: "expression", value: "b * b - 4 * a * c" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "b * b",
+        hint: "D = b² − 4ac → b² = D + 4ac",
+        solution: [
+          { explanation: "b² = D + 4ac = {d} + 4·{a}·{c}", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== 2. Разложение трёхчлена на множители =====
+  {
+    id: "grade8-trinomialFactoring",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратный трёхчлен",
+    topic: "trinomialFactoring",
+    topic_title: "Разложение трёхчлена на множители",
+    problemType: "numeric",
+    skills: ["factoring", "quadratic"],
+    difficulties: {
+      // Уровень 1 — оба корня положительные, a = 1
+      1: {
+        template: "Разложите на множители x² − {s}x + {p}. Найдите больший корень.",
+        parameters: {
+          r1: { type: "int", min: 1, max: 5 },
+          r2: { type: "int", min: 1, max: 5 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "Math.max(r1, r2)",
+        hint: "Подберите два числа с суммой {s} и произведением {p}",
+        solution: [
+          { explanation: "Числа {r1} и {r2}: сумма = {s}, произведение = {p}" },
+          { explanation: "Разложение: (x − {r1})(x − {r2})" },
+          { explanation: "Корни: {r1} и {r2}. Больший:", result: "{answer}" }
+        ]
+      },
+      // Уровень 2 — корни разных знаков, a = 1
+      2: {
+        template: "Разложите на множители x² + {b}x + {c}. Найдите больший корень.",
+        parameters: {
+          r1: { type: "int", min: -7, max: -1 },
+          r2: { type: "int", min: 1, max: 7 },
+          b: { type: "expression", value: "r1 + r2" },
+          c: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== -r2"],
+        // Корни уравнения (x-r1)(x-r2)=0 — это r1 и r2.
+        // Так как r1<0 и r2>0, больший корень = r2
+        answer_formula: "r2",
+        hint: "c < 0 → корни разных знаков. Найдите числа с суммой {b} и произведением {c}.",
+        solution: [
+          { explanation: "Ищем числа с суммой {b} и произведением {c}" },
+          { explanation: "Это {r1} и {r2}: ({r1}) + {r2} = {b}, ({r1})·{r2} = {c}" },
+          { explanation: "Разложение: (x − ({r1}))(x − {r2})" },
+          { explanation: "Корни: {r1} и {r2}. Больший:", result: "{answer}" }
+        ]
+      },
+      // Уровень 3 — a > 1, найти произведение корней (теорема Виета)
+      3: {
+        template: "Разложите на множители {a}x² + {b}x + {c}. Найдите произведение корней.",
+        parameters: {
+          a: { type: "int", min: 2, max: 4 },
+          r1: { type: "int", min: -5, max: -1 },
+          r2: { type: "int", min: 1, max: 5 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        answer_formula: "r1 * r2",
+        hint: "По теореме Виета x₁·x₂ = c/a",
+        solution: [
+          { explanation: "{a}x² + {b}x + {c} = {a}(x − {r1})(x − {r2})" },
+          { explanation: "x₁·x₂ = c/a = {c}/{a} =", result: "{answer}" }
+        ]
+      },
+      // Уровень 4 — оба корня отрицательные, a > 1, найти сумму корней
+      // Добавлена поддержка кратных и отрицательных корней
+      4: {
+        template: "Разложите {a}x² + {b}x + {c}. Найдите сумму корней.",
+        parameters: {
+          a: { type: "int", min: 2, max: 5 },
+          r1: { type: "int", min: -7, max: -1 },
+          r2: { type: "int", min: -7, max: -1 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        // r1 === r2 разрешено — кратный корень
+        answer_formula: "r1 + r2",
+        hint: "По теореме Виета x₁ + x₂ = −b/a",
+        solution: [
+          { explanation: "x₁ + x₂ = −b/a = −({b})/{a} =", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== 3. Неполные квадратные уравнения =====
+  {
+    id: "grade8-quadraticIncomplete",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные уравнения",
+    topic: "quadraticIncomplete",
+    topic_title: "Неполные квадратные уравнения",
+    problemType: "numeric",
+    skills: ["quadratic", "squareRoot"],
+    difficulties: {
+      // Уровень 1 — x² = c (строим от корня)
+      1: {
+        template: "Решите уравнение x² = {c}. Найдите положительный корень.",
+        parameters: {
+          r: { type: "int", min: 2, max: 10 },
+          c: { type: "expression", value: "r * r" }
+        },
+        answer_formula: "r",
+        hint: "x² = {c} → x = ±√{c}",
+        solution: [
+          { explanation: "x = ±√{c} = ±{r}" },
+          { explanation: "Положительный корень:", result: "{r}" }
+        ],
+        common_mistakes: [
+          { pattern: "c", feedback: "Нужно √{c}, а не {c} — не забудьте извлечь корень." }
+        ]
+      },
+      // Уровень 2 — ax² = c (строим от корня)
+      2: {
+        template: "Решите уравнение {a}x² − {c} = 0. Найдите положительный корень.",
+        parameters: {
+          a: { type: "int", min: 2, max: 6 },
+          r: { type: "int", min: 1, max: 7 },
+          c: { type: "expression", value: "a * r * r" }
+        },
+        answer_formula: "r",
+        hint: "{a}x² = {c} → x² = {c}/{a}",
+        solution: [
+          { explanation: "{a}x² = {c}" },
+          { explanation: "x² = {c} ÷ {a} = {r*r}" },
+          { explanation: "x = ±√{r*r} = ±{r}. Положительный:", result: "{r}" }
+        ]
+      },
+      // Уровень 3 — ax² + bx = 0 (один корень 0, другой -b/a)
+      3: {
+        template: "Решите уравнение {a}x² + {b}x = 0. Найдите ненулевой корень.",
+        parameters: {
+          a: { type: "int", min: 1, max: 5 },
+          r: { type: "int", min: -8, max: 8 },
+          b: { type: "expression", value: "-a * r" }
+        },
+        constraints: ["r !== 0"],
+        answer_formula: "r",
+        hint: "Вынесите x: x({a}x + {b}) = 0",
+        solution: [
+          { explanation: "x·({a}x + {b}) = 0" },
+          { explanation: "x = 0  или  {a}x = −({b})" },
+          { explanation: "Ненулевой корень: x =", result: "{r}" }
+        ]
+      },
+      // Уровень 4 — (x + p)² = q, найти сумму корней
+      4: {
+        template: "Решите уравнение (x + {p})² = {q}. Найдите сумму корней.",
+        parameters: {
+          p: { type: "int", min: -6, max: 6 },
+          r: { type: "int", min: 1, max: 6 },
+          q: { type: "expression", value: "r * r" }
+        },
+        constraints: ["p !== 0"],
+        // x₁ = r - p, x₂ = -r - p  →  сумма = -2p
+        answer_formula: "-2 * p",
+        hint: "x + {p} = ±{r} → два корня. Их сумма = ?",
+        solution: [
+          { explanation: "x + {p} = {r}  →  x₁ = {r} − {p} = {r - p}" },
+          { explanation: "x + {p} = −{r}  →  x₂ = −{r} − {p} = {-r - p}" },
+          { explanation: "Сумма x₁ + x₂ =", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== 4. Формула корней (дискриминант) =====
+  {
+    id: "grade8-quadraticFormula",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные уравнения",
+    topic: "quadraticFormula",
+    topic_title: "Формула корней квадратного уравнения",
+    problemType: "numeric",
+    skills: ["quadratic", "discriminant"],
+    difficulties: {
+      // Уровень 1 — вычислить D, a = 1
+      1: {
+        template: "Вычислите дискриминант уравнения x² + {b}x + {c} = 0.",
+        parameters: {
+          r1: { type: "int", min: -6, max: 6 },
+          r2: { type: "int", min: -6, max: 6 },
+          b: { type: "expression", value: "-(r1 + r2)" },
+          c: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "b * b - 4 * c",
+        hint: "D = b² − 4·1·c = {b}² − 4·({c})",
+        solution: [
+          { explanation: "D = ({b})² − 4·({c})" },
+          { explanation: "D = {b*b} − {4*c} =", result: "{answer}" }
+        ],
+        common_mistakes: [
+          { pattern: "b * b + 4 * c", feedback: "D = b² − 4ac (минус, не плюс)." }
+        ]
+      },
+      // Уровень 2 — найти меньший корень, a = 1
+      2: {
+        template: "Решите уравнение x² + {b}x + {c} = 0. Найдите меньший корень.",
+        parameters: {
+          r1: { type: "int", min: -8, max: 8 },
+          r2: { type: "int", min: -8, max: 8 },
+          b: { type: "expression", value: "-(r1 + r2)" },
+          c: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "Math.min(r1, r2)",
+        hint: "Вычислите D, затем x = (−{b} ± √D) / 2",
+        solution: [
+          { explanation: "D = ({b})² − 4·({c}) = {b*b - 4*c}" },
+          { explanation: "x₁,₂ = (−({b}) ± √{b*b - 4*c}) / 2" },
+          { explanation: "Меньший корень:", result: "{answer}" }
+        ]
+      },
+      // Уровень 3 — a > 1, найти больший корень
+      3: {
+        template: "Решите уравнение {a}x² + {b}x + {c} = 0. Найдите больший корень.",
+        parameters: {
+          a: { type: "int", min: 2, max: 5 },
+          r1: { type: "int", min: -6, max: 6 },
+          r2: { type: "int", min: -6, max: 6 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: "Math.max(r1, r2)",
+        hint: "D = ({b})² − 4·{a}·({c}). Корни: x = (−{b} ± √D) / (2·{a})",
+        solution: [
+          { explanation: "D = {b*b} − 4·{a}·{c} = {b*b - 4*a*c}" },
+          { explanation: "x₁,₂ = (−{b} ± √{b*b - 4*a*c}) / {2*a}" },
+          { explanation: "Больший корень:", result: "{answer}" }
+        ]
+      },
+      // Уровень 4 — отрицательные / кратные корни, a≠1; найти оба корня (через запятую)
+      // Формат ответа: меньший, больший (или одно число если кратные)
+      4: {
+        template: "Решите уравнение {a}x² + {b}x + {c} = 0. Запишите корни через запятую (по возрастанию).",
+        parameters: {
+          a: { type: "int", min: 2, max: 4 },
+          // r1 <= r2, один или оба могут быть отрицательными или равными
+          r1: { type: "int", min: -8, max: 0 },
+          r2: { type: "int", min: -4, max: 4 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        // r1 === r2 разрешено (кратный корень)
+        // answer_formula возвращает строку "r1, r2" или "r1" если равны
+        answer_formula: 'r1 === r2 ? String(r1) : Math.min(r1,r2) + ", " + Math.max(r1,r2)',
+        hint: "D = b² − 4ac = {a}²·(r1−r2)². Корни: (−b ± √D) / (2a)",
+        solution: [
+          { explanation: "D = ({b})² − 4·{a}·({c}) = {b*b - 4*a*c}" },
+          { explanation: "x₁,₂ = (−({b}) ± √{b*b - 4*a*c}) / {2*a}", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== 5. Теорема Виета =====
+  {
+    id: "grade8-vietasTheorem",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные уравнения",
+    topic: "vietasTheorem",
+    topic_title: "Теорема Виета",
+    problemType: "numeric",
+    skills: ["quadratic", "vietasTheorem"],
+    difficulties: {
+      // Уровень 1 — найти b по корням (a = 1)
+      1: {
+        template: "Корни уравнения x² + bx + c = 0 равны {r1} и {r2}. Найдите b.",
+        parameters: {
+          r1: { type: "int", min: -7, max: 7 },
+          r2: { type: "int", min: -7, max: 7 }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0"],
+        answer_formula: "-(r1 + r2)",
+        hint: "x₁ + x₂ = −b → b = −(x₁ + x₂)",
+        solution: [
+          { explanation: "x₁ + x₂ = {r1} + ({r2}) = {r1 + r2}" },
+          { explanation: "b = −({r1 + r2}) =", result: "{answer}" }
+        ]
+      },
+      // Уровень 2 — найти c по корням (a = 1)
+      2: {
+        template: "Составьте уравнение (a = 1) с корнями {r1} и {r2}. Найдите c.",
+        parameters: {
+          r1: { type: "int", min: -7, max: 7 },
+          r2: { type: "int", min: -7, max: 7 }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0"],
+        answer_formula: "r1 * r2",
+        hint: "x₁ · x₂ = c (теорема Виета)",
+        solution: [
+          { explanation: "c = x₁ · x₂ = ({r1}) · ({r2}) =", result: "{answer}" }
+        ]
+      },
+      // Уровень 3 — найти r₁² + r₂² через теорему Виета
+      3: {
+        template: "Корни уравнения {a}x² + {b}x + {c} = 0 равны r₁ и r₂. Найдите r₁² + r₂².",
+        parameters: {
+          a: { type: "int", min: 1, max: 4 },
+          r1: { type: "int", min: -5, max: 5 },
+          r2: { type: "int", min: -5, max: 5 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0"],
+        answer_formula: "r1 * r1 + r2 * r2",
+        hint: "r₁² + r₂² = (r₁+r₂)² − 2r₁r₂. Из т. Виета: r₁+r₂ = −b/a, r₁r₂ = c/a",
+        solution: [
+          { explanation: "r₁ + r₂ = −{b}/{a} = {-(b/a)}" },
+          { explanation: "r₁ · r₂ = {c}/{a} = {c/a}" },
+          { explanation: "r₁²+r₂² = ({-(b/a)})² − 2·({c/a}) =", result: "{answer}" }
+        ]
+      },
+      // Уровень 4 — a≠1, отрицательные / кратные корни, найти (r₁−r₂)²
+      4: {
+        template: "Корни уравнения {a}x² + {b}x + {c} = 0. Найдите (r₁ − r₂)².",
+        parameters: {
+          a: { type: "int", min: 2, max: 4 },
+          r1: { type: "int", min: -6, max: 0 },
+          r2: { type: "int", min: -6, max: 4 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        // r1 === r2 → ответ 0 (кратный корень — допустимо)
+        answer_formula: "(r1 - r2) * (r1 - r2)",
+        hint: "(r₁−r₂)² = (r₁+r₂)² − 4r₁r₂ = D / a²",
+        solution: [
+          { explanation: "D = {b*b} − 4·{a}·{c} = {b*b - 4*a*c}" },
+          { explanation: "(r₁−r₂)² = D / a² = {b*b - 4*a*c} / {a*a} =", result: "{answer}" }
+        ]
+      }
+    }
+  },
+  // ===== 6. Задачи на квадратные уравнения =====
+  {
+    id: "grade8-quadraticWordProblems",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные уравнения",
+    topic: "quadraticWordProblems",
+    topic_title: "Задачи на квадратные уравнения",
+    problemType: "numeric",
+    skills: ["quadratic", "wordProblems"],
+    difficulties: {
+      // Уровень 1 — ГЕОМЕТРИЧЕСКАЯ: прямоугольник (целые стороны гарантированы)
+      1: {
+        template: "Прямоугольник: длина на {d} см больше ширины, площадь {area} см². Найдите ширину.",
+        parameters: {
+          // Ширина w, длина w+d; строим от целых сторон
+          w: { type: "int", min: 3, max: 10 },
+          d: { type: "int", min: 1, max: 6 },
+          area: { type: "expression", value: "w * (w + d)" }
+        },
+        constraints: ["d < w"],
+        answer_formula: "w",
+        hint: "Пусть ширина = x, тогда x(x + {d}) = {area}",
+        solution: [
+          { explanation: "Ширина = x, длина = x + {d}" },
+          { explanation: "x(x + {d}) = {area}" },
+          { explanation: "x² + {d}x − {area} = 0" },
+          { explanation: "Корни уравнения: {w} и {-(w+d)}. Подходит x = {w} (длина > 0)" },
+          { explanation: "Ширина:", result: "{w} см" }
+        ],
+        common_mistakes: [
+          { pattern: "w + d", feedback: "Это длина, а не ширина." }
+        ]
+      },
+      // Уровень 2 — ЧИСЛОВАЯ: два числа (целые корни гарантированы через r1,r2)
+      2: {
+        template: "Найдите два натуральных числа: сумма = {s}, произведение = {p}. Укажите меньшее.",
+        parameters: {
+          r1: { type: "int", min: 2, max: 8 },
+          r2: { type: "int", min: 2, max: 8 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 < r2"],
+        answer_formula: "r1",
+        hint: "Составьте уравнение: x² − {s}x + {p} = 0",
+        solution: [
+          { explanation: "Пусть меньшее = x, тогда большее = {s} − x" },
+          { explanation: "x · ({s} − x) = {p}" },
+          { explanation: "x² − {s}x + {p} = 0" },
+          { explanation: "Корни: {r1} и {r2}. Меньшее:", result: "{r1}" }
+        ]
+      },
+      // Уровень 3 — ГЕОМЕТРИЧЕСКАЯ: площадь прямоугольного треугольника
+      // Гарантируем целые катеты через pythagorean-like построение от r
+      3: {
+        template: "В прямоугольном треугольнике один катет на {d} см длиннее другого, площадь = {area} см². Найдите меньший катет.",
+        parameters: {
+          a: { type: "int", min: 3, max: 9 },
+          // меньший катет
+          d: { type: "int", min: 1, max: 5 },
+          // разность
+          area: { type: "expression", value: "a * (a + d) / 2" }
+        },
+        // area должна быть целой → a*(a+d) чётное
+        constraints: ["(a * (a + d)) % 2 === 0"],
+        answer_formula: "a",
+        hint: "Пусть меньший катет = x, тогда x(x + {d})/2 = {area}",
+        solution: [
+          { explanation: "x · (x + {d}) / 2 = {area}" },
+          { explanation: "x² + {d}x − {2*area} = 0" },
+          { explanation: "Корень: x =", result: "{a} см" }
+        ]
+      },
+      // Уровень 4 — ЧИСЛОВАЯ: разность квадратов с отрицательными числами
+      // Строим от двух чисел с заданными знаками
+      4: {
+        template: "Сумма квадратов двух чисел равна {sumSq}, а их произведение равно {prod}. Найдите сумму чисел.",
+        parameters: {
+          r1: { type: "int", min: -8, max: -1 },
+          r2: { type: "int", min: 1, max: 8 },
+          sumSq: { type: "expression", value: "r1*r1 + r2*r2" },
+          prod: { type: "expression", value: "r1 * r2" }
+        },
+        // Сумма = r1 + r2 (может быть отрицательной — учим работать с отриц. ответами)
+        answer_formula: "r1 + r2",
+        hint: "(r₁+r₂)² = r₁² + r₂² + 2r₁r₂ = {sumSq} + 2·({prod})",
+        solution: [
+          { explanation: "(r₁+r₂)² = {sumSq} + 2·({prod}) = {sumSq + 2*prod}" },
+          { explanation: "r₁+r₂ = ±√{sumSq + 2*prod}" },
+          { explanation: "Произведение {prod} < 0 → знаки разные → проверяем оба знака" },
+          { explanation: "Ответ:", result: "{answer}" }
+        ]
+      }
+    }
+  }
+];
+const grade8RootsTemplates = [
+  // ===== Тема 1: Арифметический квадратный корень =====
+  {
+    id: "grade8-squareRootBasic",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные корни",
+    topic: "squareRootBasic",
+    topic_title: "Арифметический квадратный корень",
+    problemType: "numeric",
+    skills: ["squareRoot", "arithmetic"],
+    difficulties: {
+      // Уровень 1 — √(n²), n от 2 до 12
+      1: {
+        template: "Вычислите: √{c}.",
+        parameters: {
+          n: { type: "int", min: 2, max: 12 },
+          c: { type: "expression", value: "n * n" }
+        },
+        answer_formula: "n",
+        hint: "Найдите число, квадрат которого равен {c}",
+        solution: [
+          { explanation: "√{c} = √({n}²) =", result: "{n}" }
+        ],
+        common_mistakes: [
+          { pattern: "c / 2", feedback: "Квадратный корень ≠ деление на 2. Найдите число, которое в квадрате даёт {c}." }
+        ]
+      },
+      // Уровень 2 — √(a²·n²) = a·n, подкоренное — произведение двух квадратов
+      2: {
+        template: "Вычислите: √{c}.",
+        parameters: {
+          a: { type: "int", min: 2, max: 7 },
+          b: { type: "int", min: 2, max: 7 },
+          c: { type: "expression", value: "a * a * b * b" }
+        },
+        constraints: ["a !== b"],
+        answer_formula: "a * b",
+        hint: "{c} = {a}² · {b}², поэтому √{c} = {a}·{b}",
+        solution: [
+          { explanation: "√{c} = √({a}² · {b}²) = {a} · {b} =", result: "{a * b}" }
+        ]
+      },
+      // Уровень 3 — √(коэффициент · точный квадрат), например √(3·49) = 7√3 → ответ: целая часть
+      // Упрощаем: задаём a²·b, просим найти a (коэффициент перед √b)
+      3: {
+        template: "Упростите √{c}. Запишите коэффициент перед знаком корня (множитель a в выражении a√{b}).",
+        parameters: {
+          a: { type: "int", min: 2, max: 8 },
+          b: { type: "int", min: 2, max: 7 },
+          c: { type: "expression", value: "a * a * b" }
+        },
+        // b не должен быть точным квадратом (иначе нечего выносить)
+        constraints: ["b !== 4", "b !== 9", "b !== 1"],
+        answer_formula: "a",
+        hint: "{c} = {a}² · {b} → √{c} = {a}·√{b}",
+        solution: [
+          { explanation: "{c} = {a*a} · {b} = {a}² · {b}" },
+          { explanation: "√{c} = √({a}² · {b}) = {a}√{b}" },
+          { explanation: "Коэффициент перед √{b}:", result: "{a}" }
+        ],
+        common_mistakes: [
+          { pattern: "a * a", feedback: "Нужен сам коэффициент a, а не a². √{c} = {a}·√{b}." }
+        ]
+      },
+      // Уровень 4 — √(a²·b) · √(a²·b) = a²·b (свойство: (√x)² = x при x ≥ 0)
+      // или сложнее: √{c1} · √{c2} где c1·c2 — точный квадрат
+      4: {
+        template: "Вычислите: (√{c})².",
+        parameters: {
+          a: { type: "int", min: 2, max: 9 },
+          b: { type: "int", min: 2, max: 6 },
+          c: { type: "expression", value: "a * a * b" }
+        },
+        constraints: ["b !== 4", "b !== 9", "b !== 1"],
+        answer_formula: "a * a * b",
+        hint: "(√x)² = x при x ≥ 0",
+        solution: [
+          { explanation: "(√{c})² = {c} (по определению квадратного корня)", result: "{c}" }
+        ]
+      }
+    }
+  },
+  // ===== Тема 2: Свойства квадратных корней =====
+  {
+    id: "grade8-squareRootProperties",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные корни",
+    topic: "squareRootProperties",
+    topic_title: "Свойства квадратных корней",
+    problemType: "numeric",
+    skills: ["squareRoot", "properties"],
+    difficulties: {
+      // Уровень 1 — √a · √b = √(a·b), вычислить результат (a·b — точный квадрат)
+      1: {
+        template: "Вычислите: √{a} · √{b}.",
+        parameters: {
+          n: { type: "int", min: 2, max: 10 },
+          // a и b — два множителя, произведение которых = n²
+          // строим: a = n·k, b = n/k для простых k — но лучше фиксированно
+          // Проще: a = k², b = m², результат = k·m = n
+          k: { type: "int", min: 2, max: 6 },
+          m: { type: "int", min: 2, max: 6 },
+          a: { type: "expression", value: "k * k" },
+          b: { type: "expression", value: "m * m" }
+        },
+        constraints: ["k !== m"],
+        answer_formula: "k * m",
+        hint: "√a · √b = √(a·b). Здесь √{a} · √{b} = √{a*b}",
+        solution: [
+          { explanation: "√{a} · √{b} = √({a} · {b}) = √{a*b}" },
+          { explanation: "√{a*b} = √({k*m}²) =", result: "{k*m}" }
+        ]
+      },
+      // Уровень 2 — √(a/b) = √a / √b, a и b — точные квадраты
+      2: {
+        template: "Вычислите: √({a}/{b}).",
+        parameters: {
+          k: { type: "int", min: 2, max: 9 },
+          m: { type: "int", min: 2, max: 9 },
+          a: { type: "expression", value: "k * k" },
+          b: { type: "expression", value: "m * m" }
+        },
+        constraints: ["k !== m", "k > m"],
+        // √(k²/m²) = k/m, но ответ должен быть целым → k кратно m
+        // Упрощаем: просим ввести числитель результата k (знаменатель m известен из условия)
+        answer_formula: "k / m",
+        hint: "√(a/b) = √a / √b = {k}/{m}",
+        solution: [
+          { explanation: "√({a}/{b}) = √{a} / √{b} = {k} / {m}", result: "{k/m}" }
+        ],
+        common_mistakes: [
+          { pattern: "k * m", feedback: "Это произведение корней. При делении под корнем — берём корни отдельно и делим." }
+        ]
+      },
+      // Уровень 3 — √a · √b где произведение НЕ точный квадрат, но можно вынести
+      // Например: √8 · √2 = √16 = 4
+      3: {
+        template: "Вычислите: √{a} · √{b}.",
+        parameters: {
+          n: { type: "int", min: 2, max: 8 },
+          // a = n * factor, b = n * factor → a·b = n²·factor²
+          f: { type: "int", min: 2, max: 5 },
+          a: { type: "expression", value: "n * f" },
+          b: { type: "expression", value: "n * f" }
+        },
+        constraints: ["n !== f"],
+        answer_formula: "n * f",
+        hint: "√{a} · √{b} = √({a}·{b}) = √{a*b}. Является ли {a*b} точным квадратом?",
+        solution: [
+          { explanation: "√{a} · √{b} = √({a} · {b}) = √{a*b}" },
+          { explanation: "{a*b} = ({n*f})² → √{a*b} =", result: "{n*f}" }
+        ]
+      },
+      // Уровень 4 — сравнение без вычисления: √a vs b (определить знак разности)
+      // Ответ: 1 если √a > b, -1 если √a < b, 0 если равны
+      4: {
+        template: "Сравните √{a} и {b}. Введите 1 если √{a} > {b}, −1 если √{a} < {b}, 0 если равны.",
+        parameters: {
+          b: { type: "int", min: 3, max: 9 },
+          // строим a = b² ± delta чтобы гарантировать конкретный ответ
+          delta: { type: "int", min: 1, max: 5 },
+          // случайно: больше или меньше (используем delta как знак через чётность)
+          a: { type: "expression", value: "b * b + delta" }
+        },
+        // a > b² → √a > b → ответ 1
+        answer_formula: "1",
+        hint: "Сравните a = {a} с b² = {b*b}. Если a > b² то √a > b.",
+        solution: [
+          { explanation: "b² = {b}² = {b*b}" },
+          { explanation: "{a} > {b*b} → √{a} > {b}", result: "1" }
+        ]
+      }
+    }
+  },
+  // ===== Тема 3: Вынесение множителя из-под знака корня =====
+  {
+    id: "grade8-squareRootSimplify",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные корни",
+    topic: "squareRootSimplify",
+    topic_title: "Упрощение выражений с корнями",
+    problemType: "numeric",
+    skills: ["squareRoot", "simplify"],
+    difficulties: {
+      // Уровень 1 — вынести из-под корня: √(4·b) = 2√b, найти коэффициент
+      1: {
+        template: "Вынесите множитель из-под знака корня: √{c}. Чему равен коэффициент перед √{b}?",
+        parameters: {
+          b: { type: "int", min: 2, max: 7 },
+          c: { type: "expression", value: "4 * b" }
+        },
+        constraints: ["b !== 4", "b !== 1"],
+        answer_formula: "2",
+        hint: "{c} = 4 · {b} = 2² · {b}, значит √{c} = 2√{b}",
+        solution: [
+          { explanation: "{c} = 4 · {b} = 2² · {b}" },
+          { explanation: "√{c} = √(2² · {b}) = 2·√{b}" },
+          { explanation: "Коэффициент:", result: "2" }
+        ]
+      },
+      // Уровень 2 — √(a²·b), найти коэффициент a
+      2: {
+        template: "Упростите √{c}. Найдите коэффициент перед √{b}.",
+        parameters: {
+          a: { type: "int", min: 2, max: 9 },
+          b: { type: "int", min: 2, max: 7 },
+          c: { type: "expression", value: "a * a * b" }
+        },
+        constraints: ["b !== 4", "b !== 9", "b !== 1"],
+        answer_formula: "a",
+        hint: "{c} = {a}² · {b} → √{c} = {a}√{b}",
+        solution: [
+          { explanation: "{c} = {a*a} · {b} = {a}² · {b}" },
+          { explanation: "√{c} = {a}·√{b}" },
+          { explanation: "Коэффициент:", result: "{a}" }
+        ]
+      },
+      // Уровень 3 — √(a²·b) + √(a²·b) = 2a√b, найти коэффициент перед √b
+      3: {
+        template: "Вычислите: {k}√{c1} + {m}√{c1}. Найдите коэффициент перед √{b}.",
+        parameters: {
+          a: { type: "int", min: 2, max: 6 },
+          b: { type: "int", min: 2, max: 7 },
+          k: { type: "int", min: 1, max: 4 },
+          m: { type: "int", min: 1, max: 4 },
+          c1: { type: "expression", value: "a * a * b" }
+        },
+        constraints: ["b !== 4", "b !== 9", "b !== 1", "k !== m"],
+        // k·a√b + m·a√b = (k+m)·a·√b → коэффициент = (k+m)*a
+        answer_formula: "(k + m) * a",
+        hint: "{k}√{c1} + {m}√{c1} = ({k}+{m})·√{c1} = ({k}+{m})·{a}·√{b}",
+        solution: [
+          { explanation: "√{c1} = {a}√{b}" },
+          { explanation: "{k}·{a}√{b} + {m}·{a}√{b} = ({k}+{m})·{a}·√{b}" },
+          { explanation: "Коэффициент:", result: "{(k+m)*a}" }
+        ]
+      },
+      // Уровень 4 — внесение множителя ПОД знак корня: a·√b = √(a²·b), найти подкоренное
+      4: {
+        template: "Внесите множитель под знак корня: {a}·√{b} = √?. Найдите число под знаком корня.",
+        parameters: {
+          a: { type: "int", min: 2, max: 8 },
+          b: { type: "int", min: 2, max: 7 }
+        },
+        constraints: ["b !== 4", "b !== 9", "b !== 1"],
+        answer_formula: "a * a * b",
+        hint: "a·√b = √(a²·b) = √({a*a}·{b})",
+        solution: [
+          { explanation: "{a}·√{b} = √({a}² · {b}) = √({a*a} · {b}) = √{a*a*b}" },
+          { explanation: "Подкоренное выражение:", result: "{a*a*b}" }
+        ],
+        common_mistakes: [
+          { pattern: "a * b", feedback: "Под корень идёт a², а не a. {a}·√{b} = √({a}²·{b}) = √{a*a*b}." }
+        ]
+      }
+    }
+  },
+  // ===== Тема 4: Избавление от иррациональности в знаменателе =====
+  {
+    id: "grade8-rationalizeDenominator",
+    class: 8,
+    subject: "algebra",
+    section: "Квадратные корни",
+    topic: "rationalizeDenominator",
+    topic_title: "Избавление от иррациональности в знаменателе",
+    problemType: "numeric",
+    skills: ["squareRoot", "rationalize", "fractions"],
+    difficulties: {
+      // Уровень 1 — 1/√a · √a/√a = √a/a, найти числитель результата (= √a → ответ: a под корнем)
+      // Упрощаем: вычислить числовое значение при конкретных значениях
+      // a/√b → умножаем на √b/√b → a√b/b; ответ = числитель·знаменатель
+      1: {
+        template: "Рационализируйте знаменатель: {a}/√{b}. Чему равен числитель после рационализации?",
+        parameters: {
+          a: { type: "int", min: 1, max: 6 },
+          b: { type: "int", min: 2, max: 8 }
+        },
+        constraints: ["b !== 4", "b !== 9", "b !== 1", "a !== b"],
+        // a/√b = a√b/b → числитель (число перед √b) = a
+        answer_formula: "a",
+        hint: "Умножьте числитель и знаменатель на √{b}: {a}/√{b} · √{b}/√{b} = {a}√{b}/{b}",
+        solution: [
+          { explanation: "{a}/√{b} = {a}·√{b} / (√{b}·√{b}) = {a}·√{b} / {b}" },
+          { explanation: "Числитель перед √{b}:", result: "{a}" }
+        ]
+      },
+      // Уровень 2 — 1/√b, знаменатель после рационализации = b
+      2: {
+        template: "Рационализируйте знаменатель: 1/√{b}. Найдите знаменатель результата.",
+        parameters: {
+          b: { type: "int", min: 2, max: 12 }
+        },
+        constraints: ["b !== 4", "b !== 9", "b !== 1"],
+        answer_formula: "b",
+        hint: "1/√{b} = √{b}/({b}). Знаменатель = √{b}·√{b} = {b}",
+        solution: [
+          { explanation: "1/√{b} · √{b}/√{b} = √{b}/(√{b})²" },
+          { explanation: "(√{b})² = {b}" },
+          { explanation: "Знаменатель:", result: "{b}" }
+        ]
+      },
+      // Уровень 3 — b — точный квадрат (b = n²), c = k·n → c/√b = k·n/n = k (целый ответ)
+      3: {
+        template: "Вычислите: {c}/√{b}. (Ответ — целое число.)",
+        parameters: {
+          k: { type: "int", min: 2, max: 8 },
+          n: { type: "int", min: 2, max: 6 },
+          b: { type: "expression", value: "n * n" },
+          c: { type: "expression", value: "k * n" }
+        },
+        answer_formula: "k",
+        hint: "√{b} = {n}, значит {c}/√{b} = {c}/{n}",
+        solution: [
+          { explanation: "√{b} = √({n}²) = {n}" },
+          { explanation: "{c}/{n} =", result: "{k}" }
+        ]
+      },
+      // Уровень 4 — (a + √b)(a − √b) = a² − b (разность квадратов), найти результат
+      4: {
+        template: "Вычислите: ({a} + √{b})·({a} − √{b}).",
+        parameters: {
+          a: { type: "int", min: 2, max: 8 },
+          b: { type: "int", min: 2, max: 10 }
+        },
+        constraints: ["a * a > b", "b !== 4", "b !== 9", "b !== 1"],
+        answer_formula: "a * a - b",
+        hint: "(x+y)(x−y) = x²−y². Здесь x = {a}, y = √{b}",
+        solution: [
+          { explanation: "({a}+√{b})·({a}−√{b}) = {a}² − (√{b})² = {a*a} − {b} =", result: "{a*a - b}" }
+        ],
+        common_mistakes: [
+          { pattern: "a * a + b", feedback: "Это разность квадратов: (a+b)(a−b) = a²−b², а не a²+b²." }
+        ]
+      }
+    }
+  }
+];
+const grade8VietaTemplates = [
+  // ===== 1. Найти сумму корней =====
+  {
+    id: "grade8-vieta-sum",
+    class: 8,
+    subject: "algebra",
+    section: "Теорема Виета",
+    topic: "vietasTheorem",
+    topic_title: "Теорема Виета",
+    problemType: "numeric",
+    skills: ["quadratic", "vietas-theorem"],
+    difficulties: {
+      // Уровень 1 — простые корни, положительные
+      1: {
+        template: "Найдите сумму корней уравнения x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0.",
+        parameters: {
+          r1: { type: "int", min: 1, max: 5 },
+          r2: { type: "int", min: 1, max: 5 },
+          b: { type: "expression", value: "-(r1 + r2)" },
+          c: { type: "expression", value: "r1 * r2" },
+          b_abs: { type: "expression", value: "Math.abs(b)" },
+          b_sign: { type: "expression", value: 'b < 0 ? "" : "+"' },
+          c_abs: { type: "expression", value: "Math.abs(c)" },
+          c_sign: { type: "expression", value: 'c < 0 ? "" : "+"' }
+        },
+        constraints: ["r1 !== r2", "b !== 0"],
+        answer_formula: "-b",
+        hint: "По теореме Виета сумма корней равна -b/a. Здесь a = 1, поэтому сумма = -b.",
+        solution: [
+          { explanation: "Уравнение: x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0" },
+          { explanation: "По теореме Виета: сумма корней = -b/a = -({b}) / 1 = {-b}" },
+          { explanation: "Ответ:", result: "{-b}" }
+        ],
+        common_mistakes: [
+          { pattern: "b", feedback: "Сумма корней = -b/a. Не забудьте знак минус." },
+          { pattern: "r1 + r2", feedback: "Нельзя просто сложить коэффициенты. Используйте теорему Виета." }
+        ]
+      },
+      // Уровень 2 — корни с разными знаками
+      2: {
+        template: "Найдите сумму корней уравнения x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0.",
+        parameters: {
+          r1: { type: "int", min: -5, max: -1 },
+          r2: { type: "int", min: 1, max: 5 },
+          b: { type: "expression", value: "-(r1 + r2)" },
+          c: { type: "expression", value: "r1 * r2" },
+          b_abs: { type: "expression", value: "Math.abs(b)" },
+          b_sign: { type: "expression", value: 'b < 0 ? "" : "+"' },
+          c_abs: { type: "expression", value: "Math.abs(c)" },
+          c_sign: { type: "expression", value: 'c < 0 ? "" : "+"' }
+        },
+        constraints: ["r1 !== r2", "b !== 0"],
+        answer_formula: "-b",
+        hint: "По теореме Виета сумма корней = -b/a.",
+        solution: [
+          { explanation: "Уравнение: x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0" },
+          { explanation: "Сумма корней = -b/a = -({b})" },
+          { explanation: "Ответ:", result: "{-b}" }
+        ]
+      },
+      // Уровень 3 — больший диапазон
+      3: {
+        template: "Найдите сумму корней уравнения {a}x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0.",
+        parameters: {
+          a: { type: "int", min: 2, max: 4 },
+          r1: { type: "int", min: -6, max: 6 },
+          r2: { type: "int", min: -6, max: 6 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" },
+          b_abs: { type: "expression", value: "Math.abs(b)" },
+          b_sign: { type: "expression", value: 'b < 0 ? "" : "+"' },
+          c_abs: { type: "expression", value: "Math.abs(c)" },
+          c_sign: { type: "expression", value: 'c < 0 ? "" : "+"' }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0", "b !== 0"],
+        answer_formula: "-b / a",
+        answer_type: "fraction",
+        hint: "По теореме Виета сумма корней = -b/a.",
+        solution: [
+          { explanation: "Уравнение: {a}x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0" },
+          { explanation: "Сумма корней = -b/a = -({b}) / {a}" },
+          { explanation: "Ответ:", result: "{-b}/{a}" }
+        ]
+      },
+      // Уровень 4 — дробный ответ
+      4: {
+        template: "Найдите сумму корней уравнения {a}x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0.",
+        parameters: {
+          a: { type: "int", min: 2, max: 5 },
+          r1: { type: "int", min: -8, max: 8 },
+          r2: { type: "int", min: -8, max: 8 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" },
+          b_abs: { type: "expression", value: "Math.abs(b)" },
+          b_sign: { type: "expression", value: 'b < 0 ? "" : "+"' },
+          c_abs: { type: "expression", value: "Math.abs(c)" },
+          c_sign: { type: "expression", value: 'c < 0 ? "" : "+"' }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0", "b !== 0", "Math.abs(r1 + r2) > a"],
+        answer_formula: "-b / a",
+        answer_type: "fraction",
+        hint: "Сумма корней = -b/a. Не забудьте привести к несократимой дроби.",
+        solution: [
+          { explanation: "Уравнение: {a}x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0" },
+          { explanation: "Сумма корней = -b/a = -({b}) / {a}" },
+          { explanation: "Ответ:", result: "{-b}/{a}" }
+        ]
+      }
+    }
+  },
+  // ===== 2. Найти произведение корней =====
+  {
+    id: "grade8-vieta-product",
+    class: 8,
+    subject: "algebra",
+    section: "Теорема Виета",
+    topic: "vietasTheorem",
+    topic_title: "Теорема Виета",
+    problemType: "numeric",
+    skills: ["quadratic", "vietas-theorem"],
+    difficulties: {
+      // Уровень 1 — простые корни
+      1: {
+        template: "Найдите произведение корней уравнения x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0.",
+        parameters: {
+          r1: { type: "int", min: 1, max: 5 },
+          r2: { type: "int", min: 1, max: 5 },
+          b: { type: "expression", value: "-(r1 + r2)" },
+          c: { type: "expression", value: "r1 * r2" },
+          b_abs: { type: "expression", value: "Math.abs(b)" },
+          b_sign: { type: "expression", value: 'b < 0 ? "" : "+"' },
+          c_abs: { type: "expression", value: "Math.abs(c)" },
+          c_sign: { type: "expression", value: 'c < 0 ? "" : "+"' }
+        },
+        constraints: ["r1 !== r2", "c !== 0"],
+        answer_formula: "c",
+        hint: "По теореме Виета произведение корней равно c/a. Здесь a = 1, поэтому произведение = c.",
+        solution: [
+          { explanation: "Уравнение: x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0" },
+          { explanation: "По теореме Виета: произведение корней = c/a = {c} / 1 = {c}" },
+          { explanation: "Ответ:", result: "{c}" }
+        ],
+        common_mistakes: [
+          { pattern: "b", feedback: "Произведение корней = c/a, не b/a." },
+          { pattern: "r1 * r2", feedback: "Нельзя просто перемножить коэффициенты. Используйте теорему Виета." }
+        ]
+      },
+      // Уровень 2 — корни с разными знаками
+      2: {
+        template: "Найдите произведение корней уравнения x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0.",
+        parameters: {
+          r1: { type: "int", min: -5, max: -1 },
+          r2: { type: "int", min: 1, max: 5 },
+          b: { type: "expression", value: "-(r1 + r2)" },
+          c: { type: "expression", value: "r1 * r2" },
+          b_abs: { type: "expression", value: "Math.abs(b)" },
+          b_sign: { type: "expression", value: 'b < 0 ? "" : "+"' },
+          c_abs: { type: "expression", value: "Math.abs(c)" },
+          c_sign: { type: "expression", value: 'c < 0 ? "" : "+"' }
+        },
+        constraints: ["r1 !== r2", "c !== 0"],
+        answer_formula: "c",
+        hint: "По теореме Виета произведение корней = c/a.",
+        solution: [
+          { explanation: "Уравнение: x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0" },
+          { explanation: "Произведение корней = c/a = {c}" },
+          { explanation: "Ответ:", result: "{c}" }
+        ]
+      },
+      // Уровень 3 — с коэффициентом a
+      3: {
+        template: "Найдите произведение корней уравнения {a}x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0.",
+        parameters: {
+          a: { type: "int", min: 2, max: 4 },
+          r1: { type: "int", min: -6, max: 6 },
+          r2: { type: "int", min: -6, max: 6 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" },
+          b_abs: { type: "expression", value: "Math.abs(b)" },
+          b_sign: { type: "expression", value: 'b < 0 ? "" : "+"' },
+          c_abs: { type: "expression", value: "Math.abs(c)" },
+          c_sign: { type: "expression", value: 'c < 0 ? "" : "+"' }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0", "c !== 0"],
+        answer_formula: "c / a",
+        answer_type: "fraction",
+        hint: "По теореме Виета произведение корней = c/a.",
+        solution: [
+          { explanation: "Уравнение: {a}x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0" },
+          { explanation: "Произведение корней = c/a = {c} / {a}" },
+          { explanation: "Ответ:", result: "{c}/{a}" }
+        ]
+      },
+      // Уровень 4 — дробный ответ
+      4: {
+        template: "Найдите произведение корней уравнения {a}x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0.",
+        parameters: {
+          a: { type: "int", min: 2, max: 5 },
+          r1: { type: "int", min: -8, max: 8 },
+          r2: { type: "int", min: -8, max: 8 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" },
+          b_abs: { type: "expression", value: "Math.abs(b)" },
+          b_sign: { type: "expression", value: 'b < 0 ? "" : "+"' },
+          c_abs: { type: "expression", value: "Math.abs(c)" },
+          c_sign: { type: "expression", value: 'c < 0 ? "" : "+"' }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0", "c !== 0", "Math.abs(r1 * r2) > a"],
+        answer_formula: "c / a",
+        answer_type: "fraction",
+        hint: "Произведение корней = c/a. Приведите к несократимой дроби.",
+        solution: [
+          { explanation: "Уравнение: {a}x² {b_sign}{b_abs}x {c_sign}{c_abs} = 0" },
+          { explanation: "Произведение корней = c/a = {c} / {a}" },
+          { explanation: "Ответ:", result: "{c}/{a}" }
+        ]
+      }
+    }
+  },
+  // ===== 3. Составить уравнение по корням =====
+  {
+    id: "grade8-vieta-equation",
+    class: 8,
+    subject: "algebra",
+    section: "Теорема Виета",
+    topic: "vietasTheorem",
+    topic_title: "Теорема Виета",
+    problemType: "text",
+    skills: ["quadratic", "vietas-theorem"],
+    difficulties: {
+      // Уровень 1 — положительные корни
+      1: {
+        template: "Составьте квадратное уравнение с корнями {r1} и {r2}.",
+        parameters: {
+          r1: { type: "int", min: 1, max: 5 },
+          r2: { type: "int", min: 1, max: 5 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: 'p > 0 ? "x² - " + s + "x + " + p + " = 0" : "x² - " + s + "x " + p + " = 0"',
+        hint: "Уравнение: x² - (сумма)x + (произведение) = 0",
+        solution: [
+          { explanation: "Сумма корней = {r1} + {r2} = {s}" },
+          { explanation: "Произведение корней = {r1} × {r2} = {p}" },
+          { explanation: "Уравнение: x² - {s}x + {p} = 0" },
+          { explanation: "Ответ:", result: "x² - {s}x + {p} = 0" }
+        ]
+      },
+      // Уровень 2 — корни с разными знаками
+      2: {
+        template: "Составьте квадратное уравнение с корнями {r1} и {r2}.",
+        parameters: {
+          r1: { type: "int", min: -5, max: -1 },
+          r2: { type: "int", min: 1, max: 5 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2"],
+        answer_formula: 'p > 0 ? "x² " + (s > 0 ? "+" : "") + s + "x + " + p + " = 0" : "x² " + (s > 0 ? "+" : "") + s + "x " + p + " = 0"',
+        hint: "x² - (сумма)x + (произведение) = 0",
+        solution: [
+          { explanation: "Сумма корней = {r1} + {r2} = {s}" },
+          { explanation: "Произведение корней = {r1} × {r2} = {p}" },
+          { explanation: 'Уравнение: x² {s > 0 ? "+" : ""}{s}x {p > 0 ? "+" : ""}{p} = 0' },
+          { explanation: "Ответ:", result: 'x² {s > 0 ? "+" : ""}{s}x {p > 0 ? "+" : ""}{p} = 0' }
+        ]
+      },
+      // Уровень 3 — больший диапазон
+      3: {
+        template: "Составьте квадратное уравнение с корнями {r1} и {r2}.",
+        parameters: {
+          r1: { type: "int", min: -8, max: 8 },
+          r2: { type: "int", min: -8, max: 8 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0"],
+        answer_formula: '"x² " + (s === 0 ? "" : s > 0 ? "+" + s : s) + "x " + (p === 0 ? "" : p > 0 ? "+" + p : p) + " = 0"',
+        hint: "Используйте теорему Виета: x² - Sx + P = 0, где S = сумма, P = произведение.",
+        solution: [
+          { explanation: "Сумма корней = {r1} + {r2} = {s}" },
+          { explanation: "Произведение корней = {r1} × {r2} = {p}" },
+          { explanation: 'Уравнение: x² {s === 0 ? "" : s > 0 ? "+" + s : s}x {p === 0 ? "" : p > 0 ? "+" + p : p} = 0' },
+          { explanation: "Ответ:", result: 'x² {s === 0 ? "" : s > 0 ? "+" + s : s}x {p === 0 ? "" : p > 0 ? "+" + p : p} = 0' }
+        ]
+      },
+      // Уровень 4 — с коэффициентом a
+      4: {
+        template: "Составьте квадратное уравнение вида {a}x² + bx + c = 0 с корнями {r1} и {r2}.",
+        parameters: {
+          a: { type: "int", min: 2, max: 4 },
+          r1: { type: "int", min: -6, max: 6 },
+          r2: { type: "int", min: -6, max: 6 },
+          b: { type: "expression", value: "-a * (r1 + r2)" },
+          c: { type: "expression", value: "a * r1 * r2" }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0"],
+        answer_formula: 'a + "x² " + (b === 0 ? "" : b > 0 ? "+" + b : b) + "x " + (c === 0 ? "" : c > 0 ? "+" + c : c) + " = 0"',
+        hint: "b = -a(S), c = a(P), где S = сумма корней, P = произведение.",
+        solution: [
+          { explanation: "Сумма корней = {r1} + {r2} = {r1 + r2}" },
+          { explanation: "Произведение корней = {r1} × {r2} = {r1 * r2}" },
+          { explanation: "b = -a × сумма = -{a} × {r1 + r2} = {b}" },
+          { explanation: "c = a × произведение = {a} × {r1 * r2} = {c}" },
+          { explanation: 'Уравнение: {a}x² {b === 0 ? "" : b > 0 ? "+" + b : b}x {c === 0 ? "" : c > 0 ? "+" + c : c} = 0' },
+          { explanation: "Ответ:", result: '{a}x² {b === 0 ? "" : b > 0 ? "+" + b : b}x {c === 0 ? "" : c > 0 ? "+" + c : c} = 0' }
+        ]
+      }
+    }
+  },
+  // ===== 4. Найти корни по сумме и произведению =====
+  {
+    id: "grade8-vieta-roots",
+    class: 8,
+    subject: "algebra",
+    section: "Теорема Виета",
+    topic: "vietasTheorem",
+    topic_title: "Теорема Виета",
+    problemType: "text",
+    skills: ["quadratic", "vietas-theorem"],
+    difficulties: {
+      // Уровень 1 — положительные корни
+      1: {
+        template: "Найдите корни квадратного уравнения x² - {s}x + {p} = 0.",
+        parameters: {
+          r1: { type: "int", min: 1, max: 5 },
+          r2: { type: "int", min: 1, max: 5 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2", "s > 0", "p > 0"],
+        answer_formula: 'r1 < r2 ? r1 + " и " + r2 : r2 + " и " + r1',
+        hint: "Корни: x = [S ± √(S² - 4P)]/2, где S = сумма, P = произведение.",
+        solution: [
+          { explanation: "Уравнение: x² - {s}x + {p} = 0" },
+          { explanation: "По теореме Виета: сумма корней = {s}, произведение = {p}" },
+          { explanation: "Корни: {r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}" },
+          { explanation: "Ответ:", result: "{r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}" }
+        ]
+      },
+      // Уровень 2 — корни с разными знаками
+      2: {
+        template: "Найдите корни квадратного уравнения x² - {s}x + {p} = 0.",
+        parameters: {
+          r1: { type: "int", min: -5, max: -1 },
+          r2: { type: "int", min: 1, max: 5 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2", "p < 0"],
+        answer_formula: 'r1 < r2 ? r1 + " и " + r2 : r2 + " и " + r1',
+        hint: "Сумма корней = {s}, произведение = {p}. Решите систему.",
+        solution: [
+          { explanation: "Уравнение: x² - {s}x + {p} = 0" },
+          { explanation: "Корни: x₁ + x₂ = {s}, x₁ × x₂ = {p}" },
+          { explanation: "Корни: {r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}" },
+          { explanation: "Ответ:", result: "{r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}" }
+        ]
+      },
+      // Уровень 3 — больший диапазон
+      3: {
+        template: "Найдите корни квадратного уравнения x² - {s}x + {p} = 0.",
+        parameters: {
+          r1: { type: "int", min: -8, max: 8 },
+          r2: { type: "int", min: -8, max: 8 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0", "s * s - 4 * p >= 0"],
+        answer_formula: 'r1 < r2 ? r1 + " и " + r2 : r2 + " и " + r1',
+        hint: "Дискриминант D = S² - 4P. Корни: [S ± √D]/2.",
+        solution: [
+          { explanation: "Уравнение: x² - {s}x + {p} = 0" },
+          { explanation: "Дискриминант D = {s}² - 4×{p} = {s*s - 4*p}" },
+          { explanation: "Корни: [{s} ± √{s*s - 4*p}]/2 = {r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}" },
+          { explanation: "Ответ:", result: "{r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}" }
+        ]
+      },
+      // Уровень 4 — с проверкой
+      4: {
+        template: "Найдите корни квадратного уравнения x² - {s}x + {p} = 0 и проверьте по теореме Виета.",
+        parameters: {
+          r1: { type: "int", min: -10, max: 10 },
+          r2: { type: "int", min: -10, max: 10 },
+          s: { type: "expression", value: "r1 + r2" },
+          p: { type: "expression", value: "r1 * r2" }
+        },
+        constraints: ["r1 !== r2", "r1 !== 0", "r2 !== 0", "s * s - 4 * p >= 0"],
+        answer_formula: 'r1 < r2 ? r1 + " и " + r2 : r2 + " и " + r1',
+        hint: "Найдите корни, затем проверьте: сумма = {s}, произведение = {p}.",
+        solution: [
+          { explanation: "Уравнение: x² - {s}x + {p} = 0" },
+          { explanation: "Корни: {r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}" },
+          { explanation: "Проверка: сумма = {r1 < r2 ? r1 : r2} + {r1 < r2 ? r2 : r1} = {s}" },
+          { explanation: "Произведение = {r1 < r2 ? r1 : r2} × {r1 < r2 ? r2 : r1} = {p}" },
+          { explanation: "Ответ:", result: "{r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}" }
+        ]
+      }
+    }
+  }
+];
+const grade8LinearInequalityTemplates = [
+  // ===== 1. Решить линейное неравенство (положительный коэффициент) =====
+  {
+    id: "grade8-linear-inequality-basic",
+    class: 8,
+    subject: "algebra",
+    section: "Линейные неравенства",
+    topic: "linearInequality",
+    topic_title: "Линейные неравенства",
+    problemType: "text",
+    skills: ["inequalities", "linear-equations"],
+    difficulties: {
+      // Уровень 1 — положительный коэффициент, простые числа
+      1: {
+        template: "Решите неравенство {a}x + {b} {sign} {c}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 5 },
+          b: { type: "int", min: -10, max: 10 },
+          c: { type: "int", min: -10, max: 10 },
+          sign: { type: "choice", values: [">", "<"] }
+        },
+        constraints: ["a !== 0"],
+        answer_formula: 'sign === ">" ? "x > " + (c - b) / a : "x < " + (c - b) / a',
+        hint: "Перенесите все члены с x в одну сторону, остальные в другую.",
+        solution: [
+          { explanation: "Неравенство: {a}x + {b} {sign} {c}" },
+          { explanation: "{a}x {sign} {c} - {b}" },
+          { explanation: "{a}x {sign} {c - b}" },
+          { explanation: "x {sign} {(c - b) / a}" },
+          { explanation: "Ответ: x {sign} {(c - b) / a}" }
+        ]
+      },
+      // Уровень 2 — отрицательный коэффициент
+      2: {
+        template: "Решите неравенство {a}x + {b} {sign} {c}.",
+        parameters: {
+          a: { type: "int", min: -5, max: -1 },
+          b: { type: "int", min: -10, max: 10 },
+          c: { type: "int", min: -10, max: 10 },
+          sign: { type: "choice", values: [">", "<"] }
+        },
+        constraints: ["a !== 0"],
+        answer_formula: 'sign === ">" ? "x < " + (c - b) / a : "x > " + (c - b) / a',
+        hint: "При делении на отрицательное число неравенство меняет направление.",
+        solution: [
+          { explanation: "Неравенство: {a}x + {b} {sign} {c}" },
+          { explanation: "{a}x {sign} {c} - {b}" },
+          { explanation: "{a}x {sign} {c - b}" },
+          { explanation: 'Делим на {a} < 0, меняем знак: x {sign === ">" ? "<" : ">"} {(c - b) / a}' },
+          { explanation: 'Ответ: x {sign === ">" ? "<" : ">"} {(c - b) / a}' }
+        ]
+      },
+      // Уровень 3 — дробные коэффициенты
+      3: {
+        template: "Решите неравенство {a}x + {b} {sign} {c}.",
+        parameters: {
+          a: { type: "int", min: -8, max: 8 },
+          b: { type: "int", min: -15, max: 15 },
+          c: { type: "int", min: -15, max: 15 },
+          sign: { type: "choice", values: [">", "<"] }
+        },
+        constraints: ["a !== 0", "Math.abs(a) > 1"],
+        answer_formula: 'a > 0 ? (sign === ">" ? "x > " + (c - b) / a : "x < " + (c - b) / a) : (sign === ">" ? "x < " + (c - b) / a : "x > " + (c - b) / a)',
+        answer_type: "fraction",
+        hint: "Перенесите все в одну сторону и разделите на коэффициент при x.",
+        solution: [
+          { explanation: "Неравенство: {a}x + {b} {sign} {c}" },
+          { explanation: "{a}x {sign} {c - b}" },
+          { explanation: 'x {a > 0 ? sign : (sign === ">" ? "<" : ">")} {(c - b) / a}' },
+          { explanation: 'Ответ: x {a > 0 ? sign : (sign === ">" ? "<" : ">")} {(c - b) / a}' }
+        ]
+      },
+      // Уровень 4 — с проверкой
+      4: {
+        template: "Решите неравенство {a}x + {b} {sign} {c} и проверьте решение на числе {test}.",
+        parameters: {
+          a: { type: "int", min: -10, max: 10 },
+          b: { type: "int", min: -20, max: 20 },
+          c: { type: "int", min: -20, max: 20 },
+          sign: { type: "choice", values: [">", "<"] },
+          test: { type: "int", min: -10, max: 10 }
+        },
+        constraints: ["a !== 0"],
+        answer_formula: 'a > 0 ? (sign === ">" ? "x > " + (c - b) / a : "x < " + (c - b) / a) : (sign === ">" ? "x < " + (c - b) / a : "x > " + (c - b) / a)',
+        answer_type: "fraction",
+        hint: "Решите неравенство, затем подставьте проверочное число.",
+        solution: [
+          { explanation: "Неравенство: {a}x + {b} {sign} {c}" },
+          { explanation: 'Решение: x {a > 0 ? sign : (sign === ">" ? "<" : ">")} {(c - b) / a}' },
+          { explanation: "Проверка при x = {test}:" },
+          { explanation: '{a}×{test} + {b} = {a*test + b}, которое {a*test + b > c ? ">" : a*test + b < c ? "<" : "="} {c}' },
+          { explanation: 'Ответ: x {a > 0 ? sign : (sign === ">" ? "<" : ">")} {(c - b) / a}' }
+        ]
+      }
+    }
+  },
+  // ===== 2. Система двух линейных неравенств =====
+  {
+    id: "grade8-linear-inequality-system",
+    class: 8,
+    subject: "algebra",
+    section: "Линейные неравенства",
+    topic: "linearInequality",
+    topic_title: "Линейные неравенства",
+    problemType: "text",
+    skills: ["inequalities", "systems"],
+    difficulties: {
+      // Уровень 1 — простая система
+      1: {
+        template: "Решите систему неравенств: {a1}x {sign1} {b1}, {a2}x {sign2} {b2}.",
+        parameters: {
+          a1: { type: "int", min: 1, max: 3 },
+          b1: { type: "int", min: -10, max: 10 },
+          a2: { type: "int", min: 1, max: 3 },
+          b2: { type: "int", min: -10, max: 10 },
+          sign1: { type: "choice", values: [">", "<"] },
+          sign2: { type: "choice", values: [">", "<"] }
+        },
+        constraints: ["a1 !== 0", "a2 !== 0"],
+        answer_formula: 'sign1 === ">" ? "x > " + b1/a1 : "x < " + b1/a1 + " и " + (sign2 === ">" ? "x > " + b2/a2 : "x < " + b2/a2)',
+        hint: "Решите каждое неравенство отдельно, затем найдите пересечение решений.",
+        solution: [
+          { explanation: "Первое неравенство: x {sign1} {b1/a1}" },
+          { explanation: "Второе неравенство: x {sign2} {b2/a2}" },
+          { explanation: "Пересечение: x {sign1} {b1/a1} и x {sign2} {b2/a2}" },
+          { explanation: "Ответ:", result: 'sign1 === ">" ? "x > " + b1/a1 : "x < " + b1/a1 + " и " + (sign2 === ">" ? "x > " + b2/a2 : "x < " + b2/a2)' }
+        ]
+      },
+      // Уровень 2 — с отрицательными коэффициентами
+      2: {
+        template: "Решите систему неравенств: {a1}x {sign1} {b1}, {a2}x {sign2} {b2}.",
+        parameters: {
+          a1: { type: "int", min: -3, max: 3 },
+          b1: { type: "int", min: -10, max: 10 },
+          a2: { type: "int", min: -3, max: 3 },
+          b2: { type: "int", min: -10, max: 10 },
+          sign1: { type: "choice", values: [">", "<"] },
+          sign2: { type: "choice", values: [">", "<"] }
+        },
+        constraints: ["a1 !== 0", "a2 !== 0"],
+        answer_formula: 'a1 > 0 ? (sign1 === ">" ? "x > " + b1/a1 : "x < " + b1/a1) : (sign1 === ">" ? "x < " + b1/a1 : "x > " + b1/a1) + " и " + (a2 > 0 ? (sign2 === ">" ? "x > " + b2/a2 : "x < " + b2/a2) : (sign2 === ">" ? "x < " + b2/a2 : "x > " + b2/a2))',
+        hint: "Учитывайте знак коэффициента при делении.",
+        solution: [
+          { explanation: 'Первое неравенство: x {a1 > 0 ? sign1 : (sign1 === ">" ? "<" : ">")} {b1/a1}' },
+          { explanation: 'Второе неравенство: x {a2 > 0 ? sign2 : (sign2 === ">" ? "<" : ">")} {b2/a2}' },
+          { explanation: "Ответ:", result: 'a1 > 0 ? (sign1 === ">" ? "x > " + b1/a1 : "x < " + b1/a1) : (sign1 === ">" ? "x < " + b1/a1 : "x > " + b1/a1) + " и " + (a2 > 0 ? (sign2 === ">" ? "x > " + b2/a2 : "x < " + b2/a2) : (sign2 === ">" ? "x < " + b2/a2 : "x > " + b2/a2))' }
+        ]
+      },
+      // Уровень 3 — с дробными решениями
+      3: {
+        template: "Решите систему неравенств: {a1}x {sign1} {b1}, {a2}x {sign2} {b2}.",
+        parameters: {
+          a1: { type: "int", min: -5, max: 5 },
+          b1: { type: "int", min: -15, max: 15 },
+          a2: { type: "int", min: -5, max: 5 },
+          b2: { type: "int", min: -15, max: 15 },
+          sign1: { type: "choice", values: [">", "<"] },
+          sign2: { type: "choice", values: [">", "<"] }
+        },
+        constraints: ["a1 !== 0", "a2 !== 0", "Math.abs(a1) > 1", "Math.abs(a2) > 1"],
+        answer_formula: 'a1 > 0 ? (sign1 === ">" ? "x > " + b1/a1 : "x < " + b1/a1) : (sign1 === ">" ? "x < " + b1/a1 : "x > " + b1/a1) + " и " + (a2 > 0 ? (sign2 === ">" ? "x > " + b2/a2 : "x < " + b2/a2) : (sign2 === ">" ? "x < " + b2/a2 : "x > " + b2/a2))',
+        answer_type: "fraction",
+        hint: "Решите каждое неравенство, найдите общую область решений.",
+        solution: [
+          { explanation: 'Решения: x {a1 > 0 ? sign1 : (sign1 === ">" ? "<" : ">")} {b1/a1} и x {a2 > 0 ? sign2 : (sign2 === ">" ? "<" : ">")} {b2/a2}' },
+          { explanation: "Ответ:", result: 'a1 > 0 ? (sign1 === ">" ? "x > " + b1/a1 : "x < " + b1/a1) : (sign1 === ">" ? "x < " + b1/a1 : "x > " + b1/a1) + " и " + (a2 > 0 ? (sign2 === ">" ? "x > " + b2/a2 : "x < " + b2/a2) : (sign2 === ">" ? "x < " + b2/a2 : "x > " + b2/a2))' }
+        ]
+      }
+    }
+  },
+  // ===== 3. Неравенство с переменной в обеих частях =====
+  {
+    id: "grade8-linear-inequality-variable",
+    class: 8,
+    subject: "algebra",
+    section: "Линейные неравенства",
+    topic: "linearInequality",
+    topic_title: "Линейные неравенства",
+    problemType: "text",
+    skills: ["inequalities", "algebra"],
+    difficulties: {
+      // Уровень 1 — простое
+      1: {
+        template: "Решите неравенство {a}x + {b} {sign} {c}x + {d}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 5 },
+          b: { type: "int", min: -10, max: 10 },
+          c: { type: "int", min: 1, max: 5 },
+          d: { type: "int", min: -10, max: 10 },
+          sign: { type: "choice", values: [">", "<"] }
+        },
+        constraints: ["a !== c"],
+        answer_formula: 'sign === ">" ? "x " + (a - c > 0 ? ">" : "<") + " " + ((d - b) / (a - c)) : "x " + (a - c > 0 ? "<" : ">") + " " + ((d - b) / (a - c))',
+        hint: "Перенесите все члены с x в одну сторону.",
+        solution: [
+          { explanation: "Неравенство: {a}x + {b} {sign} {c}x + {d}" },
+          { explanation: "{a}x - {c}x {sign} {d} - {b}" },
+          { explanation: "{a - c}x {sign} {d - b}" },
+          { explanation: "x {sign} {(d - b) / (a - c)}" },
+          { explanation: 'Учитывая знак коэффициента: x {a - c > 0 ? sign : (sign === ">" ? "<" : ">")} {(d - b) / (a - c)}' },
+          { explanation: "Ответ:", result: 'sign === ">" ? "x " + (a - c > 0 ? ">" : "<") + " " + ((d - b) / (a - c)) : "x " + (a - c > 0 ? "<" : ">") + " " + ((d - b) / (a - c))' }
+        ]
+      },
+      // Уровень 2 — отрицательные коэффициенты
+      2: {
+        template: "Решите неравенство {a}x + {b} {sign} {c}x + {d}.",
+        parameters: {
+          a: { type: "int", min: -5, max: 5 },
+          b: { type: "int", min: -10, max: 10 },
+          c: { type: "int", min: -5, max: 5 },
+          d: { type: "int", min: -10, max: 10 },
+          sign: { type: "choice", values: [">", "<"] }
+        },
+        constraints: ["a !== c", "a !== 0", "c !== 0"],
+        answer_formula: "(d - b) / (a - c)",
+        hint: "Приведите подобные члены.",
+        solution: [
+          { explanation: "Неравенство: {a}x + {b} {sign} {c}x + {d}" },
+          { explanation: "{a - c}x {sign} {d - b}" },
+          { explanation: "x {sign} {(d - b) / (a - c)}" },
+          { explanation: 'С учётом знака коэффициента: x {a - c > 0 ? sign : (sign === ">" ? "<" : ">")} {(d - b) / (a - c)}' },
+          { explanation: "Ответ:", result: 'sign === ">" ? "x " + ((a - c) > 0 ? ">" : "<") + " " + ((d - b) / (a - c)) : "x " + ((a - c) > 0 ? "<" : ">") + " " + ((d - b) / (a - c))' }
+        ]
+      }
+    }
+  },
+  // ===== 4. Графическое решение неравенства =====
+  {
+    id: "grade8-linear-inequality-graph",
+    class: 8,
+    subject: "algebra",
+    section: "Линейные неравенства",
+    topic: "linearInequality",
+    topic_title: "Линейные неравенства",
+    problemType: "text",
+    skills: ["inequalities", "coordinate-plane"],
+    difficulties: {
+      // Уровень 1 — прямая x = k
+      1: {
+        template: "На координатной плоскости заштрихуйте область, где x {sign} {k}.",
+        parameters: {
+          k: { type: "int", min: -10, max: 10 },
+          sign: { type: "choice", values: [">", "<"] }
+        },
+        answer_formula: 'sign === ">" ? "x > " + k : "x < " + k',
+        hint: "Прямая x = {k} делит плоскость на две полуплоскости.",
+        solution: [
+          { explanation: "Область: все точки, где x {sign} {k}" },
+          { explanation: "Ответ:", result: 'sign === ">" ? "x > " + k : "x < " + k' }
+        ]
+      },
+      // Уровень 2 — линейная функция
+      2: {
+        template: "На координатной плоскости заштрихуйте область, где {a}x + {b} {sign} {c}.",
+        parameters: {
+          a: { type: "int", min: -5, max: 5 },
+          b: { type: "int", min: -10, max: 10 },
+          c: { type: "int", min: -10, max: 10 },
+          sign: { type: "choice", values: [">", "<"] }
+        },
+        constraints: ["a !== 0"],
+        answer_formula: 'a > 0 ? (sign === ">" ? "x > " + ((c - b)/a) : "x < " + ((c - b)/a)) : (sign === ">" ? "x < " + ((c - b)/a) : "x > " + ((c - b)/a))',
+        hint: "Найдите границу неравенства и определите полуплоскость.",
+        solution: [
+          { explanation: "Граница: прямая {a}x + {b} = {c}, или x = {(c - b)/a}" },
+          { explanation: 'Область: {a > 0 ? (sign === ">" ? "справа" : "слева") : (sign === ">" ? "слева" : "справа")} от границы' },
+          { explanation: "Ответ:", result: 'a > 0 ? (sign === ">" ? "x > " + ((c - b)/a) : "x < " + ((c - b)/a)) : (sign === ">" ? "x < " + ((c - b)/a) : "x > " + ((c - b)/a))' }
+        ]
+      }
+    }
+  }
+];
+const grade8AbsoluteValueEqTemplates = [
+  // ===== 1. |ax + b| = c =====
+  {
+    id: "grade8-abs-eq-basic",
+    class: 8,
+    subject: "algebra",
+    section: "Уравнения с модулем",
+    topic: "absoluteValueEq",
+    topic_title: "Уравнения с модулем",
+    problemType: "text",
+    skills: ["absolute-value", "equations"],
+    difficulties: {
+      // Уровень 1 — положительный коэффициент
+      1: {
+        template: "Решите уравнение |{a}x + {b}| = {c}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -10, max: 10 },
+          c: { type: "int", min: 0, max: 10 }
+        },
+        constraints: ["c >= 0"],
+        answer_formula: 'c === 0 ? -b/a + "" : (-b + c)/a + ", " + (-b - c)/a',
+        answer_type: "text",
+        hint: "Модуль равен c, значит ax + b = c или ax + b = -c.",
+        solution: [
+          { explanation: "Уравнение: |{a}x + {b}| = {c}" },
+          { explanation: "{a}x + {b} = {c} или {a}x + {b} = -{c}" },
+          { explanation: "{a}x = {c - b}, x = {(c - b)/a}" },
+          { explanation: "{a}x = {-c - b}, x = {(-c - b)/a}" },
+          { explanation: "Ответ: x = {(c - b)/a}, x = {(-c - b)/a}" }
+        ]
+      },
+      // Уровень 2 — отрицательный коэффициент
+      2: {
+        template: "Решите уравнение |{a}x + {b}| = {c}.",
+        parameters: {
+          a: { type: "int", min: -3, max: -1 },
+          b: { type: "int", min: -10, max: 10 },
+          c: { type: "int", min: 0, max: 10 }
+        },
+        constraints: ["c >= 0"],
+        answer_formula: "c === 0 ? `-b/a` : `(-b + c)/a, (-b - c)/a`",
+        answer_type: "text",
+        hint: "Разложите модуль на два случая.",
+        solution: [
+          { explanation: "Уравнение: |{a}x + {b}| = {c}" },
+          { explanation: "{a}x + {b} = {c} ⇒ x = {(c - b)/a}" },
+          { explanation: "{a}x + {b} = -{c} ⇒ x = {(-c - b)/a}" },
+          { explanation: "Ответ: x = {(c - b)/a}, x = {(-c - b)/a}" }
+        ]
+      },
+      // Уровень 3 — дробные решения
+      3: {
+        template: "Решите уравнение |{a}x + {b}| = {c}.",
+        parameters: {
+          a: { type: "int", min: -5, max: 5 },
+          b: { type: "int", min: -15, max: 15 },
+          c: { type: "int", min: 0, max: 15 }
+        },
+        constraints: ["a !== 0", "c >= 0", "Math.abs(a) > 1"],
+        answer_formula: "c === 0 ? `-b/a` : `(-b + c)/a, (-b - c)/a`",
+        answer_type: "text",
+        hint: "Модуль даёт два уравнения.",
+        solution: [
+          { explanation: "Уравнение: |{a}x + {b}| = {c}" },
+          { explanation: "Решения: x = {(-b + c)/a}, x = {(-b - c)/a}" },
+          { explanation: "Ответ: x = {(-b + c)/a}, x = {(-b - c)/a}" }
+        ]
+      },
+      // Уровень 4 — с проверкой
+      4: {
+        template: "Решите уравнение |{a}x + {b}| = {c} и проверьте корни.",
+        parameters: {
+          a: { type: "int", min: -8, max: 8 },
+          b: { type: "int", min: -20, max: 20 },
+          c: { type: "int", min: 0, max: 20 }
+        },
+        constraints: ["a !== 0", "c >= 0"],
+        answer_formula: "c === 0 ? `-b/a` : `(-b + c)/a, (-b - c)/a`",
+        answer_type: "text",
+        hint: "Найдите корни и подставьте в исходное уравнение.",
+        solution: [
+          { explanation: "Уравнение: |{a}x + {b}| = {c}" },
+          { explanation: "Корни: x₁ = {(-b + c)/a}, x₂ = {(-b - c)/a}" },
+          { explanation: "Проверка x₁: |{a}×{(-b + c)/a} + {b}| = |{c}| = {c} ✓" },
+          { explanation: "Проверка x₂: |{a}×{(-b - c)/a} + {b}| = |{-c}| = {c} ✓" },
+          { explanation: "Ответ: x = {(-b + c)/a}, x = {(-b - c)/a}" }
+        ]
+      }
+    }
+  },
+  // ===== 2. |ax + b| = |cx + d| =====
+  {
+    id: "grade8-abs-eq-equal",
+    class: 8,
+    subject: "algebra",
+    section: "Уравнения с модулем",
+    topic: "absoluteValueEq",
+    topic_title: "Уравнения с модулем",
+    problemType: "text",
+    skills: ["absolute-value", "equations"],
+    difficulties: {
+      // Уровень 1 — простое
+      1: {
+        template: "Решите уравнение |{a}x + {b}| = |{c}x + {d}|.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -5, max: 5 },
+          c: { type: "int", min: 1, max: 3 },
+          d: { type: "int", min: -5, max: 5 }
+        },
+        constraints: ["a !== c"],
+        answer_formula: "(d - b) / (a - c)",
+        answer_type: "text",
+        hint: "Модули равны, когда выражения внутри равны или противоположны.",
+        solution: [
+          { explanation: "Уравнение: |{a}x + {b}| = |{c}x + {d}|" },
+          { explanation: "{a}x + {b} = {c}x + {d} или {a}x + {b} = -({c}x + {d})" },
+          { explanation: "x = {(d - b)/(a - c)} или x = {( -d - b)/(a - c)}" },
+          { explanation: "Ответ: x = {(d - b)/(a - c)}, x = {(-d - b)/(a - c)}" }
+        ]
+      },
+      // Уровень 2 — с отрицательными
+      2: {
+        template: "Решите уравнение |{a}x + {b}| = |{c}x + {d}|.",
+        parameters: {
+          a: { type: "int", min: -3, max: 3 },
+          b: { type: "int", min: -10, max: 10 },
+          c: { type: "int", min: -3, max: 3 },
+          d: { type: "int", min: -10, max: 10 }
+        },
+        constraints: ["a !== c", "a !== 0", "c !== 0"],
+        answer_formula: '(d - b) / (a - c) + ", " + (-d - b) / (a - c)',
+        answer_type: "text",
+        hint: "Рассмотрите четыре случая для знаков выражений.",
+        solution: [
+          { explanation: "Уравнение: |{a}x + {b}| = |{c}x + {d}|" },
+          { explanation: "Корни: x = {(d - b)/(a - c)}, x = {(-d - b)/(a - c)}" },
+          { explanation: "Ответ: x = {(d - b)/(a - c)}, x = {(-d - b)/(a - c)}" }
+        ]
+      }
+    }
+  },
+  // ===== 3. |ax + b| = kx + m =====
+  {
+    id: "grade8-abs-eq-linear",
+    class: 8,
+    subject: "algebra",
+    section: "Уравнения с модулем",
+    topic: "absoluteValueEq",
+    topic_title: "Уравнения с модулем",
+    problemType: "text",
+    skills: ["absolute-value", "equations"],
+    difficulties: {
+      // Уровень 1 — положительная правая часть
+      1: {
+        template: "Решите уравнение |{a}x + {b}| = {k}x + {m}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -5, max: 5 },
+          k: { type: "int", min: 1, max: 3 },
+          m: { type: "int", min: 0, max: 10 }
+        },
+        constraints: ["k > 0"],
+        answer_formula: '(m - b) / (a - k) + ", " + (-m - b) / (a + k)',
+        answer_type: "text",
+        hint: "Разложите модуль на два случая.",
+        solution: [
+          { explanation: "Уравнение: |{a}x + {b}| = {k}x + {m}" },
+          { explanation: "Случай 1: {a}x + {b} = {k}x + {m} ⇒ x = {(m - b)/(a - k)}" },
+          { explanation: "Случай 2: {a}x + {b} = -({k}x + {m}) ⇒ x = {(-m - b)/(a + k)}" },
+          { explanation: "Ответ: x = {(m - b)/(a - k)}, x = {(-m - b)/(a + k)}" }
+        ]
+      },
+      // Уровень 2 — общий случай
+      2: {
+        template: "Решите уравнение |{a}x + {b}| = {k}x + {m}.",
+        parameters: {
+          a: { type: "int", min: -3, max: 3 },
+          b: { type: "int", min: -10, max: 10 },
+          k: { type: "int", min: -3, max: 3 },
+          m: { type: "int", min: -10, max: 10 }
+        },
+        constraints: ["a !== 0", "a !== k", "a !== -k"],
+        answer_formula: '(m - b) / (a - k) + ", " + (-m - b) / (a + k)',
+        answer_type: "text",
+        hint: "Модуль даёт два линейных уравнения.",
+        solution: [
+          { explanation: "Уравнение: |{a}x + {b}| = {k}x + {m}" },
+          { explanation: "Решения: x = {(m - b)/(a - k)}, x = {(-m - b)/(a + k)}" },
+          { explanation: "Ответ: x = {(m - b)/(a - k)}, x = {(-m - b)/(a + k)}" }
+        ]
+      }
+    }
+  },
+  // ===== 4. Неравенства с модулем =====
+  {
+    id: "grade8-abs-inequality",
+    class: 8,
+    subject: "algebra",
+    section: "Уравнения с модулем",
+    topic: "absoluteValueEq",
+    topic_title: "Уравнения с модулем",
+    problemType: "text",
+    skills: ["absolute-value", "inequalities"],
+    difficulties: {
+      // Уровень 1 — |ax + b| < c
+      1: {
+        template: "Решите неравенство |{a}x + {b}| < {c}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -5, max: 5 },
+          c: { type: "int", min: 1, max: 10 }
+        },
+        constraints: ["c > 0"],
+        answer_formula: '(-c - b)/a + ", " + (c - b)/a',
+        hint: "Модуль меньше c означает -c < ax + b < c.",
+        solution: [
+          { explanation: "Неравенство: |{a}x + {b}| < {c}" },
+          { explanation: "-{c} < {a}x + {b} < {c}" },
+          { explanation: "-{c} - {b} < {a}x < {c} - {b}" },
+          { explanation: "{(-c - b)/a} < x < {(c - b)/a}" },
+          { explanation: "Ответ:", result: '(-c - b)/a + ", " + (c - b)/a' }
+        ]
+      },
+      // Уровень 2 — |ax + b| > c
+      2: {
+        template: "Решите неравенство |{a}x + {b}| > {c}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -5, max: 5 },
+          c: { type: "int", min: 0, max: 10 }
+        },
+        constraints: ["c >= 0"],
+        answer_formula: 'c === 0 ? "x ∈ ℝ \\\\ {" + (-b/a) + "}" : "x < " + ((-c - b)/a) + " или x > " + ((c - b)/a)',
+        hint: "Модуль больше c: ax + b > c или ax + b < -c.",
+        solution: [
+          { explanation: "Неравенство: |{a}x + {b}| > {c}" },
+          { explanation: "{a}x + {b} > {c} или {a}x + {b} < -{c}" },
+          { explanation: "x > {(c - b)/a} или x < {(-c - b)/a}" },
+          { explanation: "Ответ:", result: 'c === 0 ? "x ∈ ℝ \\\\ {" + (-b/a) + "}" : "x < " + ((-c - b)/a) + " или x > " + ((c - b)/a)' }
+        ]
+      }
+    }
+  }
+];
+const grade8RationalExpressionTemplates = [
+  // ===== 1. Упрощение рационального выражения =====
+  {
+    id: "grade8-rational-simplify",
+    class: 8,
+    subject: "algebra",
+    section: "Рациональные выражения",
+    topic: "rationalExpression",
+    topic_title: "Рациональные выражения",
+    problemType: "text",
+    skills: ["fractions", "polynomials"],
+    difficulties: {
+      // Уровень 1 — простое сокращение
+      1: {
+        template: "Упростите выражение \\frac{{a}x + {b}}{{c}x + {d}}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 5 },
+          b: { type: "int", min: -5, max: 5 },
+          c: { type: "int", min: 1, max: 5 },
+          d: { type: "int", min: -5, max: 5 }
+        },
+        constraints: ["a !== 0", "c !== 0", "b !== 0", "d !== 0"],
+        answer_formula: "1",
+        // Placeholder for text answer
+        answer_type: "text",
+        hint: "Выделите общий множитель в числителе и знаменателе.",
+        solution: [
+          { explanation: "Выражение: \\frac{{a}x + {b}}{{c}x + {d}}" },
+          { explanation: "Общий множитель: 1" },
+          { explanation: "Ответ: \\frac{{a}x + {b}}{{c}x + {d}}" },
+          { explanation: "Ответ: \\frac{{a}x + {b}}{{c}x + {d}}" }
+        ]
+      },
+      // Уровень 2 — с сокращением
+      2: {
+        template: "Упростите выражение \\frac{{k}({a}x + {b})}{{m}({c}x + {d})}, где {k} и {m} — целые числа.",
+        parameters: {
+          gcd: { type: "choice", values: [1, 2, 3, 5] },
+          k: { type: "int", min: 2, max: 10 },
+          m: { type: "int", min: 2, max: 10 },
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -3, max: 3 },
+          c: { type: "int", min: 1, max: 3 },
+          d: { type: "int", min: -3, max: 3 }
+        },
+        constraints: ["k % gcd === 0", "m % gcd === 0", "k / gcd !== m / gcd", "k / gcd > 1 || m / gcd > 1"],
+        answer_formula: '(k / gcd) === 1 ? ((m / gcd) === 1 ? "\\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}" : "\\\\frac{1}{" + (m / gcd) + "} \\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}") : "\\\\frac{" + (k / gcd) + "}{" + (m / gcd) + "} \\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}"',
+        answer_type: "text",
+        hint: "Сократите числовые коэффициенты.",
+        solution: [
+          { explanation: "Выражение: \\frac{{k}({a}x + {b})}{{m}({c}x + {d})}" },
+          { explanation: "Сократим {k} и {m} на НОД = {gcd}" },
+          { explanation: "Получим: \\frac{{nk}({a}x + {b})}{{nm}({c}x + {d})}" },
+          { explanation: "Ответ:", result: '(k / gcd) === 1 ? ((m / gcd) === 1 ? "\\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}" : "\\\\frac{1}{" + (m / gcd) + "} \\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}") : "\\\\frac{" + (k / gcd) + "}{" + (m / gcd) + "} \\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}"' }
+        ]
+      }
+    }
+  },
+  // ===== 2. Сложение рациональных выражений =====
+  {
+    id: "grade8-rational-add",
+    class: 8,
+    subject: "algebra",
+    section: "Рациональные выражения",
+    topic: "rationalExpression",
+    topic_title: "Рациональные выражения",
+    problemType: "text",
+    skills: ["fractions", "algebra"],
+    difficulties: {
+      // Уровень 1 — одинаковые знаменатели
+      1: {
+        template: "Вычислите \\frac{{a}x + {b}}{{c}x + {d}} + \\frac{{e}x + {f}}{{c}x + {d}}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -5, max: 5 },
+          c: { type: "int", min: 1, max: 3 },
+          d: { type: "int", min: -5, max: 5 },
+          e: { type: "int", min: 1, max: 3 },
+          f: { type: "int", min: -5, max: 5 }
+        },
+        constraints: ["c !== 0"],
+        answer_formula: '"\\\\frac{" + (a + e) + "x + " + (b + f) + "}{" + c + "x + " + d + "}"',
+        answer_type: "text",
+        hint: "Сложите числители, знаменатель общий.",
+        solution: [
+          { explanation: "Выражение: \\frac{{a}x + {b}}{{c}x + {d}} + \\frac{{e}x + {f}}{{c}x + {d}}" },
+          { explanation: "= \\frac{({a}x + {b}) + ({e}x + {f})}{{c}x + {d}}" },
+          { explanation: "= \\frac{{a + e}x + {b + f}}{{c}x + {d}}" },
+          { explanation: "Ответ:", result: '"\\\\frac{" + (a + e) + "x + " + (b + f) + "}{" + c + "x + " + d + "}"' }
+        ]
+      },
+      // Уровень 2 — приведение к общему знаменателю
+      2: {
+        template: "Вычислите \\frac{{a}x + {b}}{{c}x + {d}} + \\frac{{e}x + {f}}{{g}x + {h}}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -5, max: 5 },
+          c: { type: "int", min: 1, max: 3 },
+          d: { type: "int", min: -5, max: 5 },
+          e: { type: "int", min: 1, max: 3 },
+          f: { type: "int", min: -5, max: 5 },
+          g: { type: "int", min: 1, max: 3 },
+          h: { type: "int", min: -5, max: 5 }
+        },
+        constraints: ["c !== g", "c !== 0", "g !== 0"],
+        answer_formula: '"\\\\frac{(" + a + "x + " + b + ")(" + g + "x + " + h + ") + (" + e + "x + " + f + ")(" + c + "x + " + d + ")}{(" + c + "x + " + d + ")(" + g + "x + " + h + ")}"',
+        answer_type: "text",
+        hint: "Приведите к общему знаменателю.",
+        solution: [
+          { explanation: "Общий знаменатель: ({c}x + {d})({g}x + {h})" },
+          { explanation: "Первая дробь: \\frac{({a}x + {b})({g}x + {h})}{({c}x + {d})({g}x + {h})}" },
+          { explanation: "Вторая дробь: \\frac{({e}x + {f})({c}x + {d})}{({c}x + {d})({g}x + {h})}" },
+          { explanation: "Сумма: \\frac{({a}x + {b})({g}x + {h}) + ({e}x + {f})({c}x + {d})}{({c}x + {d})({g}x + {h})}" },
+          { explanation: "Ответ:", result: '"\\\\frac{(" + a + "x + " + b + ")(" + g + "x + " + h + ") + (" + e + "x + " + f + ")(" + c + "x + " + d + ")}{(" + c + "x + " + d + ")(" + g + "x + " + h + ")}"' }
+        ]
+      }
+    }
+  },
+  // ===== 3. Умножение рациональных выражений =====
+  {
+    id: "grade8-rational-multiply",
+    class: 8,
+    subject: "algebra",
+    section: "Рациональные выражения",
+    topic: "rationalExpression",
+    topic_title: "Рациональные выражения",
+    problemType: "text",
+    skills: ["fractions", "algebra"],
+    difficulties: {
+      // Уровень 1 — простое умножение
+      1: {
+        template: "Вычислите \\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{e}x + {f}}{{g}x + {h}}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -3, max: 3 },
+          c: { type: "int", min: 1, max: 3 },
+          d: { type: "int", min: -3, max: 3 },
+          e: { type: "int", min: 1, max: 3 },
+          f: { type: "int", min: -3, max: 3 },
+          g: { type: "int", min: 1, max: 3 },
+          h: { type: "int", min: -3, max: 3 }
+        },
+        constraints: ["c !== 0", "g !== 0"],
+        answer_formula: '"\\\\frac{(" + a + "x + " + b + ")(" + e + "x + " + f + ")}{(" + c + "x + " + d + ")(" + g + "x + " + h + ")}"',
+        answer_type: "text",
+        hint: "Перемножьте числители и знаменатели.",
+        solution: [
+          { explanation: "Выражение: \\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{e}x + {f}}{{g}x + {h}}" },
+          { explanation: "= \\frac{({a}x + {b})({e}x + {f})}{({c}x + {d})({g}x + {h})}" },
+          { explanation: "Ответ:", result: '"\\\\frac{(" + a + "x + " + b + ")(" + e + "x + " + f + ")}{(" + c + "x + " + d + ")(" + g + "x + " + h + ")}"' }
+        ]
+      },
+      // Уровень 2 — с сокращением
+      2: {
+        template: "Упростите \\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{c}x + {d}}{{e}x + {f}}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -3, max: 3 },
+          c: { type: "int", min: 1, max: 3 },
+          d: { type: "int", min: -3, max: 3 },
+          e: { type: "int", min: 1, max: 3 },
+          f: { type: "int", min: -3, max: 3 }
+        },
+        constraints: ["c !== 0", "e !== 0"],
+        answer_formula: '"\\\\frac{" + a + "x + " + b + "}{" + e + "x + " + f + "}"',
+        answer_type: "text",
+        hint: "Сократите общий множитель.",
+        solution: [
+          { explanation: "Выражение: \\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{c}x + {d}}{{e}x + {f}}" },
+          { explanation: "({c}x + {d}) сокращается" },
+          { explanation: "= \\frac{{a}x + {b}}{{e}x + {f}}" },
+          { explanation: "Ответ:", result: '"\\\\frac{" + a + "x + " + b + "}{" + e + "x + " + f + "}"' }
+        ]
+      }
+    }
+  },
+  // ===== 4. Деление рациональных выражений =====
+  {
+    id: "grade8-rational-divide",
+    class: 8,
+    subject: "algebra",
+    section: "Рациональные выражения",
+    topic: "rationalExpression",
+    topic_title: "Рациональные выражения",
+    problemType: "text",
+    skills: ["fractions", "algebra"],
+    difficulties: {
+      // Уровень 1 — простое деление
+      1: {
+        template: "Вычислите \\frac{{a}x + {b}}{{c}x + {d}} : \\frac{{e}x + {f}}{{g}x + {h}}.",
+        parameters: {
+          a: { type: "int", min: 1, max: 3 },
+          b: { type: "int", min: -3, max: 3 },
+          c: { type: "int", min: 1, max: 3 },
+          d: { type: "int", min: -3, max: 3 },
+          e: { type: "int", min: 1, max: 3 },
+          f: { type: "int", min: -3, max: 3 },
+          g: { type: "int", min: 1, max: 3 },
+          h: { type: "int", min: -3, max: 3 }
+        },
+        constraints: ["c !== 0", "g !== 0"],
+        answer_formula: '"\\\\frac{(" + a + "x + " + b + ")(" + g + "x + " + h + ")}{(" + c + "x + " + d + ")(" + e + "x + " + f + ")}"',
+        answer_type: "text",
+        hint: "Умножьте на обратную дробь.",
+        solution: [
+          { explanation: "Выражение: \\frac{{a}x + {b}}{{c}x + {d}} : \\frac{{e}x + {f}}{{g}x + {h}}" },
+          { explanation: "= \\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{g}x + {h}}{{e}x + {f}}" },
+          { explanation: "= \\frac{({a}x + {b})({g}x + {h})}{({c}x + {d})({e}x + {f})}" },
+          { explanation: "Ответ:", result: '"\\\\frac{(" + a + "x + " + b + ")(" + g + "x + " + h + ")}{(" + c + "x + " + d + ")(" + e + "x + " + f + ")}"' }
+        ]
+      }
+    }
+  }
+];
+const grade8PythagoreanTheoremTemplates = [
+  // ===== 1. Найти гипотенузу =====
+  {
+    id: "grade8-pythag-hypotenuse",
+    class: 8,
+    subject: "geometry",
+    section: "Теорема Пифагора",
+    topic: "pythagoreanTheorem",
+    topic_title: "Теорема Пифагора",
+    problemType: "numeric",
+    relatedModule: "pythagorean",
+    skills: ["pythagorean", "right-triangles"],
+    difficulties: {
+      // Уровень 1 — целые стороны
+      1: {
+        template: "В прямоугольном треугольнике катеты {a} см и {b} см. Найдите гипотенузу.",
+        parameters: {
+          a: { type: "int", min: 3, max: 10 },
+          b: { type: "int", min: 3, max: 10 }
+        },
+        constraints: ["a !== b"],
+        answer_formula: "Math.sqrt(a*a + b*b)",
+        hint: "Гипотенуза² = катет₁² + катет₂²",
+        solution: [
+          { explanation: "По теореме Пифагора: c² = a² + b²" },
+          { explanation: "c² = {a}² + {b}² = {a*a} + {b*b} = {a*a + b*b}" },
+          { explanation: "c = √{a*a + b*b}" },
+          { explanation: "Ответ:", result: "Math.sqrt(a*a + b*b)" }
+        ],
+        common_mistakes: [
+          { pattern: "a + b", feedback: "Нужно возвести в квадрат и сложить, не просто сложить." },
+          { pattern: "Math.sqrt(a + b)", feedback: "Сначала сложите квадраты, потом извлеките корень." }
+        ]
+      },
+      // Уровень 2 — с корнем
+      2: {
+        template: "В прямоугольном треугольнике катеты {a} см и {b} см. Найдите гипотенузу.",
+        parameters: {
+          a: { type: "int", min: 1, max: 7 },
+          b: { type: "int", min: 1, max: 7 }
+        },
+        constraints: ["a !== b", "a*a + b*b !== Math.floor(Math.sqrt(a*a + b*b)) * Math.floor(Math.sqrt(a*a + b*b))"],
+        answer_formula: "Math.sqrt(a*a + b*b)",
+        hint: "Гипотенуза = √(a² + b²)",
+        solution: [
+          { explanation: "c² = {a}² + {b}² = {a*a + b*b}" },
+          { explanation: "c = √{a*a + b*b}" },
+          { explanation: "Ответ:", result: "Math.sqrt(a*a + b*b)" }
+        ]
+      },
+      // Уровень 3 — дробные стороны
+      3: {
+        template: "В прямоугольном треугольнике катеты {a} и {b}. Найдите гипотенузу.",
+        parameters: {
+          a: { type: "int", min: 1, max: 5 },
+          b: { type: "int", min: 1, max: 5 },
+          k: { type: "int", min: 2, max: 4 }
+        },
+        constraints: ["a !== b"],
+        answer_formula: "Math.sqrt(a*a + b*b)",
+        hint: "Примените теорему Пифагора.",
+        solution: [
+          { explanation: "Катеты: {a}, {b}" },
+          { explanation: "Гипотенуза: √({a}² + {b}²) = √{a*a + b*b}" },
+          { explanation: "Ответ:", result: "Math.sqrt(a*a + b*b)" }
+        ]
+      },
+      // Уровень 4 — с проверкой
+      4: {
+        template: "В прямоугольном треугольнике катеты {a} см и {b} см. Найдите гипотенузу и проверьте теорему.",
+        parameters: {
+          a: { type: "int", min: 3, max: 8 },
+          b: { type: "int", min: 3, max: 8 }
+        },
+        constraints: ["a !== b"],
+        answer_formula: "Math.sqrt(a*a + b*b)",
+        hint: "Найдите гипотенузу и убедитесь, что c² = a² + b².",
+        solution: [
+          { explanation: "c = √({a}² + {b}²) = √{a*a + b*b} = {Math.sqrt(a*a + b*b)}" },
+          { explanation: "Проверка: {Math.sqrt(a*a + b*b)}² = {a*a + b*b} ✓" },
+          { explanation: "Ответ:", result: "Math.sqrt(a*a + b*b)" }
+        ]
+      }
+    }
+  },
+  // ===== 2. Найти катет =====
+  {
+    id: "grade8-pythag-leg",
+    class: 8,
+    subject: "geometry",
+    section: "Теорема Пифагора",
+    topic: "pythagoreanTheorem",
+    topic_title: "Теорема Пифагора",
+    problemType: "numeric",
+    relatedModule: "pythagorean",
+    skills: ["pythagorean", "right-triangles"],
+    difficulties: {
+      // Уровень 1 — найти катет по гипотенузе и другому катету
+      1: {
+        template: "В прямоугольном треугольнике гипотенуза {c} см, один катет {a} см. Найдите второй катет.",
+        parameters: {
+          c: { type: "int", min: 5, max: 13 },
+          a: { type: "int", min: 3, max: 8 }
+        },
+        constraints: ["c > a", "c*c - a*a > 0", "Math.sqrt(c*c - a*a) === Math.floor(Math.sqrt(c*c - a*a))"],
+        answer_formula: "Math.sqrt(c*c - a*a)",
+        hint: "Катет² = гипотенуза² - другой катет²",
+        solution: [
+          { explanation: "b² = c² - a²" },
+          { explanation: "b² = {c}² - {a}² = {c*c} - {a*a} = {c*c - a*a}" },
+          { explanation: "b = √{c*c - a*a}" },
+          { explanation: "Ответ:", result: "Math.sqrt(c*c - a*a)" }
+        ]
+      },
+      // Уровень 2 — с корнем
+      2: {
+        template: "В прямоугольном треугольнике гипотенуза {c} см, один катет {a} см. Найдите второй катет.",
+        parameters: {
+          c: { type: "int", min: 5, max: 15 },
+          a: { type: "int", min: 1, max: 10 }
+        },
+        constraints: ["c > a", "c*c - a*a > 0"],
+        answer_formula: "Math.sqrt(c*c - a*a)",
+        hint: "b = √(c² - a²)",
+        solution: [
+          { explanation: "b² = {c}² - {a}² = {c*c - a*a}" },
+          { explanation: "b = √{c*c - a*a}" },
+          { explanation: "Ответ:", result: "Math.sqrt(c*c - a*a)" }
+        ]
+      },
+      // Уровень 3 — дробный ответ
+      3: {
+        template: "В прямоугольном треугольнике гипотенуза {c}, один катет {a}. Найдите второй катет.",
+        parameters: {
+          c: { type: "int", min: 5, max: 10 },
+          a: { type: "int", min: 1, max: 7 },
+          k: { type: "int", min: 2, max: 3 }
+        },
+        constraints: ["c > a", "c*c - a*a > 0"],
+        answer_formula: "Math.sqrt(c*c - a*a)",
+        hint: "Второй катет = √(гипотенуза² - катет²)",
+        solution: [
+          { explanation: "b = √({c}² - {a}²) = √{c*c - a*a}" },
+          { explanation: "Ответ:", result: "Math.sqrt(c*c - a*a)" }
+        ]
+      }
+    }
+  },
+  // ===== 3. Проверка на прямоугольный треугольник =====
+  {
+    id: "grade8-pythag-check",
+    class: 8,
+    subject: "geometry",
+    section: "Теорема Пифагора",
+    topic: "pythagoreanTheorem",
+    topic_title: "Теорема Пифагора",
+    problemType: "text",
+    relatedModule: "pythagorean",
+    skills: ["pythagorean", "right-triangles"],
+    difficulties: {
+      // Уровень 1 — да/нет
+      1: {
+        template: "Могут ли стороны {a}, {b}, {c} быть сторонами прямоугольного треугольника?",
+        parameters: {
+          a: { type: "int", min: 3, max: 10 },
+          b: { type: "int", min: 3, max: 10 },
+          c: { type: "int", min: 4, max: 15 }
+        },
+        constraints: ["a < c", "b < c", "a + b > c"],
+        answer_formula: 'a*a + b*b === c*c ? "да" : "нет"',
+        hint: "Проверьте теорему Пифагора для каждой возможной гипотенузы.",
+        solution: [
+          { explanation: "Возможная гипотенуза: {c}" },
+          { explanation: "Проверка: {a}² + {b}² = {a*a + b*b}, {c}² = {c*c}" },
+          { explanation: '{a*a + b*b === c*c ? "Равны" : "Не равны"}' },
+          { explanation: "Ответ:", result: 'a*a + b*b === c*c ? "да" : "нет"' }
+        ]
+      },
+      // Уровень 2 — определить гипотенузу
+      2: {
+        template: "В треугольнике со сторонами {a}, {b}, {c} найдите гипотенузу, если он прямоугольный.",
+        parameters: {
+          a: { type: "int", min: 3, max: 8 },
+          b: { type: "int", min: 3, max: 8 },
+          c: { type: "int", min: 5, max: 12 }
+        },
+        constraints: ["a*a + b*b === c*c || a*a + c*c === b*b || b*b + c*c === a*a"],
+        answer_formula: "a*a + b*b === c*c ? c : a*a + c*c === b*b ? b : a",
+        hint: "Гипотенуза — наибольшая сторона, для которой выполняется теорема Пифагора.",
+        solution: [
+          { explanation: "Проверим для каждой стороны:" },
+          { explanation: 'Если гипотенуза {c}: {a}² + {b}² {a*a + b*b === c*c ? "=" : "≠"} {c}²' },
+          { explanation: 'Если гипотенуза {b}: {a}² + {c}² {a*a + c*c === b*b ? "=" : "≠"} {b}²' },
+          { explanation: 'Если гипотенуза {a}: {b}² + {c}² {b*b + c*c === a*a ? "=" : "≠"} {a}²' },
+          { explanation: "Гипотенуза:", result: "a*a + b*b === c*c ? c : a*a + c*c === b*b ? b : a" }
+        ]
+      }
+    }
+  },
+  // ===== 4. Расстояние между точками =====
+  {
+    id: "grade8-pythag-distance",
+    class: 8,
+    subject: "geometry",
+    section: "Теорема Пифагора",
+    topic: "pythagoreanTheorem",
+    topic_title: "Теорема Пифагора",
+    problemType: "numeric",
+    relatedModule: "pythagorean",
+    skills: ["pythagorean", "coordinate-plane"],
+    difficulties: {
+      // Уровень 1 — целые координаты
+      1: {
+        template: "Найдите расстояние между точками A({x1}, {y1}) и B({x2}, {y2}).",
+        parameters: {
+          x1: { type: "int", min: 0, max: 5 },
+          y1: { type: "int", min: 0, max: 5 },
+          x2: { type: "int", min: 0, max: 5 },
+          y2: { type: "int", min: 0, max: 5 }
+        },
+        constraints: ["x1 !== x2 || y1 !== y2"],
+        answer_formula: "Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))",
+        hint: "Расстояние = √((x₂ - x₁)² + (y₂ - y₁)²)",
+        solution: [
+          { explanation: "Δx = {x2} - {x1} = {x2 - x1}" },
+          { explanation: "Δy = {y2} - {y1} = {y2 - y1}" },
+          { explanation: "Расстояние = √(({x2 - x1})² + ({y2 - y1})²) = √{ (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) }" },
+          { explanation: "Ответ:", result: "Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))" }
+        ]
+      },
+      // Уровень 2 — с корнем
+      2: {
+        template: "Найдите расстояние между точками A({x1}, {y1}) и B({x2}, {y2}).",
+        parameters: {
+          x1: { type: "int", min: -5, max: 5 },
+          y1: { type: "int", min: -5, max: 5 },
+          x2: { type: "int", min: -5, max: 5 },
+          y2: { type: "int", min: -5, max: 5 }
+        },
+        constraints: ["x1 !== x2 || y1 !== y2"],
+        answer_formula: "Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))",
+        hint: "Используйте формулу расстояния.",
+        solution: [
+          { explanation: "d = √((x₂ - x₁)² + (y₂ - y₁)²)" },
+          { explanation: "= √({(x2 - x1)*(x2 - x1)} + {(y2 - y1)*(y2 - y1)}) = √{(x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1)}" },
+          { explanation: "Ответ:", result: "Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))" }
+        ]
+      },
+      // Уровень 3 — дробные координаты
+      3: {
+        template: "Найдите расстояние между точками A({x1}, {y1}) и B({x2}, {y2}).",
+        parameters: {
+          x1: { type: "int", min: -3, max: 3 },
+          y1: { type: "int", min: -3, max: 3 },
+          x2: { type: "int", min: -3, max: 3 },
+          y2: { type: "int", min: -3, max: 3 },
+          k: { type: "int", min: 2, max: 3 }
+        },
+        constraints: ["x1 !== x2 || y1 !== y2"],
+        answer_formula: "Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))",
+        hint: "Расстояние между точками на плоскости.",
+        solution: [
+          { explanation: "d = √((x₂ - x₁)² + (y₂ - y₁)²)" },
+          { explanation: "Ответ:", result: "Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))" }
+        ]
+      }
+    }
+  }
+];
+const grade8TriangleSimilarityAATemplates = [
+  // ===== 1. Найти коэффициент подобия =====
+  {
+    id: "grade8-similarity-ratio",
+    class: 8,
+    subject: "geometry",
+    section: "Подобие треугольников",
+    topic: "triangleSimilarityAA",
+    topic_title: "Подобие треугольников",
+    problemType: "numeric",
+    relatedModule: "triangle-similarity",
+    skills: ["similarity", "triangles"],
+    difficulties: {
+      // Уровень 1 — по двум сторонам
+      1: {
+        template: "Треугольники ABC и A₁B₁C₁ подобны. Стороны: AB = {ab}, A₁B₁ = {a1b1}. Найдите коэффициент подобия.",
+        parameters: {
+          ab: { type: "int", min: 4, max: 10 },
+          a1b1: { type: "int", min: 2, max: 5 }
+        },
+        constraints: ["ab > a1b1"],
+        answer_formula: "a1b1 / ab",
+        hint: "Коэффициент подобия = соответствующая сторона меньшего треугольника / соответствующая сторона большего.",
+        solution: [
+          { explanation: "Коэффициент подобия k = A₁B₁ / AB = {a1b1} / {ab}" },
+          { explanation: "Ответ:", result: "a1b1 / ab" }
+        ]
+      },
+      // Уровень 2 — по трём сторонам
+      2: {
+        template: "Треугольники подобны с коэффициентом k. Стороны большего: {a}, {b}, {c}. Найдите k.",
+        parameters: {
+          a: { type: "int", min: 6, max: 12 },
+          b: { type: "int", min: 4, max: 10 },
+          c: { type: "int", min: 5, max: 11 },
+          a1: { type: "int", min: 3, max: 6 }
+        },
+        constraints: ["a > a1", "a1 < b", "a1 < c"],
+        answer_formula: "a1 / a",
+        hint: "k = сторона меньшего / соответствующая сторона большего.",
+        solution: [
+          { explanation: "k = {a1} / {a}" },
+          { explanation: "Ответ:", result: "a1 / a" }
+        ]
+      },
+      // Уровень 3 — дробный коэффициент
+      3: {
+        template: "Треугольники ABC и A₁B₁C₁ подобны. AB = {ab}, BC = {bc}, A₁B₁ = {a1b1}. Найдите коэффициент подобия.",
+        parameters: {
+          ab: { type: "int", min: 6, max: 12 },
+          bc: { type: "int", min: 4, max: 10 },
+          a1b1: { type: "int", min: 2, max: 5 }
+        },
+        constraints: ["ab > a1b1"],
+        answer_formula: "a1b1 / ab",
+        answer_type: "fraction",
+        hint: "Коэффициент подобия одинаков для всех соответствующих сторон.",
+        solution: [
+          { explanation: "k = A₁B₁ / AB = {a1b1} / {ab}" },
+          { explanation: "Ответ:", result: "a1b1 / ab" }
+        ]
+      }
+    }
+  },
+  // ===== 2. Найти сторону по коэффициенту подобия =====
+  {
+    id: "grade8-similarity-side",
+    class: 8,
+    subject: "geometry",
+    section: "Подобие треугольников",
+    topic: "triangleSimilarityAA",
+    topic_title: "Подобие треугольников",
+    problemType: "numeric",
+    relatedModule: "triangle-similarity",
+    skills: ["similarity", "triangles"],
+    difficulties: {
+      // Уровень 1 — найти большую сторону
+      1: {
+        template: "Треугольники подобны с коэффициентом k = {k}. Сторона меньшего треугольника {small}. Найдите соответствующую сторону большего.",
+        parameters: {
+          k: { type: "int", min: 2, max: 4 },
+          small: { type: "int", min: 3, max: 8 }
+        },
+        answer_formula: "small / k",
+        hint: "Сторона большего = сторона меньшего / k.",
+        solution: [
+          { explanation: "Сторона большего = {small} / {k} = {small / k}" },
+          { explanation: "Ответ:", result: "small / k" }
+        ]
+      },
+      // Уровень 2 — найти меньшую сторону
+      2: {
+        template: "Треугольники подобны с коэффициентом k = {k}. Сторона большего треугольника {big}. Найдите соответствующую сторону меньшего.",
+        parameters: {
+          k: { type: "int", min: 2, max: 4 },
+          big: { type: "int", min: 6, max: 12 }
+        },
+        answer_formula: "big * k",
+        hint: "Сторона меньшего = сторона большего × k.",
+        solution: [
+          { explanation: "Сторона меньшего = {big} × {k} = {big * k}" },
+          { explanation: "Ответ:", result: "big * k" }
+        ]
+      },
+      // Уровень 3 — дробный коэффициент
+      3: {
+        template: "Треугольники подобны с коэффициентом k = {num}/{den}. Сторона меньшего {small}. Найдите соответствующую сторону большего.",
+        parameters: {
+          num: { type: "int", min: 1, max: 3 },
+          den: { type: "int", min: 2, max: 4 },
+          small: { type: "int", min: 4, max: 10 }
+        },
+        constraints: ["num < den"],
+        answer_formula: "small / (num / den)",
+        answer_type: "fraction",
+        hint: "Сторона большего = сторона меньшего / k.",
+        solution: [
+          { explanation: "k = {num}/{den}" },
+          { explanation: "Сторона большего = {small} / ({num}/{den}) = {small} × ({den}/{num}) = {(small * den) / num}" },
+          { explanation: "Ответ:", result: "small / (num / den)" }
+        ]
+      }
+    }
+  },
+  // ===== 3. Найти периметр подобного треугольника =====
+  {
+    id: "grade8-similarity-perimeter",
+    class: 8,
+    subject: "geometry",
+    section: "Подобие треугольников",
+    topic: "triangleSimilarityAA",
+    topic_title: "Подобие треугольников",
+    problemType: "numeric",
+    relatedModule: "triangle-similarity",
+    skills: ["similarity", "triangles"],
+    difficulties: {
+      // Уровень 1 — найти периметр большего
+      1: {
+        template: "Треугольники подобны с коэффициентом k = {k}. Периметр меньшего треугольника {p_small}. Найдите периметр большего.",
+        parameters: {
+          k: { type: "int", min: 2, max: 4 },
+          p_small: { type: "int", min: 10, max: 20 }
+        },
+        answer_formula: "p_small / k",
+        hint: "Периметр большего = периметр меньшего / k.",
+        solution: [
+          { explanation: "Периметр большего = {p_small} / {k} = {p_small / k}" },
+          { explanation: "Ответ:", result: "p_small / k" }
+        ]
+      },
+      // Уровень 2 — найти периметр меньшего
+      2: {
+        template: "Треугольники подобны с коэффициентом k = {k}. Периметр большего треугольника {p_big}. Найдите периметр меньшего.",
+        parameters: {
+          k: { type: "int", min: 2, max: 4 },
+          p_big: { type: "int", min: 15, max: 30 }
+        },
+        answer_formula: "p_big * k",
+        hint: "Периметр меньшего = периметр большего × k.",
+        solution: [
+          { explanation: "Периметр меньшего = {p_big} × {k} = {p_big * k}" },
+          { explanation: "Ответ:", result: "p_big * k" }
+        ]
+      },
+      // Уровень 3 — дробный коэффициент
+      3: {
+        template: "Треугольники подобны с коэффициентом k = {num}/{den}. Периметр меньшего {p_small}. Найдите периметр большего.",
+        parameters: {
+          num: { type: "int", min: 1, max: 3 },
+          den: { type: "int", min: 2, max: 4 },
+          p_small: { type: "int", min: 12, max: 24 }
+        },
+        constraints: ["num < den"],
+        answer_formula: "p_small / (num / den)",
+        answer_type: "fraction",
+        hint: "Периметр большего = периметр меньшего / k.",
+        solution: [
+          { explanation: "k = {num}/{den}" },
+          { explanation: "Периметр большего = {p_small} / ({num}/{den}) = {p_small} × ({den}/{num}) = {(p_small * den) / num}" },
+          { explanation: "Ответ:", result: "p_small / (num / den)" }
+        ]
+      }
+    }
+  },
+  // ===== 4. Найти площадь подобного треугольника =====
+  {
+    id: "grade8-similarity-area",
+    class: 8,
+    subject: "geometry",
+    section: "Подобие треугольников",
+    topic: "triangleSimilarityAA",
+    topic_title: "Подобие треугольников",
+    problemType: "numeric",
+    relatedModule: "triangle-similarity",
+    skills: ["similarity", "triangles", "area"],
+    difficulties: {
+      // Уровень 1 — найти площадь большего
+      1: {
+        template: "Треугольники подобны с коэффициентом k = {k}. Площадь меньшего треугольника {area_small}. Найдите площадь большего.",
+        parameters: {
+          k: { type: "int", min: 2, max: 4 },
+          area_small: { type: "int", min: 5, max: 15 }
+        },
+        answer_formula: "area_small / (k * k)",
+        hint: "Площадь большего = площадь меньшего / k².",
+        solution: [
+          { explanation: "Площадь большего = {area_small} / {k}² = {area_small / (k * k)}" },
+          { explanation: "Ответ:", result: "area_small / (k * k)" }
+        ]
+      },
+      // Уровень 2 — найти площадь меньшего
+      2: {
+        template: "Треугольники подобны с коэффициентом k = {k}. Площадь большего треугольника {area_big}. Найдите площадь меньшего.",
+        parameters: {
+          k: { type: "int", min: 2, max: 4 },
+          area_big: { type: "int", min: 10, max: 25 }
+        },
+        answer_formula: "area_big * k * k",
+        hint: "Площадь меньшего = площадь большего × k².",
+        solution: [
+          { explanation: "Площадь меньшего = {area_big} × {k}² = {area_big * k * k}" },
+          { explanation: "Ответ:", result: "area_big * k * k" }
+        ]
+      },
+      // Уровень 3 — дробный коэффициент
+      3: {
+        template: "Треугольники подобны с коэффициентом k = {num}/{den}. Площадь меньшего {area_small}. Найдите площадь большего.",
+        parameters: {
+          num: { type: "int", min: 1, max: 3 },
+          den: { type: "int", min: 2, max: 4 },
+          area_small: { type: "int", min: 6, max: 18 }
+        },
+        constraints: ["num < den"],
+        answer_formula: "area_small / ((num / den) * (num / den))",
+        answer_type: "fraction",
+        hint: "Площадь большего = площадь меньшего / k².",
+        solution: [
+          { explanation: "k = {num}/{den}" },
+          { explanation: "k² = ({num}/{den})² = {num*num}/{den*den}" },
+          { explanation: "Площадь большего = {area_small} / ({num*num}/{den*den}) = {area_small} × ({den*den}/{num*num}) = {(area_small * den * den) / (num * num)}" },
+          { explanation: "Ответ:", result: "area_small / ((num / den) * (num / den))" }
+        ]
+      }
+    }
+  }
+];
+const grade8QuadrilateralAreaTemplates = [
+  // ===== 1. Площадь параллелограмма =====
+  {
+    id: "grade8-parallelogram-area",
+    class: 8,
+    subject: "geometry",
+    section: "Площади четырехугольников",
+    topic: "quadrilateralArea",
+    topic_title: "Площади четырехугольников",
+    problemType: "numeric",
+    relatedModule: "quadrilateral-area",
+    skills: ["area", "parallelogram"],
+    difficulties: {
+      // Уровень 1 — основание и высота целые
+      1: {
+        template: "Найдите площадь параллелограмма с основанием {base} см и высотой {height} см.",
+        parameters: {
+          base: { type: "int", min: 5, max: 15 },
+          height: { type: "int", min: 3, max: 10 }
+        },
+        answer_formula: "base * height",
+        hint: "Площадь параллелограмма = основание × высота.",
+        solution: [
+          { explanation: "S = {base} × {height} = {base * height} см²" },
+          { explanation: "Ответ:", result: "base * height" }
+        ]
+      },
+      // Уровень 2 — с дробной высотой
+      2: {
+        template: "Найдите площадь параллелограмма с основанием {base} см и высотой {num}/{den} см.",
+        parameters: {
+          base: { type: "int", min: 6, max: 12 },
+          num: { type: "int", min: 1, max: 5 },
+          den: { type: "int", min: 2, max: 4 }
+        },
+        constraints: ["num < den"],
+        answer_formula: "base * num / den",
+        answer_type: "fraction",
+        hint: "Площадь параллелограмма = основание × высота.",
+        solution: [
+          { explanation: "S = {base} × {num}/{den} = {base * num}/{den} см²" },
+          { explanation: "Ответ:", result: "base * num / den" }
+        ]
+      },
+      // Уровень 3 — найти основание
+      3: {
+        template: "Площадь параллелограмма {area} см², высота {height} см. Найдите основание.",
+        parameters: {
+          area: { type: "int", min: 20, max: 60 },
+          height: { type: "int", min: 4, max: 8 }
+        },
+        constraints: ["area % height === 0"],
+        answer_formula: "area / height",
+        hint: "Основание = площадь / высота.",
+        solution: [
+          { explanation: "Основание = {area} / {height} = {area / height} см" },
+          { explanation: "Ответ:", result: "area / height" }
+        ]
+      }
+    }
+  },
+  // ===== 2. Площадь трапеции =====
+  {
+    id: "grade8-trapezoid-area",
+    class: 8,
+    subject: "geometry",
+    section: "Площади четырехугольников",
+    topic: "quadrilateralArea",
+    topic_title: "Площади четырехугольников",
+    problemType: "numeric",
+    relatedModule: "quadrilateral-area",
+    skills: ["area", "trapezoid"],
+    difficulties: {
+      // Уровень 1 — среднее арифметическое оснований
+      1: {
+        template: "Найдите площадь трапеции с основаниями {a} см и {b} см, высотой {h} см.",
+        parameters: {
+          a: { type: "int", min: 8, max: 15 },
+          b: { type: "int", min: 4, max: 7 },
+          h: { type: "int", min: 3, max: 8 }
+        },
+        constraints: ["a > b"],
+        answer_formula: "(a + b) * h / 2",
+        hint: "Площадь трапеции = (сумма оснований × высота) / 2.",
+        solution: [
+          { explanation: "S = ({a} + {b}) × {h} / 2 = {(a + b) * h / 2} см²" },
+          { explanation: "Ответ:", result: "(a + b) * h / 2" }
+        ]
+      },
+      // Уровень 2 — дробная высота
+      2: {
+        template: "Найдите площадь трапеции с основаниями {a} см и {b} см, высотой {num}/{den} см.",
+        parameters: {
+          a: { type: "int", min: 10, max: 18 },
+          b: { type: "int", min: 5, max: 9 },
+          num: { type: "int", min: 2, max: 6 },
+          den: { type: "int", min: 2, max: 4 }
+        },
+        constraints: ["a > b", "num < den"],
+        answer_formula: "(a + b) * num / den / 2",
+        answer_type: "fraction",
+        hint: "Площадь трапеции = (сумма оснований × высота) / 2.",
+        solution: [
+          { explanation: "S = ({a} + {b}) × {num}/{den} / 2 = {(a + b) * num}/{den} / 2 = {(a + b) * num}/{den * 2} см²" },
+          { explanation: "Ответ:", result: "(a + b) * num / den / 2" }
+        ]
+      },
+      // Уровень 3 — найти высоту
+      3: {
+        template: "Площадь трапеции {area} см², основания {a} см и {b} см. Найдите высоту.",
+        parameters: {
+          area: { type: "int", min: 25, max: 75 },
+          a: { type: "int", min: 9, max: 16 },
+          b: { type: "int", min: 4, max: 8 }
+        },
+        constraints: ["a > b", "(area * 2) % (a + b) === 0"],
+        answer_formula: "area * 2 / (a + b)",
+        hint: "Высота = (площадь × 2) / сумма оснований.",
+        solution: [
+          { explanation: "h = {area} × 2 / ({a} + {b}) = {area * 2 / (a + b)} см" },
+          { explanation: "Ответ:", result: "area * 2 / (a + b)" }
+        ]
+      }
+    }
+  },
+  // ===== 3. Площадь ромба =====
+  {
+    id: "grade8-rhombus-area",
+    class: 8,
+    subject: "geometry",
+    section: "Площади четырехугольников",
+    topic: "quadrilateralArea",
+    topic_title: "Площади четырехугольников",
+    problemType: "numeric",
+    relatedModule: "quadrilateral-area",
+    skills: ["area", "rhombus"],
+    difficulties: {
+      // Уровень 1 — по диагоналям
+      1: {
+        template: "Найдите площадь ромба с диагоналями {d1} см и {d2} см.",
+        parameters: {
+          d1: { type: "int", min: 6, max: 12 },
+          d2: { type: "int", min: 4, max: 10 }
+        },
+        answer_formula: "d1 * d2 / 2",
+        hint: "Площадь ромба = (диагональ₁ × диагональ₂) / 2.",
+        solution: [
+          { explanation: "S = {d1} × {d2} / 2 = {d1 * d2 / 2} см²" },
+          { explanation: "Ответ:", result: "d1 * d2 / 2" }
+        ]
+      },
+      // Уровень 2 — по стороне и высоте
+      2: {
+        template: "Найдите площадь ромба со стороной {side} см и высотой {height} см.",
+        parameters: {
+          side: { type: "int", min: 5, max: 11 },
+          height: { type: "int", min: 3, max: 8 }
+        },
+        answer_formula: "side * height",
+        hint: "Площадь ромба = сторона × высота.",
+        solution: [
+          { explanation: "S = {side} × {height} = {side * height} см²" },
+          { explanation: "Ответ:", result: "side * height" }
+        ]
+      },
+      // Уровень 3 — найти диагональ
+      3: {
+        template: "Площадь ромба {area} см², диагонали {d1} см и d₂. Найдите d₂.",
+        parameters: {
+          area: { type: "int", min: 20, max: 60 },
+          d1: { type: "int", min: 6, max: 12 }
+        },
+        constraints: ["(area * 2) % d1 === 0"],
+        answer_formula: "area * 2 / d1",
+        hint: "d₂ = (площадь × 2) / d₁.",
+        solution: [
+          { explanation: "d₂ = {area} × 2 / {d1} = {area * 2 / d1} см" },
+          { explanation: "Ответ:", result: "area * 2 / d1" }
+        ]
+      }
+    }
+  },
+  // ===== 4. Площадь прямоугольника =====
+  {
+    id: "grade8-rectangle-area",
+    class: 8,
+    subject: "geometry",
+    section: "Площади четырехугольников",
+    topic: "quadrilateralArea",
+    topic_title: "Площади четырехугольников",
+    problemType: "numeric",
+    relatedModule: "quadrilateral-area",
+    skills: ["area", "rectangle"],
+    difficulties: {
+      // Уровень 1 — длина и ширина
+      1: {
+        template: "Найдите площадь прямоугольника со сторонами {a} см и {b} см.",
+        parameters: {
+          a: { type: "int", min: 5, max: 12 },
+          b: { type: "int", min: 3, max: 9 }
+        },
+        answer_formula: "a * b",
+        hint: "Площадь прямоугольника = длина × ширина.",
+        solution: [
+          { explanation: "S = {a} × {b} = {a * b} см²" },
+          { explanation: "Ответ:", result: "a * b" }
+        ]
+      },
+      // Уровень 2 — найти сторону
+      2: {
+        template: "Площадь прямоугольника {area} см², одна сторона {a} см. Найдите другую сторону.",
+        parameters: {
+          area: { type: "int", min: 20, max: 60 },
+          a: { type: "int", min: 4, max: 10 }
+        },
+        constraints: ["area % a === 0"],
+        answer_formula: "area / a",
+        hint: "Другая сторона = площадь / известная сторона.",
+        solution: [
+          { explanation: "Сторона = {area} / {a} = {area / a} см" },
+          { explanation: "Ответ:", result: "area / a" }
+        ]
+      },
+      // Уровень 3 — периметр и сторона
+      3: {
+        template: "Периметр прямоугольника {perimeter} см, одна сторона {a} см. Найдите площадь.",
+        parameters: {
+          perimeter: { type: "int", min: 24, max: 48 },
+          a: { type: "int", min: 4, max: 10 }
+        },
+        constraints: ["perimeter % 2 === 0", "perimeter > a * 2"],
+        answer_formula: "a * (perimeter / 2 - a)",
+        hint: "Найдите вторую сторону: (периметр / 2) - первая сторона.",
+        solution: [
+          { explanation: "Вторая сторона = {perimeter}/2 - {a} = {perimeter / 2 - a} см" },
+          { explanation: "S = {a} × {perimeter / 2 - a} = {a * (perimeter / 2 - a)} см²" },
+          { explanation: "Ответ:", result: "a * (perimeter / 2 - a)" }
+        ]
+      }
+    }
+  }
+];
+const grade8Templates = [
+  ...grade8QuadraticTemplates,
+  ...grade8RootsTemplates,
+  ...grade8VietaTemplates,
+  ...grade8LinearInequalityTemplates,
+  ...grade8AbsoluteValueEqTemplates,
+  ...grade8RationalExpressionTemplates,
+  ...grade8PythagoreanTheoremTemplates,
+  ...grade8TriangleSimilarityAATemplates,
+  ...grade8QuadrilateralAreaTemplates
+];
+const problemTemplates = [
+  ...grade5Templates,
+  ...grade6Templates,
+  ...grade7Templates,
+  ...grade8Templates
 ];
 function tokenize(expr) {
   const tokens = [];
@@ -22238,81 +25014,65 @@ const topicGraph = [
   { id: "magicSquare", prerequisites: ["arithmetic"] },
   { id: "olympiad", prerequisites: ["arithmetic", "patterns"] },
   // ===== Grade 6 =====
-  // Делимость
   { id: "divisibility_rules", prerequisites: ["arithmetic"] },
   { id: "prime_factorization", prerequisites: ["divisibility_rules"] },
   { id: "gcd", prerequisites: ["prime_factorization"] },
   { id: "lcm", prerequisites: ["gcd"] },
-  // Дроби
   { id: "fraction_property", prerequisites: ["arithmetic"] },
   { id: "fraction_reduction", prerequisites: ["fraction_property", "gcd"] },
   { id: "common_denominator", prerequisites: ["fraction_reduction", "lcm"] },
   { id: "fraction_add_sub", prerequisites: ["common_denominator"] },
   { id: "fraction_mul", prerequisites: ["fraction_reduction"] },
   { id: "fraction_div", prerequisites: ["fraction_mul"] },
-  // Отношения и пропорции
   { id: "ratios", prerequisites: ["fraction_reduction"] },
   { id: "proportions", prerequisites: ["ratios"] },
   { id: "direct_proportion", prerequisites: ["proportions"] },
-  // Проценты
   { id: "percent_basics", prerequisites: ["fraction_property"] },
   { id: "percent_of_number", prerequisites: ["percent_basics", "fraction_mul"] },
   { id: "number_by_percent", prerequisites: ["percent_of_number"] },
   { id: "percent_change", prerequisites: ["number_by_percent"] },
-  // Линейные уравнения
   { id: "linear_equations_basic", prerequisites: ["fraction_add_sub"] },
   { id: "linear_equations_brackets", prerequisites: ["linear_equations_basic"] },
   { id: "word_problems_equations", prerequisites: ["linear_equations_brackets"] },
-  // Геометрия 6 класса
   { id: "coordinate_plane", prerequisites: ["arithmetic"] },
   { id: "quadrants", prerequisites: ["coordinate_plane"] },
   { id: "distance_on_axis", prerequisites: ["quadrants"] },
   { id: "circles", prerequisites: ["perimeter"] },
   { id: "figureArea", prerequisites: ["area"] },
-  // ===== Grade 7 - Algebra: Блок 1 — Степени =====
+  // ===== Grade 7 — Algebra =====
   { id: "powerOfNumber", prerequisites: [] },
-  // entry topic
   { id: "productOfPowers", prerequisites: ["powerOfNumber"] },
   { id: "powerOfPower", prerequisites: ["powerOfNumber"] },
   { id: "divisionOfPowers", prerequisites: ["powerOfNumber"] },
-  // ===== Grade 7 - Algebra: Блок 2 — Одночлены =====
   { id: "monomialStdForm", prerequisites: ["powerOfNumber"] },
   { id: "monomialMultiply", prerequisites: ["monomialStdForm"] },
   { id: "monomialPower", prerequisites: ["monomialStdForm"] },
-  // ===== Grade 7 - Algebra: Блок 3 — Многочлены =====
   { id: "likeTerms", prerequisites: ["monomialStdForm"] },
   { id: "polyAddition", prerequisites: ["likeTerms"] },
   { id: "polySubtraction", prerequisites: ["likeTerms"] },
   { id: "polyMultiply", prerequisites: ["likeTerms"] },
-  // ===== Grade 7 - Algebra: Блок 4 — ФСУ =====
   { id: "squareOfSum", prerequisites: ["polyMultiply"] },
   { id: "squareOfDiff", prerequisites: ["polyMultiply"] },
   { id: "diffOfSquares", prerequisites: ["polyMultiply"] },
   { id: "factoringApply", prerequisites: ["squareOfSum", "squareOfDiff", "diffOfSquares"] },
-  // ===== Grade 7 - Algebra: Блок 5 — Линейные уравнения =====
   { id: "linearEqSimple", prerequisites: ["monomialStdForm"] },
   { id: "linearEqTranspose", prerequisites: ["linearEqSimple"] },
   { id: "linearEqBrackets", prerequisites: ["linearEqSimple"] },
-  // ===== Grade 7 - Algebra: Блок 6 — Функции =====
   { id: "funcValue", prerequisites: ["linearEqSimple"] },
   { id: "funcCoefficients", prerequisites: ["funcValue"] },
-  // ===== Grade 7 - Algebra: Блок 7 — Системы уравнений =====
   { id: "systemsSubstitution", prerequisites: ["funcValue"] },
   { id: "systemsElimination", prerequisites: ["linearEqTranspose"] },
-  // ===== Grade 7 - Geometry: Параллельные прямые =====
+  // ===== Grade 7 — Geometry =====
   { id: "corrAngles", prerequisites: [] },
-  // entry topic
   { id: "altAngles", prerequisites: ["corrAngles"] },
   { id: "coInteriorAngles", prerequisites: ["corrAngles"] },
-  // ===== Grade 7 - Geometry: Треугольники =====
   { id: "triangleAngles", prerequisites: [] },
-  // entry topic
   { id: "exteriorAngle", prerequisites: ["triangleAngles"] },
   { id: "congruenceSSS", prerequisites: ["triangleAngles"] },
   { id: "congruenceSAS", prerequisites: ["triangleAngles"] },
   { id: "congruenceASA", prerequisites: ["triangleAngles"] },
   { id: "triangleInequality", prerequisites: ["triangleAngles"] },
-  // ===== Legacy grade 7 topic IDs (backward compat) =====
+  // ===== Legacy Grade 7 IDs (backward compat) =====
   { id: "powers", prerequisites: ["powerOfNumber"] },
   { id: "monomials", prerequisites: ["monomialStdForm"] },
   { id: "polynomials", prerequisites: ["likeTerms"] },
@@ -22321,11 +25081,42 @@ const topicGraph = [
   { id: "linearFunctions", prerequisites: ["funcValue"] },
   { id: "systems", prerequisites: ["funcValue"] },
   { id: "parallelLines", prerequisites: ["corrAngles"] },
-  { id: "triangleCongruence", prerequisites: ["triangleAngles"] }
+  { id: "triangleCongruence", prerequisites: ["triangleAngles"] },
+  // ===== Grade 8 — Algebra =====
+  //
+  // Entry topics (prerequisites: []) — открыты сразу:
+  //   quadraticTrinomial, linearInequality, rationalExpression
+  //
+  { id: "quadraticTrinomial", prerequisites: [] },
+  // ENTRY
+  { id: "trinomialFactoring", prerequisites: ["quadraticTrinomial"] },
+  { id: "quadraticIncomplete", prerequisites: ["quadraticTrinomial"] },
+  { id: "quadraticFormula", prerequisites: ["quadraticIncomplete"] },
+  { id: "vietasTheorem", prerequisites: ["quadraticFormula"] },
+  { id: "quadraticWordProblems", prerequisites: ["vietasTheorem"] },
+  { id: "parabolaBasics", prerequisites: ["quadraticFormula"] },
+  { id: "linearInequality", prerequisites: [] },
+  // ENTRY
+  { id: "absoluteValueEq", prerequisites: ["linearInequality"] },
+  { id: "rationalExpression", prerequisites: [] },
+  // ENTRY
+  // ===== Grade 8 — Geometry =====
+  //
+  // Entry topics:
+  //   pythagoreanTheorem, triangleSimilarityAA, quadrilateralArea
+  //
+  { id: "pythagoreanTheorem", prerequisites: [] },
+  // ENTRY
+  { id: "triangleSimilarityAA", prerequisites: [] },
+  // ENTRY
+  { id: "quadrilateralArea", prerequisites: [] },
+  // ENTRY
+  { id: "inscribedAngle", prerequisites: ["quadrilateralArea"] },
+  { id: "distanceFormula", prerequisites: ["pythagoreanTheorem"] }
 ];
 function getPrerequisites(topicId) {
   const node = topicGraph.find((n) => n.id === topicId);
-  return node ? node.prerequisites : [];
+  return (node == null ? void 0 : node.prerequisites) ?? [];
 }
 function getUnmetPrerequisites(topicId, masteredTopics) {
   const prerequisites = getPrerequisites(topicId);
@@ -22388,28 +25179,23 @@ const curriculum = [
         id: "algebra",
         title: "Алгебра",
         topics: [
-          // Делимость
           { id: "divisibility_rules", title: "Признаки делимости" },
           { id: "prime_factorization", title: "Разложение на простые множители" },
           { id: "gcd", title: "Наибольший общий делитель" },
           { id: "lcm", title: "Наименьшее общее кратное" },
-          // Дроби
           { id: "fraction_property", title: "Основное свойство дроби" },
           { id: "fraction_reduction", title: "Сокращение дробей" },
           { id: "common_denominator", title: "Общий знаменатель" },
           { id: "fraction_add_sub", title: "Сложение и вычитание дробей" },
           { id: "fraction_mul", title: "Умножение дробей" },
           { id: "fraction_div", title: "Деление дробей" },
-          // Отношения и пропорции
           { id: "ratios", title: "Отношения" },
           { id: "proportions", title: "Пропорции" },
           { id: "direct_proportion", title: "Прямая и обратная пропорциональность" },
-          // Проценты
           { id: "percent_basics", title: "Понятие процента" },
           { id: "percent_of_number", title: "Нахождение процента от числа" },
           { id: "number_by_percent", title: "Нахождение числа по проценту" },
           { id: "percent_change", title: "Процентное изменение" },
-          // Линейные уравнения
           { id: "linear_equations_basic", title: "Линейные уравнения" },
           { id: "linear_equations_brackets", title: "Уравнения со скобками" },
           { id: "word_problems_equations", title: "Текстовые задачи через уравнения" }
@@ -22438,33 +25224,26 @@ const curriculum = [
         id: "algebra",
         title: "Алгебра",
         topics: [
-          // Степени
           { id: "powerOfNumber", title: "Степень числа" },
           { id: "productOfPowers", title: "Произведение степеней" },
           { id: "powerOfPower", title: "Степень степени" },
           { id: "divisionOfPowers", title: "Деление степеней" },
-          // Одночлены
           { id: "monomialStdForm", title: "Стандартный вид одночлена" },
           { id: "monomialMultiply", title: "Умножение одночленов" },
           { id: "monomialPower", title: "Степень одночлена" },
-          // Многочлены
           { id: "likeTerms", title: "Подобные члены" },
           { id: "polyAddition", title: "Сложение многочленов" },
           { id: "polySubtraction", title: "Вычитание многочленов" },
           { id: "polyMultiply", title: "Умножение одночлена на многочлен" },
-          // Формулы сокращённого умножения
           { id: "squareOfSum", title: "Квадрат суммы" },
           { id: "squareOfDiff", title: "Квадрат разности" },
           { id: "diffOfSquares", title: "Разность квадратов" },
           { id: "factoringApply", title: "Применение формул" },
-          // Линейные уравнения
           { id: "linearEqSimple", title: "Простые уравнения (ax + b = c)" },
           { id: "linearEqTranspose", title: "Перенос членов" },
           { id: "linearEqBrackets", title: "Уравнения со скобками" },
-          // Линейная функция
           { id: "funcValue", title: "Вычисление значения функции" },
           { id: "funcCoefficients", title: "Коэффициенты k и b" },
-          // Системы уравнений
           { id: "systemsSubstitution", title: "Метод подстановки" },
           { id: "systemsElimination", title: "Метод сложения" }
         ]
@@ -22473,18 +25252,14 @@ const curriculum = [
         id: "geometry",
         title: "Геометрия",
         topics: [
-          // Параллельные прямые
           { id: "corrAngles", title: "Соответственные углы" },
           { id: "altAngles", title: "Накрест лежащие углы" },
           { id: "coInteriorAngles", title: "Односторонние углы" },
-          // Треугольники — углы
           { id: "triangleAngles", title: "Сумма углов треугольника" },
           { id: "exteriorAngle", title: "Внешний угол треугольника" },
-          // Признаки равенства
           { id: "congruenceSSS", title: "Признак равенства SSS (три стороны)" },
           { id: "congruenceSAS", title: "Признак равенства SAS (две стороны и угол)" },
           { id: "congruenceASA", title: "Признак равенства ASA (угол, сторона, угол)" },
-          // Неравенство
           { id: "triangleInequality", title: "Неравенство треугольника" }
         ]
       }
@@ -22499,18 +25274,33 @@ const curriculum = [
         id: "algebra",
         title: "Алгебра",
         topics: [
-          { id: "quadratic", title: "Квадратные уравнения" },
-          { id: "graphs", title: "Графики функций" },
-          { id: "systemsAdvanced", title: "Системы уравнений" }
+          // entry: quadraticTrinomial
+          { id: "quadraticTrinomial", title: "Квадратный трёхчлен" },
+          { id: "trinomialFactoring", title: "Разложение трёхчлена на множители" },
+          { id: "quadraticIncomplete", title: "Неполные квадратные уравнения" },
+          { id: "quadraticFormula", title: "Формула корней (дискриминант)" },
+          { id: "vietasTheorem", title: "Теорема Виета" },
+          { id: "quadraticWordProblems", title: "Задачи на квадратные уравнения" },
+          { id: "parabolaBasics", title: "Парабола: вершина и ось симметрии" },
+          // entry: linearInequality
+          { id: "linearInequality", title: "Линейные неравенства" },
+          { id: "absoluteValueEq", title: "Уравнения с модулем" },
+          // entry: rationalExpression
+          { id: "rationalExpression", title: "Рациональные выражения" }
         ]
       },
       {
         id: "geometry",
         title: "Геометрия",
         topics: [
-          { id: "similarity", title: "Подобие" },
-          { id: "pythagorean", title: "Теорема Пифагора" },
-          { id: "triangleArea", title: "Площадь треугольника" }
+          // entry: pythagoreanTheorem
+          { id: "pythagoreanTheorem", title: "Теорема Пифагора" },
+          // entry: triangleSimilarityAA
+          { id: "triangleSimilarityAA", title: "Подобие треугольников" },
+          // entry: quadrilateralArea
+          { id: "quadrilateralArea", title: "Площади четырёхугольников" },
+          { id: "inscribedAngle", title: "Вписанный угол" },
+          { id: "distanceFormula", title: "Расстояние между двумя точками" }
         ]
       }
     ]
@@ -22780,7 +25570,14 @@ const LANES = [{
     // Grade 7 — системы
     "systemsSubstitution",
     "systemsElimination",
-    "systems"
+    "systems",
+    // Grade 8 — квадратный трёхчлен и уравнения
+    "quadraticTrinomial",
+    "trinomialFactoring",
+    "quadraticIncomplete",
+    "quadraticFormula",
+    "vietasTheorem",
+    "quadraticWordProblems"
   ]
 }, {
   id: "geometry",
@@ -22867,21 +25664,21 @@ function SkillTree({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
     width: "100%",
     fontFamily: "inherit"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:193:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "193", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22width%22%3A%22100%25%22%2C%22fontFamily%22%3A%22inherit%22%7D%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:196:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "196", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22width%22%3A%22100%25%22%2C%22fontFamily%22%3A%22inherit%22%7D%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "flex",
       alignItems: "center",
       gap: 12,
       marginBottom: 16,
       flexWrap: "wrap"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:196:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "196", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A12%2C%22marginBottom%22%3A16%2C%22flexWrap%22%3A%22wrap%22%7D%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ProgressBar, { pct: progressPct, completed: completedCount, total: totalCount, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:200:8", "data-matrix-name": "ProgressBar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "200", "data-component-file": "SkillTree.tsx", "data-component-name": "ProgressBar", "data-component-content": "%7B%22pct%22%3A%22%5BIdentifier%5D%22%2C%22completed%22%3A%22%5BIdentifier%5D%22%2C%22total%22%3A%22%5BIdentifier%5D%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(StateLegend, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:201:8", "data-matrix-name": "StateLegend", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "201", "data-component-file": "SkillTree.tsx", "data-component-name": "StateLegend" })
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:199:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "199", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A12%2C%22marginBottom%22%3A16%2C%22flexWrap%22%3A%22wrap%22%7D%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ProgressBar, { pct: progressPct, completed: completedCount, total: totalCount, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:203:8", "data-matrix-name": "ProgressBar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "203", "data-component-file": "SkillTree.tsx", "data-component-name": "ProgressBar", "data-component-content": "%7B%22pct%22%3A%22%5BIdentifier%5D%22%2C%22completed%22%3A%22%5BIdentifier%5D%22%2C%22total%22%3A%22%5BIdentifier%5D%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StateLegend, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:204:8", "data-matrix-name": "StateLegend", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "204", "data-component-file": "SkillTree.tsx", "data-component-name": "StateLegend" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
       overflowX: "auto",
       paddingBottom: 4
-    }, role: "region", "aria-label": "Карта навыков", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:206:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "206", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22overflowX%22%3A%22auto%22%2C%22paddingBottom%22%3A4%7D%2C%22role%22%3A%22region%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+    }, role: "region", "aria-label": "Карта навыков", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:209:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "209", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22overflowX%22%3A%22auto%22%2C%22paddingBottom%22%3A4%7D%2C%22role%22%3A%22region%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "grid",
       // minmax(160px,1fr) makes columns shrink gracefully on tablet/mobile
       gridTemplateColumns: `repeat(${colCount}, minmax(160px, 1fr))`,
@@ -22889,16 +25686,16 @@ function SkillTree({
       alignItems: "start",
       // Prevent the grid from squeezing below readable width
       minWidth: `${colCount * 170}px`
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:211:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "211", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22grid%22%2C%22gridTemplateColumns%22%3A%22%5BTemplateLiteral%5D%22%2C%22gap%22%3A10%2C%22alignItems%22%3A%22start%22%2C%22minWidth%22%3A%22%5BTemplateLiteral%5D%22%7D%7D", children: [
-      activeLanes.map((lane) => /* @__PURE__ */ jsxRuntimeExports.jsx(LaneColumn, { label: lane.label, color: lane.color, topics: lane.topics, progress, selected, nextTopicId, onSelect: handleSelect, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:221:12", "data-matrix-name": "LaneColumn", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "221", "data-component-file": "SkillTree.tsx", "data-component-name": "LaneColumn", "data-component-content": "%7B%22label%22%3A%22%5BMemberExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22topics%22%3A%22%5BMemberExpression%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22selected%22%3A%22%5BIdentifier%5D%22%2C%22nextTopicId%22%3A%22%5BIdentifier%5D%22%2C%22onSelect%22%3A%22%5BIdentifier%5D%22%7D" }, lane.id)),
-      unassigned.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(LaneColumn, { label: "Другое", color: "#888780", topics: unassigned, progress, selected, nextTopicId, onSelect: handleSelect, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:233:12", "data-matrix-name": "LaneColumn", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "233", "data-component-file": "SkillTree.tsx", "data-component-name": "LaneColumn", "data-component-content": "%7B%22label%22%3A%22%D0%94%D1%80%D1%83%D0%B3%D0%BE%D0%B5%22%2C%22color%22%3A%22%23888780%22%2C%22topics%22%3A%22%5BIdentifier%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22selected%22%3A%22%5BIdentifier%5D%22%2C%22nextTopicId%22%3A%22%5BIdentifier%5D%22%2C%22onSelect%22%3A%22%5BIdentifier%5D%22%7D" })
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:214:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "214", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22grid%22%2C%22gridTemplateColumns%22%3A%22%5BTemplateLiteral%5D%22%2C%22gap%22%3A10%2C%22alignItems%22%3A%22start%22%2C%22minWidth%22%3A%22%5BTemplateLiteral%5D%22%7D%7D", children: [
+      activeLanes.map((lane) => /* @__PURE__ */ jsxRuntimeExports.jsx(LaneColumn, { label: lane.label, color: lane.color, topics: lane.topics, progress, selected, nextTopicId, onSelect: handleSelect, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:224:12", "data-matrix-name": "LaneColumn", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "224", "data-component-file": "SkillTree.tsx", "data-component-name": "LaneColumn", "data-component-content": "%7B%22label%22%3A%22%5BMemberExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22topics%22%3A%22%5BMemberExpression%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22selected%22%3A%22%5BIdentifier%5D%22%2C%22nextTopicId%22%3A%22%5BIdentifier%5D%22%2C%22onSelect%22%3A%22%5BIdentifier%5D%22%7D" }, lane.id)),
+      unassigned.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(LaneColumn, { label: "Другое", color: "#888780", topics: unassigned, progress, selected, nextTopicId, onSelect: handleSelect, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:236:12", "data-matrix-name": "LaneColumn", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "236", "data-component-file": "SkillTree.tsx", "data-component-name": "LaneColumn", "data-component-content": "%7B%22label%22%3A%22%D0%94%D1%80%D1%83%D0%B3%D0%BE%D0%B5%22%2C%22color%22%3A%22%23888780%22%2C%22topics%22%3A%22%5BIdentifier%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22selected%22%3A%22%5BIdentifier%5D%22%2C%22nextTopicId%22%3A%22%5BIdentifier%5D%22%2C%22onSelect%22%3A%22%5BIdentifier%5D%22%7D" })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: infoPanelRef, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:247:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "247", "data-component-file": "SkillTree.tsx", "data-component-name": "div", children: selectedTopic ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoPanel, { topic: selectedTopic, state: selectedState, titleOf, onStart: () => onTopicClick == null ? void 0 : onTopicClick(selectedTopic.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:249:10", "data-matrix-name": "InfoPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "249", "data-component-file": "SkillTree.tsx", "data-component-name": "InfoPanel", "data-component-content": "%7B%22topic%22%3A%22%5BIdentifier%5D%22%2C%22state%22%3A%22%5BTSNonNullExpression%5D%22%2C%22titleOf%22%3A%22%5BIdentifier%5D%22%2C%22onStart%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: infoPanelRef, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:250:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "250", "data-component-file": "SkillTree.tsx", "data-component-name": "div", children: selectedTopic ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoPanel, { topic: selectedTopic, state: selectedState, titleOf, onStart: () => onTopicClick == null ? void 0 : onTopicClick(selectedTopic.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:252:10", "data-matrix-name": "InfoPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "252", "data-component-file": "SkillTree.tsx", "data-component-name": "InfoPanel", "data-component-content": "%7B%22topic%22%3A%22%5BIdentifier%5D%22%2C%22state%22%3A%22%5BTSNonNullExpression%5D%22%2C%22titleOf%22%3A%22%5BIdentifier%5D%22%2C%22onStart%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
       marginTop: 8,
       fontSize: 11,
       color: "var(--color-text-tertiary)",
       textAlign: "right"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:256:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "256", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22marginTop%22%3A8%2C%22fontSize%22%3A11%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22textAlign%22%3A%22right%22%7D%7D", children: "Нажмите на тему, чтобы узнать подробности" }) })
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:259:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "259", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22marginTop%22%3A8%2C%22fontSize%22%3A11%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22textAlign%22%3A%22right%22%7D%7D", children: "Нажмите на тему, чтобы узнать подробности" }) })
   ] });
 }
 function LaneColumn({
@@ -22917,7 +25714,7 @@ function LaneColumn({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
     display: "flex",
     flexDirection: "column"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:287:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "287", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexDirection%22%3A%22column%22%7D%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:290:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "290", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexDirection%22%3A%22column%22%7D%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       position: "sticky",
       top: 0,
@@ -22931,20 +25728,20 @@ function LaneColumn({
       // Subtle backdrop so sticky header stays readable when scrolling
       backdropFilter: "blur(8px)",
       WebkitBackdropFilter: "blur(8px)"
-    }, role: "columnheader", "aria-label": `${label}: ${completedCount} из ${topics.length} пройдено`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:290:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "290", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22position%22%3A%22sticky%22%2C%22top%22%3A0%2C%22zIndex%22%3A10%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22borderRadius%22%3A10%2C%22border%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderTop%22%3A%22%5BTemplateLiteral%5D%22%2C%22padding%22%3A%2210px%2012px%209px%22%2C%22marginBottom%22%3A6%2C%22backdropFilter%22%3A%22blur(8px)%22%2C%22WebkitBackdropFilter%22%3A%22blur(8px)%22%7D%2C%22role%22%3A%22columnheader%22%7D", children: [
+    }, role: "columnheader", "aria-label": `${label}: ${completedCount} из ${topics.length} пройдено`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:293:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "293", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22position%22%3A%22sticky%22%2C%22top%22%3A0%2C%22zIndex%22%3A10%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22borderRadius%22%3A10%2C%22border%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderTop%22%3A%22%5BTemplateLiteral%5D%22%2C%22padding%22%3A%2210px%2012px%209px%22%2C%22marginBottom%22%3A6%2C%22backdropFilter%22%3A%22blur(8px)%22%2C%22WebkitBackdropFilter%22%3A%22blur(8px)%22%7D%2C%22role%22%3A%22columnheader%22%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: 7
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:309:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "309", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22justifyContent%22%3A%22space-between%22%2C%22marginBottom%22%3A7%7D%7D", children: [
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:312:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "312", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22justifyContent%22%3A%22space-between%22%2C%22marginBottom%22%3A7%7D%7D", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
           fontSize: 11,
           fontWeight: 700,
           color,
           letterSpacing: "0.05em",
           textTransform: "uppercase"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:310:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "310", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A11%2C%22fontWeight%22%3A700%2C%22color%22%3A%22%5Bvar%3Acolor%5D%22%2C%22letterSpacing%22%3A%220.05em%22%2C%22textTransform%22%3A%22uppercase%22%7D%7D", children: label }),
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:313:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "313", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A11%2C%22fontWeight%22%3A700%2C%22color%22%3A%22%5Bvar%3Acolor%5D%22%2C%22letterSpacing%22%3A%220.05em%22%2C%22textTransform%22%3A%22uppercase%22%7D%7D", children: label }),
         isComplete ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
           fontSize: 9,
           fontWeight: 700,
@@ -22953,7 +25750,7 @@ function LaneColumn({
           border: "1px solid #97C459",
           borderRadius: 10,
           padding: "2px 6px"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:317:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "317", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A9%2C%22fontWeight%22%3A700%2C%22background%22%3A%22%23EAF3DE%22%2C%22color%22%3A%22%233B6D11%22%2C%22border%22%3A%221px%20solid%20%2397C459%22%2C%22borderRadius%22%3A10%2C%22padding%22%3A%222px%206px%22%7D%7D", children: "✓ Готово" }) : unlockedCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:320:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "320", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A9%2C%22fontWeight%22%3A700%2C%22background%22%3A%22%23EAF3DE%22%2C%22color%22%3A%22%233B6D11%22%2C%22border%22%3A%221px%20solid%20%2397C459%22%2C%22borderRadius%22%3A10%2C%22padding%22%3A%222px%206px%22%7D%7D", children: "✓ Готово" }) : unlockedCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
           fontSize: 9,
           fontWeight: 600,
           background: "#FAEEDA",
@@ -22961,7 +25758,7 @@ function LaneColumn({
           border: "1px solid #EF9F27",
           borderRadius: 10,
           padding: "2px 6px"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:324:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "324", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A9%2C%22fontWeight%22%3A600%2C%22background%22%3A%22%23FAEEDA%22%2C%22color%22%3A%22%23854F0B%22%2C%22border%22%3A%221px%20solid%20%23EF9F27%22%2C%22borderRadius%22%3A10%2C%22padding%22%3A%222px%206px%22%7D%7D", children: [
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:327:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "327", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A9%2C%22fontWeight%22%3A600%2C%22background%22%3A%22%23FAEEDA%22%2C%22color%22%3A%22%23854F0B%22%2C%22border%22%3A%221px%20solid%20%23EF9F27%22%2C%22borderRadius%22%3A10%2C%22padding%22%3A%222px%206px%22%7D%7D", children: [
           unlockedCount,
           " открыто"
         ] }) : null
@@ -22970,27 +25767,27 @@ function LaneColumn({
         display: "flex",
         alignItems: "center",
         gap: 7
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:334:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "334", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A7%7D%7D", children: [
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:337:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "337", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A7%7D%7D", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
           flex: 1,
           height: 5,
           borderRadius: 3,
           background: "var(--color-border-tertiary)",
           overflow: "hidden"
-        }, role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `${pct}% пройдено`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:335:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "335", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22height%22%3A5%2C%22borderRadius%22%3A3%2C%22background%22%3A%22var(--color-border-tertiary)%22%2C%22overflow%22%3A%22hidden%22%7D%2C%22role%22%3A%22progressbar%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+        }, role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `${pct}% пройдено`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:338:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "338", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22height%22%3A5%2C%22borderRadius%22%3A3%2C%22background%22%3A%22var(--color-border-tertiary)%22%2C%22overflow%22%3A%22hidden%22%7D%2C%22role%22%3A%22progressbar%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
           height: "100%",
           width: `${pct}%`,
           background: isComplete ? "#639922" : `linear-gradient(90deg, ${color}bb, ${color})`,
           borderRadius: 3,
           transition: "width 0.5s ease"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:346:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "346", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A%22100%25%22%2C%22width%22%3A%22%5BTemplateLiteral%5D%22%2C%22background%22%3A%22%5BConditionalExpression%5D%22%2C%22borderRadius%22%3A3%2C%22transition%22%3A%22width%200.5s%20ease%22%7D%7D" }) }),
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:349:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "349", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A%22100%25%22%2C%22width%22%3A%22%5BTemplateLiteral%5D%22%2C%22background%22%3A%22%5BConditionalExpression%5D%22%2C%22borderRadius%22%3A3%2C%22transition%22%3A%22width%200.5s%20ease%22%7D%7D" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
           fontSize: 10,
           color: "var(--color-text-tertiary)",
           flexShrink: 0,
           minWidth: 28,
           textAlign: "right"
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:355:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "355", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A10%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22flexShrink%22%3A0%2C%22minWidth%22%3A28%2C%22textAlign%22%3A%22right%22%7D%7D", children: [
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:358:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "358", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A10%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22flexShrink%22%3A0%2C%22minWidth%22%3A28%2C%22textAlign%22%3A%22right%22%7D%7D", children: [
           pct,
           "%"
         ] })
@@ -23001,9 +25798,9 @@ function LaneColumn({
       flexDirection: "column",
       gap: 5,
       padding: "2px 2px 6px"
-    }, role: "list", "aria-label": `Темы: ${label}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:365:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "365", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexDirection%22%3A%22column%22%2C%22gap%22%3A5%2C%22padding%22%3A%222px%202px%206px%22%7D%2C%22role%22%3A%22list%22%7D", children: topics.map((topic) => {
+    }, role: "list", "aria-label": `Темы: ${label}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:368:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "368", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexDirection%22%3A%22column%22%2C%22gap%22%3A5%2C%22padding%22%3A%222px%202px%206px%22%7D%2C%22role%22%3A%22list%22%7D", children: topics.map((topic) => {
       const state = deriveState(topic, progress);
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(TopicNode, { topic, state, accentColor: color, isSelected: selected === topic.id, isNext: topic.id === nextTopicId, onClick: () => onSelect(topic.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:376:12", "data-matrix-name": "TopicNode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "376", "data-component-file": "SkillTree.tsx", "data-component-name": "TopicNode", "data-component-content": "%7B%22topic%22%3A%22%5BIdentifier%5D%22%2C%22state%22%3A%22%5BIdentifier%5D%22%2C%22accentColor%22%3A%22%5BIdentifier%5D%22%2C%22isSelected%22%3A%22%5BBinaryExpression%5D%22%2C%22isNext%22%3A%22%5BBinaryExpression%5D%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }, topic.id);
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(TopicNode, { topic, state, accentColor: color, isSelected: selected === topic.id, isNext: topic.id === nextTopicId, onClick: () => onSelect(topic.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:379:12", "data-matrix-name": "TopicNode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "379", "data-component-file": "SkillTree.tsx", "data-component-name": "TopicNode", "data-component-content": "%7B%22topic%22%3A%22%5BIdentifier%5D%22%2C%22state%22%3A%22%5BIdentifier%5D%22%2C%22accentColor%22%3A%22%5BIdentifier%5D%22%2C%22isSelected%22%3A%22%5BBinaryExpression%5D%22%2C%22isNext%22%3A%22%5BBinaryExpression%5D%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }, topic.id);
     }) })
   ] });
 }
@@ -23066,7 +25863,7 @@ function TopicNode({
   const borderColor = isSelected ? cfg.borderSelected : isNext ? "#EF9F27" : cfg.border;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { role: "listitem", style: {
     animation: state === "unlocked" ? "st-fadein 0.3s ease both" : "none"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:471:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "471", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22role%22%3A%22listitem%22%2C%22style%22%3A%7B%22animation%22%3A%22%5BConditionalExpression%5D%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: interactive ? onClick : void 0, onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false), disabled: state === "locked", "aria-pressed": isSelected, "aria-label": `${topic.title}, ${cfg.ariaState}${topic.prerequisites.length > 0 ? `, требуется: ${topic.prerequisites.join(", ")}` : ""}`, "aria-disabled": state === "locked", style: {
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:474:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "474", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22role%22%3A%22listitem%22%2C%22style%22%3A%7B%22animation%22%3A%22%5BConditionalExpression%5D%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: interactive ? onClick : void 0, onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false), disabled: state === "locked", "aria-pressed": isSelected, "aria-label": `${topic.title}, ${cfg.ariaState}${topic.prerequisites.length > 0 ? `, требуется: ${topic.prerequisites.join(", ")}` : ""}`, "aria-disabled": state === "locked", style: {
     display: "flex",
     alignItems: "flex-start",
     gap: 10,
@@ -23094,7 +25891,7 @@ function TopicNode({
     e.currentTarget.style.boxShadow = `0 0 0 3px ${accentColor}80`;
   }, onBlur: (e) => {
     e.currentTarget.style.boxShadow = isSelected ? `0 0 0 2px ${accentColor}60, 0 2px 6px rgba(0,0,0,0.08)` : isNext ? "0 0 0 0 rgba(239,159,39,0.5), 0 2px 6px rgba(0,0,0,0.06)" : "0 1px 2px rgba(0,0,0,0.04)";
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:475:6", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "475", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BConditionalExpression%5D%22%2C%22onMouseEnter%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%2C%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22flex-start%22%2C%22gap%22%3A10%2C%22width%22%3A%22100%25%22%2C%22padding%22%3A%2210px%2010px%2010px%208px%22%2C%22background%22%3A%22%5Bvar%3Abg%5D%22%2C%22borderLeft%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderTop%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderRight%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderBottom%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderRadius%22%3A8%2C%22cursor%22%3A%22%5BConditionalExpression%5D%22%2C%22opacity%22%3A%22%5BMemberExpression%5D%22%2C%22textAlign%22%3A%22left%22%2C%22transition%22%3A%22background%200.12s%2C%20border-color%200.12s%2C%20box-shadow%200.15s%22%2C%22boxShadow%22%3A%22%5BConditionalExpression%5D%22%2C%22animation%22%3A%22%5BConditionalExpression%5D%22%2C%22outline%22%3A%22none%22%7D%2C%22onFocus%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onBlur%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:478:6", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "478", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BConditionalExpression%5D%22%2C%22onMouseEnter%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%2C%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22flex-start%22%2C%22gap%22%3A10%2C%22width%22%3A%22100%25%22%2C%22padding%22%3A%2210px%2010px%2010px%208px%22%2C%22background%22%3A%22%5Bvar%3Abg%5D%22%2C%22borderLeft%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderTop%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderRight%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderBottom%22%3A%22%5BTemplateLiteral%5D%22%2C%22borderRadius%22%3A8%2C%22cursor%22%3A%22%5BConditionalExpression%5D%22%2C%22opacity%22%3A%22%5BMemberExpression%5D%22%2C%22textAlign%22%3A%22left%22%2C%22transition%22%3A%22background%200.12s%2C%20border-color%200.12s%2C%20box-shadow%200.15s%22%2C%22boxShadow%22%3A%22%5BConditionalExpression%5D%22%2C%22animation%22%3A%22%5BConditionalExpression%5D%22%2C%22outline%22%3A%22none%22%7D%2C%22onFocus%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onBlur%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", style: {
       width: 26,
       height: 26,
@@ -23107,11 +25904,11 @@ function TopicNode({
       flexShrink: 0,
       color: cfg.iconColor,
       marginTop: 1
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:522:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "522", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22width%22%3A26%2C%22height%22%3A26%2C%22borderRadius%22%3A%2250%25%22%2C%22background%22%3A%22%5BMemberExpression%5D%22%2C%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22justifyContent%22%3A%22center%22%2C%22fontSize%22%3A%22%5BConditionalExpression%5D%22%2C%22flexShrink%22%3A0%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22marginTop%22%3A1%7D%7D", children: cfg.iconChar }),
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:525:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "525", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22width%22%3A26%2C%22height%22%3A26%2C%22borderRadius%22%3A%2250%25%22%2C%22background%22%3A%22%5BMemberExpression%5D%22%2C%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22justifyContent%22%3A%22center%22%2C%22fontSize%22%3A%22%5BConditionalExpression%5D%22%2C%22flexShrink%22%3A0%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22marginTop%22%3A1%7D%7D", children: cfg.iconChar }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
       flex: 1,
       minWidth: 0
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:539:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "539", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22minWidth%22%3A0%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:542:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "542", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22minWidth%22%3A0%7D%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         display: "block",
         fontSize: 12,
@@ -23119,7 +25916,7 @@ function TopicNode({
         color: cfg.text,
         lineHeight: 1.35,
         wordBreak: "break-word"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:540:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "540", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22block%22%2C%22fontSize%22%3A12%2C%22fontWeight%22%3A%22%5BConditionalExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22lineHeight%22%3A1.35%2C%22wordBreak%22%3A%22break-word%22%7D%7D", children: topic.title }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:543:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "543", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22block%22%2C%22fontSize%22%3A12%2C%22fontWeight%22%3A%22%5BConditionalExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22lineHeight%22%3A1.35%2C%22wordBreak%22%3A%22break-word%22%7D%7D", children: topic.title }),
       isNext && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         display: "inline-flex",
         alignItems: "center",
@@ -23131,7 +25928,7 @@ function TopicNode({
         background: "#FAC775",
         borderRadius: 4,
         padding: "1px 5px"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:552:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "552", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22inline-flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A3%2C%22marginTop%22%3A3%2C%22fontSize%22%3A10%2C%22fontWeight%22%3A700%2C%22color%22%3A%22%23854F0B%22%2C%22background%22%3A%22%23FAC775%22%2C%22borderRadius%22%3A4%2C%22padding%22%3A%221px%205px%22%7D%7D", children: "→ Следующая" })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:555:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "555", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22inline-flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A3%2C%22marginTop%22%3A3%2C%22fontSize%22%3A10%2C%22fontWeight%22%3A700%2C%22color%22%3A%22%23854F0B%22%2C%22background%22%3A%22%23FAC775%22%2C%22borderRadius%22%3A4%2C%22padding%22%3A%221px%205px%22%7D%7D", children: "→ Следующая" })
     ] })
   ] }) });
 }
@@ -23169,13 +25966,13 @@ function InfoPanel({
     border: "1px solid var(--color-border-secondary)",
     borderRadius: 12,
     animation: "st-fadein 0.2s ease both"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:588:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "588", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22role%22%3A%22region%22%2C%22style%22%3A%7B%22marginTop%22%3A12%2C%22padding%22%3A%2214px%2016px%22%2C%22background%22%3A%22var(--color-background-primary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-secondary)%22%2C%22borderRadius%22%3A12%2C%22animation%22%3A%22st-fadein%200.2s%20ease%20both%22%7D%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:591:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "591", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22role%22%3A%22region%22%2C%22style%22%3A%7B%22marginTop%22%3A12%2C%22padding%22%3A%2214px%2016px%22%2C%22background%22%3A%22var(--color-background-primary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-secondary)%22%2C%22borderRadius%22%3A12%2C%22animation%22%3A%22st-fadein%200.2s%20ease%20both%22%7D%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "flex",
       alignItems: "flex-start",
       gap: 10,
       marginBottom: 10
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:601:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "601", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22flex-start%22%2C%22gap%22%3A10%2C%22marginBottom%22%3A10%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:604:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "604", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22flex-start%22%2C%22gap%22%3A10%2C%22marginBottom%22%3A10%7D%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         background: tag.bg,
         color: tag.text,
@@ -23186,17 +25983,17 @@ function InfoPanel({
         borderRadius: 8,
         flexShrink: 0,
         whiteSpace: "nowrap"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:602:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "602", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22background%22%3A%22%5BMemberExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22border%22%3A%22%5BTemplateLiteral%5D%22%2C%22fontSize%22%3A11%2C%22fontWeight%22%3A700%2C%22padding%22%3A%223px%209px%22%2C%22borderRadius%22%3A8%2C%22flexShrink%22%3A0%2C%22whiteSpace%22%3A%22nowrap%22%7D%7D", children: tag.label }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:605:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "605", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22background%22%3A%22%5BMemberExpression%5D%22%2C%22color%22%3A%22%5BMemberExpression%5D%22%2C%22border%22%3A%22%5BTemplateLiteral%5D%22%2C%22fontSize%22%3A11%2C%22fontWeight%22%3A700%2C%22padding%22%3A%223px%209px%22%2C%22borderRadius%22%3A8%2C%22flexShrink%22%3A0%2C%22whiteSpace%22%3A%22nowrap%22%7D%7D", children: tag.label }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         fontSize: 15,
         fontWeight: 700,
         color: "var(--color-text-primary)",
         lineHeight: 1.3
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:610:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "610", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A15%2C%22fontWeight%22%3A700%2C%22color%22%3A%22var(--color-text-primary)%22%2C%22lineHeight%22%3A1.3%7D%7D", children: topic.title })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:613:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "613", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A15%2C%22fontWeight%22%3A700%2C%22color%22%3A%22var(--color-text-primary)%22%2C%22lineHeight%22%3A1.3%7D%7D", children: topic.title })
     ] }),
     topic.prerequisites.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       marginBottom: 12
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:621:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "621", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22marginBottom%22%3A12%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:624:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "624", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22marginBottom%22%3A12%7D%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
         fontSize: 11,
         fontWeight: 600,
@@ -23204,26 +26001,26 @@ function InfoPanel({
         textTransform: "uppercase",
         letterSpacing: "0.05em",
         marginBottom: 5
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:622:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "622", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A11%2C%22fontWeight%22%3A600%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22textTransform%22%3A%22uppercase%22%2C%22letterSpacing%22%3A%220.05em%22%2C%22marginBottom%22%3A5%7D%7D", children: "Требуется:" }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:625:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "625", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A11%2C%22fontWeight%22%3A600%2C%22color%22%3A%22var(--color-text-tertiary)%22%2C%22textTransform%22%3A%22uppercase%22%2C%22letterSpacing%22%3A%220.05em%22%2C%22marginBottom%22%3A5%7D%7D", children: "Требуется:" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
         display: "flex",
         flexWrap: "wrap",
         gap: 5
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:630:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "630", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexWrap%22%3A%22wrap%22%2C%22gap%22%3A5%7D%7D", children: topic.prerequisites.map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:633:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "633", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22flexWrap%22%3A%22wrap%22%2C%22gap%22%3A5%7D%7D", children: topic.prerequisites.map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         fontSize: 12,
         background: "var(--color-background-secondary)",
         border: "1px solid var(--color-border-tertiary)",
         borderRadius: 6,
         padding: "3px 9px",
         color: "var(--color-text-secondary)"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:632:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "632", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-tertiary)%22%2C%22borderRadius%22%3A6%2C%22padding%22%3A%223px%209px%22%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: titleOf(id) }, id)) })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:635:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "635", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-tertiary)%22%2C%22borderRadius%22%3A6%2C%22padding%22%3A%223px%209px%22%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: titleOf(id) }, id)) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "flex",
       gap: 8,
       alignItems: "center",
       flexWrap: "wrap"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:647:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "647", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22gap%22%3A8%2C%22alignItems%22%3A%22center%22%2C%22flexWrap%22%3A%22wrap%22%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:650:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "650", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22gap%22%3A8%2C%22alignItems%22%3A%22center%22%2C%22flexWrap%22%3A%22wrap%22%7D%7D", children: [
       state === "unlocked" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onStart, "aria-label": `Начать тему: ${topic.title}`, style: {
         padding: "8px 18px",
         background: "#EF9F27",
@@ -23240,7 +26037,7 @@ function InfoPanel({
       }, onMouseLeave: (e) => {
         e.currentTarget.style.background = "#EF9F27";
         e.currentTarget.style.color = "#412402";
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:649:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "649", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22style%22%3A%7B%22padding%22%3A%228px%2018px%22%2C%22background%22%3A%22%23EF9F27%22%2C%22color%22%3A%22%23412402%22%2C%22border%22%3A%221px%20solid%20%23BA7517%22%2C%22borderRadius%22%3A8%2C%22fontSize%22%3A13%2C%22fontWeight%22%3A700%2C%22cursor%22%3A%22pointer%22%2C%22transition%22%3A%22background%200.1s%22%7D%2C%22onMouseEnter%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: "Начать →" }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:652:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "652", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22style%22%3A%7B%22padding%22%3A%228px%2018px%22%2C%22background%22%3A%22%23EF9F27%22%2C%22color%22%3A%22%23412402%22%2C%22border%22%3A%221px%20solid%20%23BA7517%22%2C%22borderRadius%22%3A8%2C%22fontSize%22%3A13%2C%22fontWeight%22%3A700%2C%22cursor%22%3A%22pointer%22%2C%22transition%22%3A%22background%200.1s%22%7D%2C%22onMouseEnter%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: "Начать →" }),
       state === "completed" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onStart, "aria-label": `Повторить тему: ${topic.title}`, style: {
         padding: "8px 18px",
         background: "#EAF3DE",
@@ -23250,11 +26047,11 @@ function InfoPanel({
         fontSize: 13,
         fontWeight: 600,
         cursor: "pointer"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:669:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "669", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22style%22%3A%7B%22padding%22%3A%228px%2018px%22%2C%22background%22%3A%22%23EAF3DE%22%2C%22color%22%3A%22%2327500A%22%2C%22border%22%3A%221px%20solid%20%23639922%22%2C%22borderRadius%22%3A8%2C%22fontSize%22%3A13%2C%22fontWeight%22%3A600%2C%22cursor%22%3A%22pointer%22%7D%7D", children: "↺ Повторить" }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:672:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "672", "data-component-file": "SkillTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22style%22%3A%7B%22padding%22%3A%228px%2018px%22%2C%22background%22%3A%22%23EAF3DE%22%2C%22color%22%3A%22%2327500A%22%2C%22border%22%3A%221px%20solid%20%23639922%22%2C%22borderRadius%22%3A8%2C%22fontSize%22%3A13%2C%22fontWeight%22%3A600%2C%22cursor%22%3A%22pointer%22%7D%7D", children: "↺ Повторить" }),
       state === "locked" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         fontSize: 12,
         color: "var(--color-text-tertiary)"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:686:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "686", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-tertiary)%22%7D%7D", children: "Пройдите предыдущие темы, чтобы открыть" })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:689:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "689", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-tertiary)%22%7D%7D", children: "Пройдите предыдущие темы, чтобы открыть" })
     ] })
   ] });
 }
@@ -23271,22 +26068,22 @@ function ProgressBar({
     border: "1px solid var(--color-border-tertiary)",
     borderRadius: 12,
     padding: "8px 14px"
-  }, role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `Общий прогресс: ${pct}%`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:699:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "699", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22minWidth%22%3A200%2C%22maxWidth%22%3A360%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-tertiary)%22%2C%22borderRadius%22%3A12%2C%22padding%22%3A%228px%2014px%22%7D%2C%22role%22%3A%22progressbar%22%7D", children: [
+  }, role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `Общий прогресс: ${pct}%`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:702:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "702", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22flex%22%3A1%2C%22minWidth%22%3A200%2C%22maxWidth%22%3A360%2C%22background%22%3A%22var(--color-background-secondary)%22%2C%22border%22%3A%221px%20solid%20var(--color-border-tertiary)%22%2C%22borderRadius%22%3A12%2C%22padding%22%3A%228px%2014px%22%7D%2C%22role%22%3A%22progressbar%22%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "baseline",
       marginBottom: 5
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:709:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "709", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22justifyContent%22%3A%22space-between%22%2C%22alignItems%22%3A%22baseline%22%2C%22marginBottom%22%3A5%7D%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:712:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "712", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22justifyContent%22%3A%22space-between%22%2C%22alignItems%22%3A%22baseline%22%2C%22marginBottom%22%3A5%7D%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
         fontSize: 12,
         fontWeight: 600,
         color: "var(--color-text-secondary)"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:713:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "713", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22fontWeight%22%3A600%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: "Общий прогресс" }),
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:716:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "716", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22fontWeight%22%3A600%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: "Общий прогресс" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
         fontSize: 12,
         color: "var(--color-text-tertiary)"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:716:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "716", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-tertiary)%22%7D%7D", children: [
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:719:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "719", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-tertiary)%22%7D%7D", children: [
         completed,
         " / ",
         total,
@@ -23298,13 +26095,13 @@ function ProgressBar({
       borderRadius: 4,
       background: "var(--color-border-tertiary)",
       overflow: "hidden"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:720:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "720", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A7%2C%22borderRadius%22%3A4%2C%22background%22%3A%22var(--color-border-tertiary)%22%2C%22overflow%22%3A%22hidden%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:723:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "723", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A7%2C%22borderRadius%22%3A4%2C%22background%22%3A%22var(--color-border-tertiary)%22%2C%22overflow%22%3A%22hidden%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
       height: "100%",
       width: `${pct}%`,
       background: pct === 100 ? "#639922" : `linear-gradient(90deg, #639922 0%, #97C459 100%)`,
       borderRadius: 4,
       transition: "width 0.5s ease"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:725:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "725", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A%22100%25%22%2C%22width%22%3A%22%5BTemplateLiteral%5D%22%2C%22background%22%3A%22%5BConditionalExpression%5D%22%2C%22borderRadius%22%3A4%2C%22transition%22%3A%22width%200.5s%20ease%22%7D%7D" }) })
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:728:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "728", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22height%22%3A%22100%25%22%2C%22width%22%3A%22%5BTemplateLiteral%5D%22%2C%22background%22%3A%22%5BConditionalExpression%5D%22%2C%22borderRadius%22%3A4%2C%22transition%22%3A%22width%200.5s%20ease%22%7D%7D" }) })
   ] });
 }
 function StateLegend() {
@@ -23313,7 +26110,7 @@ function StateLegend() {
     gap: 14,
     alignItems: "center",
     flexWrap: "wrap"
-  }, "aria-label": "Обозначения", role: "note", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:743:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "743", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22gap%22%3A14%2C%22alignItems%22%3A%22center%22%2C%22flexWrap%22%3A%22wrap%22%7D%2C%22role%22%3A%22note%22%7D", children: [{
+  }, "aria-label": "Обозначения", role: "note", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:746:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "746", "data-component-file": "SkillTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22gap%22%3A14%2C%22alignItems%22%3A%22center%22%2C%22flexWrap%22%3A%22wrap%22%7D%2C%22role%22%3A%22note%22%7D", children: [{
     icon: "🔒",
     label: "Закрыто",
     color: "#B4B2A9"
@@ -23335,10 +26132,10 @@ function StateLegend() {
     gap: 5,
     fontSize: 12,
     color: "var(--color-text-secondary)"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:753:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "753", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A5%2C%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:756:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "756", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22display%22%3A%22flex%22%2C%22alignItems%22%3A%22center%22%2C%22gap%22%3A5%2C%22fontSize%22%3A12%2C%22color%22%3A%22var(--color-text-secondary)%22%7D%7D", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", style: {
       color
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:757:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "757", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22color%22%3A%22%5Bvar%3Acolor%5D%22%7D%7D", children: icon }),
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx:760:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SkillTree/SkillTree.tsx", "data-component-line": "760", "data-component-file": "SkillTree.tsx", "data-component-name": "span", "data-component-content": "%7B%22style%22%3A%7B%22color%22%3A%22%5Bvar%3Acolor%5D%22%7D%7D", children: icon }),
     label
   ] }, label)) });
 }
@@ -29115,4 +31912,4 @@ const queryClient = new QueryClient({
   }
 });
 clientExports.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.StrictMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:18:2", "data-matrix-name": "StrictMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "18", "data-component-file": "main.tsx", "data-component-name": "StrictMode", children: /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:19:4", "data-matrix-name": "QueryClientProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "19", "data-component-file": "main.tsx", "data-component-name": "QueryClientProvider", "data-component-content": "%7B%22client%22%3A%22%5BIdentifier%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorBoundary, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:21:8", "data-matrix-name": "App", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "21", "data-component-file": "main.tsx", "data-component-name": "App" }) }) }) }));
-//# sourceMappingURL=index-DF8hTkSr.js.map
+//# sourceMappingURL=index-C98UkAPO.js.map
