@@ -4,7 +4,7 @@
  * Tests all problem templates by generating 1000 variants per difficulty level
  */
 
-import { problemTemplates } from '../src/lib/problemTemplates';
+import { problemTemplates } from '../src/lib/templates/index';
 import { generateProblem } from '../src/lib/engine/variantGenerator';
 import { ProblemTemplate } from '../src/lib/types';
 

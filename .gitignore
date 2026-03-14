@@ -23,3 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 release/
+
+# Секретные ключи и настройки окружения
+.env
+.env.local
+.env.*.local
+
+# Файлы данных (если не хочешь хранить 150к задач в репозитории)
+public/problems.json
+problems.json

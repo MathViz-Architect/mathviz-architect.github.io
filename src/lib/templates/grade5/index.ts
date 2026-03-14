@@ -1,0 +1,1604 @@
+import { ProblemTemplate } from '../../types';
+
+export const grade5Templates: ProblemTemplate[] = [
+    // ===== ALGEBRA - Comparison =====
+    {
+        id: 'grade5-comparison',
+        class: 5,
+        subject: 'algebra',
+        section: 'Числа и операции',
+        topic: 'comparison',
+        topic_title: 'Сравнение чисел',
+        problemType: 'comparison',
+        skills: ['addition'],
+        difficulties: {
+            1: {
+                template: 'Сравните числа {a} и {b}. Выберите правильный знак.',
+                parameters: {
+                    a: { type: 'int', min: 10, max: 99 },
+                    b: { type: 'int', min: 10, max: 99 },
+                },
+                answer_formula: 'a > b ? ">" : a < b ? "<" : "="',
+                hint: 'Сравните числа поразрядно: десятки, затем единицы',
+            },
+            2: {
+                template: 'Сравните числа {a} и {b}. Выберите правильный знак.',
+                parameters: {
+                    a: { type: 'int', min: 100, max: 999 },
+                    b: { type: 'int', min: 100, max: 999 },
+                },
+                answer_formula: 'a > b ? ">" : a < b ? "<" : "="',
+                hint: 'Сравните числа поразрядно: сотни, десятки, единицы',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Arithmetic =====
+    {
+        id: 'grade5-arithmetic',
+        class: 5,
+        subject: 'algebra',
+        section: 'Арифметические операции',
+        topic: 'arithmetic',
+        topic_title: 'Порядок действий',
+        problemType: 'numeric',
+        skills: ['multiplication', 'addition'],
+        difficulties: {
+            1: {
+                template: 'Вычислите: {a} + {b} × {c} = ?',
+                parameters: {
+                    a: { type: 'int', min: 10, max: 50 },
+                    b: { type: 'int', min: 2, max: 9 },
+                    c: { type: 'int', min: 2, max: 9 },
+                },
+                answer_formula: 'a + b * c',
+                hint: 'Сначала выполните умножение, затем сложение (порядок действий)',
+            },
+            2: {
+                template: 'Вычислите: {a} × {b} − {c} = ?',
+                parameters: {
+                    a: { type: 'int', min: 2, max: 12 },
+                    b: { type: 'int', min: 2, max: 12 },
+                    c: { type: 'int', min: 1, max: 20 },
+                },
+                constraints: ['a * b - c > 0'],
+                answer_formula: 'a * b - c',
+                hint: 'Сначала выполните умножение, затем вычитание',
+            },
+            3: {
+                template: 'Вычислите: ({a} + {b}) × {c} = ?',
+                parameters: {
+                    a: { type: 'int', min: 2, max: 10 },
+                    b: { type: 'int', min: 2, max: 10 },
+                    c: { type: 'int', min: 2, max: 9 },
+                },
+                answer_formula: '(a + b) * c',
+                hint: 'Сначала выполните действие в скобках, затем умножение',
+            },
+        },
+    },
+
+    // ===== LOGIC - Patterns/Sequences =====
+    {
+        id: 'grade5-patterns',
+        class: 5,
+        subject: 'logic',
+        section: 'Закономерности',
+        topic: 'patterns',
+        topic_title: 'Числовые последовательности',
+        problemType: 'numeric',
+        skills: ['pattern', 'sequence'],
+        difficulties: {
+            1: {
+                template: 'Найдите следующее число в последовательности: {t1}, {t2}, {t3}, {t4}, ?',
+                parameters: {
+                    a0: { type: 'int', min: 1, max: 10 },
+                    d: { type: 'int', min: 1, max: 5 },
+                    t1: { type: 'expression', value: 'a0' },
+                    t2: { type: 'expression', value: 'a0 + d' },
+                    t3: { type: 'expression', value: 'a0 + d * 2' },
+                    t4: { type: 'expression', value: 'a0 + d * 3' },
+                },
+                answer_formula: 'a0 + d * 4',
+                hint: 'Найдите разность между соседними числами',
+            },
+            2: {
+                template: 'Найдите следующее число в последовательности: {t1}, {t2}, {t3}, {t4}, ?',
+                parameters: {
+                    a0: { type: 'int', min: 1, max: 5 },
+                    r: { type: 'int', min: 2, max: 3 },
+                    t1: { type: 'expression', value: 'a0' },
+                    t2: { type: 'expression', value: 'a0 * r' },
+                    t3: { type: 'expression', value: 'a0 * r * r' },
+                    t4: { type: 'expression', value: 'a0 * r * r * r' },
+                },
+                answer_formula: 'a0 * r * r * r * r',
+                hint: 'Каждое следующее число получается умножением предыдущего на одно и то же число',
+            },
+            3: {
+                template: 'Найдите пропущенное число: {t1}, {t2}, ?, {t4}, {t5}',
+                parameters: {
+                    a0: { type: 'int', min: 2, max: 8 },
+                    d: { type: 'int', min: 2, max: 6 },
+                    t1: { type: 'expression', value: 'a0' },
+                    t2: { type: 'expression', value: 'a0 + d' },
+                    t4: { type: 'expression', value: 'a0 + d * 3' },
+                    t5: { type: 'expression', value: 'a0 + d * 4' },
+                },
+                answer_formula: 'a0 + d * 2',
+                hint: 'Найдите разность между соседними числами',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Divisors =====
+    {
+        id: 'grade5-divisors',
+        class: 5,
+        subject: 'algebra',
+        section: 'Делимость',
+        topic: 'divisors',
+        topic_title: 'Делимость на 2',
+        problemType: 'numeric',
+        skills: ['divisibility'],
+        difficulties: {
+            1: {
+                template: 'Число {n} делится на 2 без остатка?',
+                parameters: {
+                    n: { type: 'int', min: 10, max: 99 },
+                },
+                answer_formula: 'n % 2 === 0 ? 1 : 0',
+                hint: 'Число делится на 2, если его последняя цифра чётная (0, 2, 4, 6, 8). Ответьте 1 (да) или 0 (нет)',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Simple Equations =====
+    {
+        id: 'grade5-equations',
+        class: 5,
+        subject: 'algebra',
+        section: 'Простые уравнения',
+        topic: 'arithmetic',
+        topic_title: 'Решение уравнений',
+        problemType: 'numeric',
+        skills: ['addition', 'subtraction'],
+        difficulties: {
+            1: {
+                template: 'Решите уравнение: x + {a} = {b}',
+                parameters: {
+                    a: { type: 'int', min: 5, max: 20 },
+                    b: { type: 'int', min: 15, max: 50 },
+                },
+                constraints: ['b > a'],
+                answer_formula: 'b - a',
+                hint: 'Чтобы найти x, вычтите {a} из обеих частей уравнения',
+            },
+            2: {
+                template: 'Решите уравнение: {a} × x = {b}',
+                parameters: {
+                    a: { type: 'int', min: 2, max: 9 },
+                    x: { type: 'int', min: 2, max: 12 },
+                    b: { type: 'expression', value: 'a * x' },
+                },
+                answer_formula: 'x',
+                hint: 'Чтобы найти x, разделите {b} на {a}',
+            },
+            3: {
+                template: 'Решите уравнение: x − {a} = {b}',
+                parameters: {
+                    a: { type: 'int', min: 5, max: 15 },
+                    b: { type: 'int', min: 10, max: 30 },
+                },
+                answer_formula: 'a + b',
+                hint: 'Чтобы найти x, прибавьте {a} к обеим частям уравнения',
+            },
+        },
+    },
+
+    // ===== GEOMETRY - Perimeter =====
+    {
+        id: 'grade5-perimeter',
+        class: 5,
+        subject: 'geometry',
+        section: 'Периметр и площадь',
+        topic: 'perimeter',
+        topic_title: 'Периметр фигур',
+        problemType: 'numeric',
+        skills: ['perimeter', 'multiplication', 'addition'],
+        difficulties: {
+            1: {
+                template: 'Прямоугольник имеет длину {a} см и ширину {b} см. Чему равен его периметр?',
+                parameters: {
+                    a: { type: 'int', min: 3, max: 20 },
+                    b: { type: 'int', min: 3, max: 20 },
+                },
+                constraints: ['a !== b'],
+                answer_formula: '2 * (a + b)',
+                hint: 'Периметр = 2 × (длина + ширина)',
+                solution: [
+                    { explanation: 'Периметр прямоугольника — сумма всех четырёх сторон' },
+                    { explanation: 'Две длины и две ширины:', expression: '2 × {a} + 2 × {b}' },
+                    { explanation: 'Считаем:', expression: '2 × ({a} + {b})', result: '{answer} см' },
+                ],
+                common_mistakes: [
+                    { pattern: 'a + b', feedback: 'Ты сложил стороны только один раз. Периметр = 2 × (a + b).' },
+                    { pattern: 'a * b', feedback: 'Это формула площади, а не периметра.' },
+                ],
+            },
+            2: {
+                template: 'Квадрат имеет сторону {a} см. Чему равен его периметр?',
+                parameters: {
+                    a: { type: 'int', min: 3, max: 15 },
+                },
+                answer_formula: '4 * a',
+                hint: 'Периметр квадрата = 4 × сторона',
+                common_mistakes: [
+                    { pattern: 'a', feedback: 'Это длина одной стороны. Периметр квадрата = 4 × сторона.' },
+                    { pattern: 'a * a', feedback: 'Это формула площади квадрата, а не периметра.' },
+                    { pattern: '2 * a', feedback: 'Ты умножил на 2, но у квадрата 4 стороны.' },
+                ],
+            },
+        },
+    },
+
+    // ===== GEOMETRY - Area =====
+    {
+        id: 'grade5-area',
+        class: 5,
+        subject: 'geometry',
+        section: 'Периметр и площадь',
+        topic: 'area',
+        topic_title: 'Площадь фигур',
+        problemType: 'numeric',
+        relatedModule: 'coordinate-plane',
+        skills: ['area', 'multiplication'],
+        difficulties: {
+            1: {
+                template: 'Прямоугольник имеет длину {a} см и ширину {b} см. Чему равна его площадь?',
+                parameters: {
+                    a: { type: 'int', min: 3, max: 15 },
+                    b: { type: 'int', min: 3, max: 15 },
+                },
+                constraints: ['a !== b'],
+                answer_formula: 'a * b',
+                hint: 'Площадь = длина × ширина',
+                solution: [
+                    { explanation: 'Площадь прямоугольника вычисляется по формуле:', expression: 'Площадь = длина × ширина' },
+                    { explanation: 'Подставляем значения:', expression: '{a} × {b}' },
+                    { explanation: 'Ответ:', result: '{answer} см²' },
+                ],
+                common_mistakes: [
+                    { pattern: '2 * (a + b)', feedback: 'Это формула периметра, а не площади. Площадь = длина × ширина.' },
+                    { pattern: 'a + b', feedback: 'Площадь считается умножением, а не сложением.' },
+                ],
+            },
+            2: {
+                template: 'Квадрат имеет сторону {a} см. Чему равна его площадь?',
+                parameters: {
+                    a: { type: 'int', min: 3, max: 12 },
+                },
+                answer_formula: 'a * a',
+                hint: 'Площадь квадрата = сторона × сторона',
+                common_mistakes: [
+                    { pattern: '4 * a', feedback: 'Это формула периметра квадрата. Площадь = сторона × сторона.' },
+                    { pattern: 'a', feedback: 'Это длина стороны. Площадь квадрата = сторона².' },
+                ],
+            },
+            3: {
+                template: 'Квадрат имеет площадь {s} см². Чему равна его сторона?',
+                parameters: {
+                    a: { type: 'int', min: 2, max: 10 },
+                    s: { type: 'expression', value: 'a * a' },
+                },
+                answer_formula: 'a',
+                hint: 'Сторона квадрата = √площадь',
+            },
+        },
+    },
+
+    // ===== GEOMETRY - Triangle Types =====
+    {
+        id: 'grade5-triangle',
+        class: 5,
+        subject: 'geometry',
+        section: 'Треугольники',
+        topic: 'triangles',
+        topic_title: 'Свойства треугольников',
+        problemType: 'text',
+        relatedModule: 'triangle-similarity',
+        skills: ['area', 'angle'],
+        difficulties: {
+            1: {
+                template: 'В треугольнике два угла равны {a}° и {b}°. Чему равен третий угол?',
+                parameters: {
+                    a: { type: 'int', min: 30, max: 70 },
+                    b: { type: 'int', min: 30, max: 70 },
+                },
+                constraints: ['a + b < 180'],
+                answer_formula: '180 - a - b',
+                hint: 'Сумма углов в треугольнике равна 180°',
+                common_mistakes: [
+                    { pattern: 'a + b', feedback: 'Сумма углов треугольника равна 180°. Третий угол = 180 − a − b.' },
+                    { pattern: '90 - a - b', feedback: 'Сумма углов треугольника равна 180°, а не 90°.' },
+                ],
+            },
+            2: {
+                template: 'Треугольник имеет стороны {a} см, {b} см и {c} см. Какой это треугольник? (равносторонний, равнобедренный или разносторонний)',
+                parameters: {
+                    type: { type: 'choice', values: ['equilateral', 'isosceles', 'scalene'] },
+                    a: { type: 'int', min: 3, max: 10 },
+                    b: { type: 'expression', value: 'type === "equilateral" ? a : type === "isosceles" ? a : a + 1' },
+                    c: { type: 'expression', value: 'type === "equilateral" ? a : type === "isosceles" ? a + 2 : a + 2' },
+                },
+                answer_formula: 'type === "equilateral" ? "равносторонний" : type === "isosceles" ? "равнобедренный" : "разносторонний"',
+                hint: 'Равносторонний: все стороны равны. Равнобедренный: две стороны равны. Разносторонний: все стороны разные',
+            },
+            3: {
+                template: 'Можно ли построить треугольник со сторонами {a} см, {b} см и {c} см? Ответьте 1 (да) или 0 (нет)',
+                parameters: {
+                    a: { type: 'int', min: 2, max: 10 },
+                    b: { type: 'int', min: 2, max: 10 },
+                    c: { type: 'int', min: 2, max: 10 },
+                },
+                answer_formula: '(a + b > c && a + c > b && b + c > a) ? 1 : 0',
+                hint: 'Неравенство треугольника: сумма любых двух сторон должна быть больше третьей',
+            },
+        },
+    },
+
+    // ===== LOGIC - Magic Squares =====
+    {
+        id: 'grade5-magic',
+        class: 5,
+        subject: 'logic',
+        section: 'Логические задачи',
+        topic: 'magicSquare',
+        topic_title: 'Магический квадрат',
+        problemType: 'magicSquare',
+        skills: ['logical_reasoning', 'addition'],
+        difficulties: {
+            1: {
+                template: 'В магическом квадрате сумма чисел в каждой строке, столбце и диагонали равна {magicSum}. Найдите пропущенное число.',
+                parameters: {
+                    offset: { type: 'int', min: 0, max: 3 },
+                    // Base magic square: [2,7,6, 9,5,1, 4,3,8] with sum=15
+                    // Add offset*3 to each cell, sum becomes 15 + offset*9
+                    magicSum: { type: 'expression', value: '15 + offset * 9' },
+                    // Generate all 9 cells
+                    c0: { type: 'expression', value: '2 + offset * 3' },
+                    c1: { type: 'expression', value: '7 + offset * 3' },
+                    c2: { type: 'expression', value: '6 + offset * 3' },
+                    c3: { type: 'expression', value: '9 + offset * 3' },
+                    c4: { type: 'expression', value: '5 + offset * 3' },
+                    c5: { type: 'expression', value: '1 + offset * 3' },
+                    c6: { type: 'expression', value: '4 + offset * 3' },
+                    c7: { type: 'expression', value: '3 + offset * 3' },
+                    c8: { type: 'expression', value: '8 + offset * 3' },
+                    // Hide center cell (index 4)
+                    hiddenIndex: { type: 'expression', value: '4' },
+                },
+                answer_formula: 'c4',
+                hint: 'Найдите сумму строки или столбца с двумя известными числами, затем вычтите их из магической суммы',
+            },
+            2: {
+                template: 'В магическом квадрате сумма чисел в каждой строке, столбце и диагонали равна {magicSum}. Найдите пропущенное число.',
+                parameters: {
+                    offset: { type: 'int', min: 1, max: 5 },
+                    magicSum: { type: 'expression', value: '15 + offset * 9' },
+                    c0: { type: 'expression', value: '2 + offset * 3' },
+                    c1: { type: 'expression', value: '7 + offset * 3' },
+                    c2: { type: 'expression', value: '6 + offset * 3' },
+                    c3: { type: 'expression', value: '9 + offset * 3' },
+                    c4: { type: 'expression', value: '5 + offset * 3' },
+                    c5: { type: 'expression', value: '1 + offset * 3' },
+                    c6: { type: 'expression', value: '4 + offset * 3' },
+                    c7: { type: 'expression', value: '3 + offset * 3' },
+                    c8: { type: 'expression', value: '8 + offset * 3' },
+                    // Hide corner cell (index 0)
+                    hiddenIndex: { type: 'expression', value: '0' },
+                },
+                answer_formula: 'c0',
+                hint: 'Используйте диагональ или строку/столбец с двумя известными числами',
+            },
+            3: {
+                template: 'В магическом квадрате сумма чисел в каждой строке, столбце и диагонали равна {magicSum}. Найдите пропущенное число.',
+                parameters: {
+                    offset: { type: 'int', min: 2, max: 6 },
+                    magicSum: { type: 'expression', value: '15 + offset * 9' },
+                    c0: { type: 'expression', value: '2 + offset * 3' },
+                    c1: { type: 'expression', value: '7 + offset * 3' },
+                    c2: { type: 'expression', value: '6 + offset * 3' },
+                    c3: { type: 'expression', value: '9 + offset * 3' },
+                    c4: { type: 'expression', value: '5 + offset * 3' },
+                    c5: { type: 'expression', value: '1 + offset * 3' },
+                    c6: { type: 'expression', value: '4 + offset * 3' },
+                    c7: { type: 'expression', value: '3 + offset * 3' },
+                    c8: { type: 'expression', value: '8 + offset * 3' },
+                    // Hide edge cell (index 7)
+                    hiddenIndex: { type: 'expression', value: '7' },
+                },
+                answer_formula: 'c7',
+                hint: 'Проверьте нижнюю строку и средний столбец - в них есть два известных числа',
+                solution: [
+                    { explanation: 'Магическая сумма равна {magicSum}' },
+                    { explanation: 'Найдем пропущенное число в нижней строке:', expression: '{c6} + ? + {c8} = {magicSum}' },
+                    { explanation: 'Вычисляем:', expression: '? = {magicSum} - {c6} - {c8} = {answer}' },
+                ],
+            },
+        },
+    },
+
+    // ===== OLYMPIAD LEVEL (Difficulty 4) =====
+    {
+        id: 'grade5-olympiad',
+        class: 5,
+        subject: 'logic',
+        section: 'Олимпиадные задачи',
+        topic: 'olympiad',
+        topic_title: 'Олимпиадные задачи',
+        problemType: 'numeric',
+        skills: ['logical_reasoning'],
+        difficulties: {
+            4: {
+                template: 'В ребусе AB + BA = {sum}, где A и B — разные цифры. Найдите значение A (большую цифру).',
+                parameters: {
+                    a: { type: 'int', min: 2, max: 8 },
+                    b: { type: 'int', min: 1, max: 7 },
+                    sum: { type: 'expression', value: '(a * 10 + b) + (b * 10 + a)' },
+                },
+                constraints: ['a !== b', 'a > b'],
+                answer_formula: 'a',
+                hint: 'AB + BA = (10A + B) + (10B + A) = 11A + 11B = 11(A + B). Разделите {sum} на 11, затем найдите A и B.',
+                solution: [
+                    { explanation: 'Запишем двузначные числа через разряды:', expression: 'AB = 10A + B, BA = 10B + A' },
+                    { explanation: 'Сложим их:', expression: '(10A + B) + (10B + A) = 11A + 11B = 11(A + B)' },
+                    { explanation: 'Получаем:', expression: '11(A + B) = {sum}' },
+                    { explanation: 'Делим на 11:', expression: 'A + B = {sum} ÷ 11' },
+                    { explanation: 'Так как A > B и оба — цифры, находим A =', result: '{answer}' },
+                ],
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Decimals =====
+    {
+        id: 'grade5-decimals',
+        class: 5,
+        subject: 'algebra',
+        section: 'Десятичные дроби',
+        topic: 'decimals',
+        topic_title: 'Десятичные дроби',
+        problemType: 'numeric',
+        relatedModule: 'linear',
+        skills: ['decimal_add', 'decimal_mul', 'addition'],
+        difficulties: {
+            1: {
+                template: 'Вычислите: {aDecimal} + {bDecimal} = ?',
+                parameters: {
+                    a: { type: 'int', min: 1, max: 9 },
+                    b: { type: 'int', min: 1, max: 9 },
+                    aDecimal: { type: 'expression', value: 'a / 10' },
+                    bDecimal: { type: 'expression', value: 'b / 10' },
+                },
+                answer_formula: '(a + b) / 10',
+                hint: 'Складывайте десятичные дроби поразрядно',
+                common_mistakes: [
+                    { pattern: 'a + b', feedback: 'Не забудьте про запятую! Ответ должен быть десятичной дробью.' },
+                ],
+            },
+            2: {
+                template: 'Вычислите: {aDecimal} × {b} = ?',
+                parameters: {
+                    a: { type: 'int', min: 1, max: 9 },
+                    b: { type: 'int', min: 2, max: 9 },
+                    aDecimal: { type: 'expression', value: 'a / 10' },
+                },
+                answer_formula: '(a * b) / 10',
+                hint: 'Умножьте {aDecimal} на {b}. После умножения перенесите запятую на один знак влево.',
+                common_mistakes: [
+                    { pattern: 'a * b', feedback: 'Не забудьте про запятую в ответе!' },
+                ],
+            },
+            3: {
+                template: 'Вычислите: {aDecimal} − {bDecimal} = ?',
+                parameters: {
+                    a: { type: 'int', min: 2, max: 9 },
+                    b: { type: 'int', min: 1, max: 9 },
+                    c: { type: 'int', min: 1, max: 9 },
+                    aDecimal: { type: 'expression', value: 'a + b / 10' },
+                    bDecimal: { type: 'expression', value: 'c / 10' },
+                },
+                constraints: ['a + b / 10 > c / 10', 'b !== c'],
+                answer_formula: 'a + (b - c) / 10',
+                hint: 'Вычитайте поразрядно: сначала целые части, затем десятые',
+                solution: [
+                    { explanation: 'Вычитаем десятые доли:', expression: '{b}/10 − {c}/10' },
+                    { explanation: 'Прибавляем целую часть:', expression: '{a} + ({b} − {c})/10', result: '{answer}' },
+                ],
+                common_mistakes: [
+                    { pattern: 'a', feedback: 'Не забудьте вычесть десятые доли.' },
+                ],
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Fractions Comparison =====
+    {
+        id: 'grade5-fractions-comparison',
+        class: 5,
+        subject: 'algebra',
+        section: 'Обыкновенные дроби',
+        topic: 'fractionsIntro',
+        topic_title: 'Сравнение дробей',
+        problemType: 'comparison',
+        skills: ['fraction_concept', 'fraction_compare'],
+        difficulties: {
+            1: {
+                template: 'Сравните дроби {a}/{d} и {b}/{d}. Выберите правильный знак.',
+                parameters: {
+                    d: { type: 'int', min: 3, max: 8 },
+                    a: { type: 'int', min: 1, max: 7 },
+                    b: { type: 'int', min: 1, max: 7 },
+                },
+                constraints: ['a < d', 'b < d', 'a !== b'],
+                answer_formula: 'a > b ? ">" : a < b ? "<" : "="',
+                hint: 'Если знаменатели равны, сравните числители',
+            },
+            2: {
+                template: 'Сравните дроби {a}/{d1} и {b}/{d2}, где {d1} и {d2} — разные знаменатели. Приведите к общему знаменателю {lcm} и выберите знак.',
+                parameters: {
+                    d1: { type: 'choice', values: [2, 3, 4] },
+                    d2: { type: 'choice', values: [3, 4, 6] },
+                    a: { type: 'int', min: 1, max: 2 },
+                    b: { type: 'int', min: 1, max: 3 },
+                    lcm: { type: 'expression', value: 'd1 === 2 && d2 === 3 ? 6 : d1 === 2 && d2 === 4 ? 4 : d1 === 2 && d2 === 6 ? 6 : d1 === 3 && d2 === 4 ? 12 : d1 === 3 && d2 === 6 ? 6 : d1 === 4 && d2 === 6 ? 12 : 12' },
+                    a1: { type: 'expression', value: 'a * (lcm / d1)' },
+                    b1: { type: 'expression', value: 'b * (lcm / d2)' },
+                },
+                constraints: ['d1 !== d2', 'a < d1', 'b < d2'],
+                answer_formula: 'a1 > b1 ? ">" : a1 < b1 ? "<" : "="',
+                hint: 'Приведите дроби к общему знаменателю {lcm}, затем сравните числители',
+            },
+            3: {
+                template: 'Сравните дроби {a}/{d} и {b}/{d}. Выберите правильный знак.',
+                parameters: {
+                    d: { type: 'int', min: 5, max: 12 },
+                    a: { type: 'int', min: 1, max: 10 },
+                    b: { type: 'int', min: 1, max: 10 },
+                },
+                constraints: ['a < d', 'b < d', 'a !== b'],
+                answer_formula: 'a > b ? ">" : a < b ? "<" : "="',
+                hint: 'Если знаменатели равны, сравните числители',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Fractions Operations =====
+    {
+        id: 'grade5-fractions-intro',
+        class: 5,
+        subject: 'algebra',
+        section: 'Обыкновенные дроби',
+        topic: 'fractionsIntro',
+        topic_title: 'Действия с дробями',
+        problemType: 'numeric',
+        skills: ['fraction_add', 'fraction_concept'],
+        difficulties: {
+            1: {
+                template: 'Вычислите: {a}/{d} + {b}/{d} = ?',
+                parameters: {
+                    d: { type: 'int', min: 4, max: 10 },
+                    a: { type: 'int', min: 1, max: 5 },
+                    b: { type: 'int', min: 1, max: 5 },
+                },
+                constraints: ['a < d', 'b < d', 'a + b < d'],
+                answer_formula: '(a + b) / d',
+                answer_type: 'fraction',
+                hint: 'Сложите числители, знаменатель оставьте тем же: ({a} + {b})/{d}',
+                common_mistakes: [
+                    { pattern: 'a + b', feedback: 'При сложении дробей с одинаковым знаменателем складываются только числители, знаменатель остаётся прежним' },
+                ],
+            },
+            2: {
+                template: 'Найдите {a}/{d} от числа {n}',
+                parameters: {
+                    d: { type: 'choice', values: [2, 4, 5, 10] },
+                    a: { type: 'int', min: 1, max: 3 },
+                    multiplier: { type: 'int', min: 2, max: 8 },
+                    n: { type: 'expression', value: 'd * multiplier' },
+                },
+                constraints: ['a < d'],
+                answer_formula: '(n * a) / d',
+                hint: 'Разделите {n} на {d}, затем умножьте на {a}',
+                common_mistakes: [
+                    { pattern: 'n / d', feedback: 'Вы нашли 1/{d}, а нужно найти {a}/{d}. Умножьте результат на {a}.' },
+                ],
+            },
+            3: {
+                template: 'Вычислите: {a}/{d} + {b}/{d} = ?',
+                parameters: {
+                    d: { type: 'int', min: 5, max: 12 },
+                    a: { type: 'int', min: 1, max: 8 },
+                    b: { type: 'int', min: 1, max: 8 },
+                    sum: { type: 'expression', value: 'a + b' },
+                },
+                constraints: ['a < d', 'b < d', 'a + b < d'],
+                answer_formula: '(a + b) / d',
+                answer_type: 'fraction',
+                hint: 'Сложите числители, знаменатель оставьте тем же: ({a} + {b})/{d}',
+                solution: [
+                    { explanation: 'Складываем дроби с одинаковым знаменателем:', expression: '{a}/{d} + {b}/{d} = ({a} + {b})/{d}' },
+                    { explanation: 'Вычисляем:', expression: '{sum}/{d} = {answer}' },
+                ],
+                common_mistakes: [
+                    { pattern: 'a + b', feedback: 'При сложении дробей с одинаковым знаменателем складываются только числители, знаменатель остаётся прежним' },
+                ],
+            },
+        },
+    },
+
+    // ===== ALGEBRA - GCD and LCM =====
+    {
+        id: 'grade5-gcd-lcm',
+        class: 5,
+        subject: 'algebra',
+        section: 'Делимость',
+        topic: 'gcdLcm',
+        topic_title: 'НОД и НОК',
+        problemType: 'numeric',
+        skills: ['gcd', 'lcm', 'prime_factorization'],
+        difficulties: {
+            1: {
+                template: 'Найдите наибольший общий делитель (НОД) чисел {a} и {b}',
+                parameters: {
+                    gcd: { type: 'choice', values: [2, 3, 4, 5, 6] },
+                    m: { type: 'int', min: 2, max: 4 },
+                    n: { type: 'int', min: 2, max: 4 },
+                    a: { type: 'expression', value: 'gcd * m' },
+                    b: { type: 'expression', value: 'gcd * n' },
+                },
+                constraints: ['m !== n', 'a <= 20', 'b <= 20', 'm % 2 !== 0 || n % 2 !== 0'],
+                answer_formula: 'gcd',
+                hint: 'НОД — наибольшее число, на которое делятся оба числа',
+            },
+            2: {
+                template: 'Найдите наименьшее общее кратное (НОК) чисел {a} и {b}',
+                parameters: {
+                    a: { type: 'choice', values: [2, 3, 4, 5, 6] },
+                    b: { type: 'choice', values: [3, 4, 5, 6, 8] },
+                },
+                constraints: ['a !== b', 'a < b'],
+                answer_formula: '(a * b) / ((a > b ? (a % b === 0 ? b : (b % a === 0 ? a : 1)) : (b % a === 0 ? a : (a % b === 0 ? b : 1))))',
+                hint: 'НОК — наименьшее число, которое делится на оба числа',
+            },
+            3: {
+                template: 'Найдите НОД чисел {a}, {b} и {c}',
+                parameters: {
+                    gcd: { type: 'choice', values: [2, 3, 4] },
+                    m: { type: 'int', min: 2, max: 4 },
+                    n: { type: 'int', min: 2, max: 4 },
+                    k: { type: 'int', min: 2, max: 4 },
+                    a: { type: 'expression', value: 'gcd * m' },
+                    b: { type: 'expression', value: 'gcd * n' },
+                    c: { type: 'expression', value: 'gcd * k' },
+                },
+                constraints: [
+                    'a !== b', 'b !== c', 'a !== c',
+                    'a <= 24', 'b <= 24', 'c <= 24',
+                    'm % 2 !== 0 || n % 2 !== 0',
+                    'm % 2 !== 0 || k % 2 !== 0',
+                    'n % 2 !== 0 || k % 2 !== 0',
+                ],
+                answer_formula: 'gcd',
+                hint: 'Найдите наибольшее число, на которое делятся все три числа',
+                solution: [
+                    { explanation: 'НОД трёх чисел — наибольший общий делитель всех трёх' },
+                    { explanation: 'Проверяем делители:', expression: '{a} = {gcd} × {m}, {b} = {gcd} × {n}, {c} = {gcd} × {k}' },
+                    { explanation: 'НОД =', result: '{answer}' },
+                ],
+            },
+        },
+    },
+
+    // ===== GEOMETRY - Angles =====
+    {
+        id: 'grade5-angles',
+        class: 5,
+        subject: 'geometry',
+        section: 'Геометрия углов',
+        topic: 'angles',
+        topic_title: 'Углы',
+        problemType: 'numeric',
+        relatedModule: 'parallel-lines',
+        skills: ['angle'],
+        difficulties: {
+            1: {
+                template: 'Два угла смежные. Один из них равен {a}°. Чему равен другой угол?',
+                parameters: {
+                    a: { type: 'int', min: 30, max: 150 },
+                },
+                constraints: ['a !== 90'],
+                answer_formula: '180 - a',
+                hint: 'Смежные углы в сумме дают 180°',
+                common_mistakes: [
+                    { pattern: '90 - a', feedback: 'Смежные углы дают 180°, а не 90°' },
+                    { pattern: 'a', feedback: 'Нужно найти другой угол, а не повторить данный' },
+                ],
+            },
+            2: {
+                template: 'Два угла вертикальные. Один из них равен {a}°. Чему равен другой угол?',
+                parameters: {
+                    a: { type: 'int', min: 30, max: 150 },
+                },
+                answer_formula: 'a',
+                hint: 'Вертикальные углы равны',
+            },
+            3: {
+                template: 'Два смежных угла относятся как {m}:{n}. Найдите меньший угол.',
+                parameters: {
+                    m: { type: 'int', min: 1, max: 3 },
+                    n: { type: 'int', min: 2, max: 4 },
+                    sum: { type: 'expression', value: 'm + n' },
+                    x: { type: 'expression', value: '180 / (m + n)' },
+                },
+                constraints: ['m < n', 'm + n <= 6'],
+                answer_formula: '180 * m / (m + n)',
+                hint: 'Сумма смежных углов равна 180°. Если углы относятся как {m}:{n}, то меньший угол = 180° × {m}/({m}+{n})',
+                solution: [
+                    { explanation: 'Пусть углы равны {m}x и {n}x' },
+                    { explanation: 'Их сумма:', expression: '{m}x + {n}x = 180°' },
+                    { explanation: 'Упрощаем:', expression: '{sum}x = 180°' },
+                    { explanation: 'Находим x:', expression: 'x = 180° ÷ {sum} = {x}°' },
+                    { explanation: 'Меньший угол:', expression: '{m}x = {m} × {x}° = {answer}°' },
+                ],
+            },
+        },
+    },
+
+    // ===== GEOMETRY - Coordinates =====
+    {
+        id: 'grade5-coordinates',
+        class: 5,
+        subject: 'geometry',
+        section: 'Координатная плоскость',
+        topic: 'coordinates',
+        topic_title: 'Координатная плоскость',
+        problemType: 'numeric',
+        relatedModule: 'coordinate-plane',
+        skills: ['coordinate'],
+        difficulties: {
+            1: {
+                template: 'Точка A имеет координаты ({x}, {y}). Чему равна координата x?',
+                parameters: {
+                    x: { type: 'int', min: 1, max: 10 },
+                    y: { type: 'int', min: 1, max: 10 },
+                },
+                answer_formula: 'x',
+                hint: 'Координата x — это первое число в скобках',
+            },
+            2: {
+                template: 'Точка B имеет координаты ({x}, {y}). Чему равна координата y?',
+                parameters: {
+                    x: { type: 'int', min: 1, max: 10 },
+                    y: { type: 'int', min: 1, max: 10 },
+                },
+                answer_formula: 'y',
+                hint: 'Координата y — это второе число в скобках',
+            },
+            3: {
+                template: 'Точки A({a}, {c}) и B({b}, {c}) лежат на одной горизонтальной прямой. Найдите расстояние между ними.',
+                parameters: {
+                    a: { type: 'int', min: 1, max: 8 },
+                    b: { type: 'int', min: 3, max: 12 },
+                    c: { type: 'int', min: 1, max: 10 },
+                },
+                constraints: ['b > a', 'b - a >= 2'],
+                answer_formula: 'b - a',
+                hint: 'Если точки на одной горизонтальной прямой (y одинаковый), расстояние = |x₂ - x₁|',
+                solution: [
+                    { explanation: 'Точки на одной горизонтальной прямой (y = {c})' },
+                    { explanation: 'Расстояние:', expression: '|{b} - {a}| = {answer}' },
+                ],
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Price Problems =====
+    {
+        id: 'grade5-price',
+        class: 5,
+        subject: 'algebra',
+        section: 'Текстовые задачи',
+        topic: 'priceQuantity',
+        topic_title: 'Цена, количество, стоимость',
+        problemType: 'numeric',
+        skills: ['price', 'multiplication', 'division'],
+        difficulties: {
+            1: {
+                template: 'Одна тетрадь стоит {price} рублей. Сколько стоят {quantity} тетрадей?',
+                parameters: {
+                    price: { type: 'int', min: 5, max: 20 },
+                    quantity: { type: 'int', min: 3, max: 10 },
+                },
+                answer_formula: 'price * quantity',
+                hint: 'Стоимость = цена × количество',
+                common_mistakes: [
+                    { pattern: 'price + quantity', feedback: 'Нужно умножить, а не сложить' },
+                ],
+            },
+            2: {
+                template: 'За {quantity} карандашей заплатили {cost} рублей. Сколько стоит один карандаш?',
+                parameters: {
+                    price: { type: 'int', min: 5, max: 15 },
+                    quantity: { type: 'int', min: 3, max: 8 },
+                    cost: { type: 'expression', value: 'price * quantity' },
+                },
+                answer_formula: 'price',
+                hint: 'Цена = стоимость ÷ количество',
+                common_mistakes: [
+                    { pattern: 'cost', feedback: 'Это общая стоимость. Нужно разделить на количество.' },
+                ],
+            },
+            3: {
+                template: 'Ручка стоит {price} рублей. Купили {quantity} ручек и дали {paid} рублей. Сколько рублей сдачи получили?',
+                parameters: {
+                    price: { type: 'int', min: 8, max: 15 },
+                    quantity: { type: 'int', min: 2, max: 5 },
+                    extra: { type: 'int', min: 10, max: 30 },
+                    paid: { type: 'expression', value: 'price * quantity + extra' },
+                    cost: { type: 'expression', value: 'price * quantity' },
+                },
+                answer_formula: 'extra',
+                hint: 'Сначала найдите стоимость покупки, затем вычтите из {paid}',
+                solution: [
+                    { explanation: 'Стоимость покупки:', expression: '{price} × {quantity} = {cost} руб.' },
+                    { explanation: 'Сдача:', expression: '{paid} - {cost} = {answer} руб.' },
+                ],
+                common_mistakes: [
+                    { pattern: 'paid - price', feedback: 'Нужно вычесть стоимость всех ручек, а не одной' },
+                ],
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Speed Problems =====
+    {
+        id: 'grade5-speed',
+        class: 5,
+        subject: 'algebra',
+        section: 'Текстовые задачи',
+        topic: 'speedTimeDistance',
+        topic_title: 'Скорость, время, расстояние',
+        problemType: 'numeric',
+        skills: ['speed', 'multiplication', 'division'],
+        difficulties: {
+            1: {
+                template: 'Велосипедист едет со скоростью {v} км/ч. Какое расстояние он проедет за {t} часов?',
+                parameters: {
+                    v: { type: 'int', min: 10, max: 20 },
+                    t: { type: 'int', min: 2, max: 5 },
+                },
+                answer_formula: 'v * t',
+                hint: 'Расстояние = скорость × время',
+                common_mistakes: [
+                    { pattern: 'v + t', feedback: 'Нужно умножить скорость на время, а не сложить' },
+                ],
+            },
+            2: {
+                template: 'Автомобиль проехал {s} км со скоростью {v} км/ч. Сколько времени он был в пути?',
+                parameters: {
+                    v: { type: 'int', min: 40, max: 80 },
+                    t: { type: 'int', min: 2, max: 5 },
+                    s: { type: 'expression', value: 'v * t' },
+                },
+                answer_formula: 't',
+                hint: 'Время = расстояние ÷ скорость',
+                common_mistakes: [
+                    { pattern: 's * v', feedback: 'Нужно делить, а не умножать' },
+                ],
+            },
+            3: {
+                template: 'Пешеход прошёл {s} км за {t} часов. С какой скоростью он шёл?',
+                parameters: {
+                    v: { type: 'int', min: 3, max: 6 },
+                    t: { type: 'int', min: 2, max: 4 },
+                    s: { type: 'expression', value: 'v * t' },
+                },
+                answer_formula: 'v',
+                hint: 'Скорость = расстояние ÷ время',
+                solution: [
+                    { explanation: 'Используем формулу:', expression: 'v = S ÷ t' },
+                    { explanation: 'Подставляем:', expression: 'v = {s} ÷ {t} = {answer} км/ч' },
+                ],
+                common_mistakes: [
+                    { pattern: 's * t', feedback: 'Нужно делить расстояние на время, а не умножать' },
+                ],
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Parts Problems =====
+    {
+        id: 'grade5-parts',
+        class: 5,
+        subject: 'algebra',
+        section: 'Текстовые задачи',
+        topic: 'parts',
+        topic_title: 'Задачи на части',
+        problemType: 'numeric',
+        skills: ['fraction_concept', 'percent', 'division'],
+        difficulties: {
+            1: {
+                template: 'Найдите 1/{n} от числа {total}',
+                parameters: {
+                    n: { type: 'choice', values: [2, 3, 4, 5] },
+                    part: { type: 'int', min: 3, max: 12 },
+                    total: { type: 'expression', value: 'n * part' },
+                },
+                answer_formula: 'part',
+                hint: 'Чтобы найти 1/{n} от числа, разделите число на {n}',
+                common_mistakes: [
+                    { pattern: 'total', feedback: 'Нужно разделить на {n}' },
+                ],
+            },
+            2: {
+                template: 'Найдите {m}/{n} от числа {total}',
+                parameters: {
+                    n: { type: 'choice', values: [4, 5, 10] },
+                    m: { type: 'int', min: 1, max: 3 },
+                    multiplier: { type: 'int', min: 2, max: 6 },
+                    total: { type: 'expression', value: 'n * multiplier' },
+                },
+                constraints: ['m < n'],
+                answer_formula: '(total * m) / n',
+                hint: 'Разделите {total} на {n}, затем умножьте на {m}',
+                common_mistakes: [
+                    { pattern: 'total / n', feedback: 'Вы нашли 1/{n}. Умножьте результат на {m}' },
+                ],
+            },
+            3: {
+                template: 'Число {part} составляет 1/{n} от неизвестного числа. Найдите это число.',
+                parameters: {
+                    n: { type: 'choice', values: [2, 3, 4, 5] },
+                    part: { type: 'int', min: 5, max: 15 },
+                },
+                answer_formula: 'part * n',
+                hint: 'Если {part} — это 1/{n}, то целое число в {n} раз больше',
+                solution: [
+                    { explanation: 'Если 1/{n} числа равна {part}' },
+                    { explanation: 'То всё число:', expression: '{part} × {n} = {answer}' },
+                ],
+                common_mistakes: [
+                    { pattern: 'part / n', feedback: 'Нужно умножить на {n}, а не делить' },
+                ],
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Fractions Subtraction =====
+    {
+        id: 'grade5-fractions-subtract',
+        class: 5,
+        subject: 'algebra',
+        section: 'Обыкновенные дроби',
+        topic: 'fractionsIntro',
+        topic_title: 'Вычитание дробей с одинаковым знаменателем',
+        problemType: 'numeric',
+        skills: ['fraction_add', 'fraction_concept'],
+        difficulties: {
+            1: {
+                template: 'Вычислите: {a}/{d} − {b}/{d} = ?',
+                parameters: {
+                    d: { type: 'int', min: 4, max: 10 },
+                    a: { type: 'int', min: 2, max: 9 },
+                    b: { type: 'int', min: 1, max: 8 },
+                },
+                constraints: ['a < d', 'b < d', 'a > b'],
+                answer_formula: '(a - b) / d',
+                answer_type: 'fraction',
+                hint: 'Вычитая дроби с одинаковым знаменателем, вычитайте числители, знаменатель оставьте тем же: ({a} − {b})/{d}',
+                common_mistakes: [
+                    {
+                        pattern: 'a - b',
+                        feedback:
+                            'При вычитании дробей с одинаковым знаменателем вычитаются только числители, знаменатель остаётся прежним.',
+                    },
+                ],
+            },
+            2: {
+                template: 'Вычислите: {a}/{d} − {b}/{d} = ?',
+                parameters: {
+                    d: { type: 'int', min: 5, max: 12 },
+                    a: { type: 'int', min: 3, max: 10 },
+                    b: { type: 'int', min: 1, max: 9 },
+                    diff: { type: 'expression', value: 'a - b' },
+                },
+                constraints: ['a < d', 'b < d', 'a > b'],
+                answer_formula: '(a - b) / d',
+                answer_type: 'fraction',
+                hint: 'Вычитая дроби с одинаковым знаменателем, вычитайте числители, знаменатель оставьте тем же.',
+                solution: [
+                    {
+                        explanation: 'Вычитаем дроби с одинаковым знаменателем:',
+                        expression: '{a}/{d} − {b}/{d} = ({a} − {b})/{d}',
+                    },
+                    { explanation: 'Вычисляем:', expression: '{diff}/{d} = {answer}' },
+                ],
+                common_mistakes: [
+                    {
+                        pattern: 'a / b',
+                        feedback: 'Знаменатель не меняется, делить числитель на числитель не нужно.',
+                    },
+                ],
+            },
+            3: {
+                template: 'У Кати было {a}/{d} пирога. Она съела {b}/{d} пирога. Сколько пирога осталось?',
+                parameters: {
+                    d: { type: 'int', min: 4, max: 10 },
+                    a: { type: 'int', min: 3, max: 9 },
+                    b: { type: 'int', min: 1, max: 6 },
+                },
+                constraints: ['a < d', 'b < d', 'a > b'],
+                answer_formula: '(a - b) / d',
+                answer_type: 'fraction',
+                hint: 'Чтобы узнать, сколько осталось, вычтите съеденную часть из имеющейся: {a}/{d} − {b}/{d}.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Mixed Numbers =====
+    {
+        id: 'grade5-fractions-mixed',
+        class: 5,
+        subject: 'algebra',
+        section: 'Обыкновенные дроби',
+        topic: 'fractionsIntro',
+        topic_title: 'Смешанные числа',
+        problemType: 'numeric',
+        skills: ['fraction_concept', 'fraction_add'],
+        difficulties: {
+            1: {
+                template: 'Запишите смешанное число {whole} {num}/{den} в виде неправильной дроби. Чему равен числитель?',
+                parameters: {
+                    whole: { type: 'int', min: 1, max: 5 },
+                    den: { type: 'choice', values: [2, 3, 4, 5, 6] },
+                    num: { type: 'int', min: 1, max: 5 },
+                },
+                constraints: ['num < den'],
+                answer_formula: 'whole * den + num',
+                answer_type: 'number',
+                hint: 'Числитель неправильной дроби = целая часть × знаменатель + числитель: {whole} × {den} + {num}.',
+                solution: [
+                    { explanation: 'Умножаем целую часть на знаменатель:', expression: '{whole} × {den} = {whole * den}' },
+                    { explanation: 'Прибавляем числитель:', expression: '{whole * den} + {num} = {answer}' },
+                    { explanation: 'Неправильная дробь:', result: '{answer}/{den}' },
+                ],
+                common_mistakes: [
+                    {
+                        pattern: 'whole + num',
+                        feedback: 'Нельзя просто сложить целую часть и числитель. Нужно: целая часть × знаменатель + числитель.',
+                    },
+                ],
+            },
+            2: {
+                template:
+                    'Неправильная дробь {imp}/{den} записана в виде смешанного числа. Сколько в нём целых частей?',
+                parameters: {
+                    den: { type: 'choice', values: [2, 3, 4, 5, 6] },
+                    whole: { type: 'int', min: 1, max: 5 },
+                    extra: { type: 'int', min: 1, max: 5 },
+                    imp: { type: 'expression', value: 'whole * den + extra' },
+                },
+                constraints: ['extra < den'],
+                answer_formula: 'whole',
+                hint: 'Целых частей столько, сколько раз знаменатель целиком содержится в числителе: ⌊{imp} ÷ {den}⌋.',
+            },
+            3: {
+                template:
+                    'Неправильная дробь {imp}/{den} записана в виде смешанного числа. Чему равен числитель дробной части?',
+                parameters: {
+                    den: { type: 'choice', values: [2, 3, 4, 5, 6] },
+                    whole: { type: 'int', min: 1, max: 5 },
+                    extra: { type: 'int', min: 1, max: 5 },
+                    imp: { type: 'expression', value: 'whole * den + extra' },
+                },
+                constraints: ['extra < den'],
+                answer_formula: 'extra',
+                hint: 'Остаток от деления {imp} на {den} — это числитель дробной части.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Divisibility (3,5,9,10) =====
+    {
+        id: 'grade5-divisibility',
+        class: 5,
+        subject: 'algebra',
+        section: 'Делимость',
+        topic: 'divisors',
+        topic_title: 'Делимость на 3, 5, 9, 10',
+        problemType: 'numeric',
+        skills: ['divisibility'],
+        difficulties: {
+            1: {
+                template: 'Число {n} делится на 3 без остатка? Ответьте 1 (да) или 0 (нет).',
+                parameters: {
+                    n: { type: 'choice', values: [12, 13, 15, 16, 21, 22, 27, 28] },
+                },
+                answer_formula:
+                    '(n === 12 || n === 15 || n === 21 || n === 27) ? 1 : 0',
+                hint: 'Число делится на 3, если сумма его цифр делится на 3.',
+            },
+            2: {
+                template: 'Число {n} делится на 5 без остатка? Ответьте 1 (да) или 0 (нет).',
+                parameters: {
+                    n: { type: 'choice', values: [20, 21, 25, 26, 30, 31, 37, 38] },
+                },
+                answer_formula:
+                    '(n === 20 || n === 25 || n === 30) ? 1 : 0',
+                hint: 'Число делится на 5, если оканчивается на 0 или 5.',
+            },
+            3: {
+                template:
+                    'Число {n} делится на одно из чисел: 9 или 10. На какое именно? Ответьте 9 или 10.',
+                parameters: {
+                    n: { type: 'choice', values: [90, 100, 180, 270] },
+                },
+                answer_formula:
+                    '(n === 90 || n === 180 || n === 270) ? 9 : 10',
+                hint: 'На 10 делятся числа, оканчивающиеся на 0. На 9 — если сумма цифр делится на 9.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Prime Numbers =====
+    {
+        id: 'grade5-prime',
+        class: 5,
+        subject: 'algebra',
+        section: 'Простые и составные числа',
+        topic: 'primeNumbers',
+        topic_title: 'Простые и составные числа',
+        problemType: 'numeric',
+        skills: ['prime_factorization', 'logical_reasoning', 'divisibility'],
+        difficulties: {
+            1: {
+                template:
+                    'Является ли число {n} простым? Ответьте 1 (да) или 0 (нет).',
+                parameters: {
+                    n: { type: 'choice', values: [2, 3, 4, 5, 6, 7, 9, 11, 12, 13] },
+                },
+                answer_formula:
+                    '(n === 2 || n === 3 || n === 5 || n === 7 || n === 11 || n === 13) ? 1 : 0',
+                hint: 'Простое число имеет ровно два делителя: 1 и само число.',
+            },
+            2: {
+                template:
+                    'Найдите наименьший простой делитель числа {n}.',
+                parameters: {
+                    p: { type: 'choice', values: [2, 3, 5] },
+                    q: { type: 'choice', values: [3, 5, 7] },
+                    n: { type: 'expression', value: 'p * q' },
+                },
+                constraints: ['p <= q'],
+                answer_formula: 'p',
+                hint: 'Попробуйте по очереди делить число на 2, 3, 5, 7...',
+            },
+            3: {
+                template:
+                    'Сколько различных простых делителей имеет число {n}?',
+                parameters: {
+                    p: { type: 'choice', values: [2, 3] },
+                    q: { type: 'choice', values: [3, 5] },
+                    r: { type: 'choice', values: [5, 7] },
+                    n: { type: 'expression', value: 'p * q * r' },
+                },
+                answer_formula:
+                    '(p === q && q === r) ? 1 : ((p === q || p === r || q === r) ? 2 : 3)',
+                hint: 'Посмотрите, какие простые числа входят в разложение и не повторяйте одинаковые.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Percentages =====
+    {
+        id: 'grade5-percentage',
+        class: 5,
+        subject: 'algebra',
+        section: 'Текстовые задачи',
+        topic: 'percentages',
+        topic_title: 'Проценты',
+        problemType: 'numeric',
+        skills: ['percent', 'fraction_concept', 'multiplication'],
+        difficulties: {
+            1: {
+                template: 'Найдите {p}% от числа {n}.',
+                parameters: {
+                    p: { type: 'choice', values: [10, 20, 25, 50] },
+                    k: { type: 'int', min: 2, max: 10 },
+                    n: { type: 'expression', value: '100 * k' },
+                },
+                answer_formula: '(n * p) / 100',
+                hint: '{p}% от числа — это {p} ÷ 100 части от него: умножьте {n} на {p} и разделите на 100.',
+                common_mistakes: [
+                    {
+                        pattern: 'n * p',
+                        feedback:
+                            'Вы умножили число на проценты, но не разделили на 100. Не забывайте, что 1% = 1/100.',
+                    },
+                ],
+            },
+            2: {
+                template:
+                    'Число {a} составляет {p}% от некоторого числа. Найдите это число.',
+                parameters: {
+                    p: { type: 'choice', values: [10, 20, 25, 50] },
+                    k: { type: 'int', min: 2, max: 10 },
+                    n: { type: 'expression', value: '100 * k' },
+                    a: { type: 'expression', value: '(n * p) / 100' },
+                },
+                answer_formula: 'n',
+                hint: 'Если {a} — это {p}%, то всё число в {100 / p} раз больше.',
+            },
+            3: {
+                template:
+                    'Сколько процентов составляет число {a} от числа {b}? Ответ дайте целым числом.',
+                parameters: {
+                    k: { type: 'choice', values: [10, 20, 25, 50] },
+                    b: { type: 'int', min: 2, max: 10 },
+                    a: { type: 'expression', value: 'b * k / 100' },
+                },
+                answer_formula: 'k',
+                hint: 'Используйте формулу: процент = {a} ÷ {b} × 100%.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Time Units =====
+    {
+        id: 'grade5-time',
+        class: 5,
+        subject: 'algebra',
+        section: 'Величины и единицы измерения',
+        topic: 'timeUnits',
+        topic_title: 'Единицы времени',
+        problemType: 'numeric',
+        skills: ['multiplication', 'division'],
+        difficulties: {
+            1: {
+                template: 'Сколько минут в {h} часах?',
+                parameters: {
+                    h: { type: 'int', min: 1, max: 5 },
+                },
+                answer_formula: 'h * 60',
+                hint: 'В одном часе 60 минут. Умножьте число часов на 60.',
+            },
+            2: {
+                template: 'Сколько часов в {m} минутах?',
+                parameters: {
+                    h: { type: 'int', min: 1, max: 5 },
+                    m: { type: 'expression', value: 'h * 60' },
+                },
+                answer_formula: 'h',
+                hint: 'Чтобы перевести минуты в часы, разделите на 60.',
+            },
+            3: {
+                template:
+                    'Сколько минут в {h} ч и {s} с? ({s} с = {minFromSeconds} мин)',
+                parameters: {
+                    h: { type: 'int', min: 1, max: 5 },
+                    minFromSeconds: { type: 'choice', values: [1, 2, 3, 4, 5] },
+                    s: { type: 'expression', value: 'minFromSeconds * 60' },
+                },
+                answer_formula: 'h * 60 + minFromSeconds',
+                hint: 'Переведите часы в минуты и прибавьте минуты, полученные из секунд.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Measure Units =====
+    {
+        id: 'grade5-units',
+        class: 5,
+        subject: 'algebra',
+        section: 'Величины и единицы измерения',
+        topic: 'measureUnits',
+        topic_title: 'Единицы длины, массы и объёма',
+        problemType: 'numeric',
+        skills: ['multiplication', 'division'],
+        difficulties: {
+            1: {
+                template: 'Переведите {km} км в метры. Сколько метров?',
+                parameters: {
+                    km: { type: 'int', min: 1, max: 9 },
+                },
+                answer_formula: 'km * 1000',
+                hint: 'В одном километре 1000 метров. Умножьте число километров на 1000.',
+            },
+            2: {
+                template: 'Переведите {m} м в километры. Сколько километров?',
+                parameters: {
+                    km: { type: 'int', min: 1, max: 9 },
+                    m: { type: 'expression', value: 'km * 1000' },
+                },
+                answer_formula: 'km',
+                hint: 'Чтобы перевести метры в километры, разделите на 1000.',
+            },
+            3: {
+                template:
+                    'Переведите {kg} кг {g} г в граммы. Сколько граммов?',
+                parameters: {
+                    kg: { type: 'int', min: 1, max: 9 },
+                    g: { type: 'choice', values: [100, 200, 250, 500] },
+                },
+                answer_formula: 'kg * 1000 + g',
+                hint: '1 кг = 1000 г. Переведите килограммы в граммы и прибавьте {g}.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Average =====
+    {
+        id: 'grade5-average',
+        class: 5,
+        subject: 'algebra',
+        section: 'Текстовые задачи',
+        topic: 'average',
+        topic_title: 'Среднее арифметическое',
+        problemType: 'numeric',
+        skills: ['addition', 'division'],
+        difficulties: {
+            1: {
+                template:
+                    'Найдите среднее арифметическое чисел {a} и {b}.',
+                parameters: {
+                    avg: { type: 'int', min: 5, max: 20 },
+                    d: { type: 'int', min: 1, max: 5 },
+                    a: { type: 'expression', value: 'avg - d' },
+                    b: { type: 'expression', value: 'avg + d' },
+                },
+                answer_formula: 'avg',
+                hint: 'Сложите числа и разделите сумму на 2.',
+                solution: [
+                    { explanation: 'Среднее арифметическое двух чисел:', expression: '(a + b) ÷ 2' },
+                    { explanation: 'Подставляем значения:', expression: '({a} + {b}) ÷ 2 = {answer}' },
+                ],
+            },
+            2: {
+                template:
+                    'Найдите среднее арифметическое чисел {a}, {b} и {c}.',
+                parameters: {
+                    avg: { type: 'int', min: 5, max: 20 },
+                    a: { type: 'int', min: 1, max: 15 },
+                    b: { type: 'int', min: 1, max: 15 },
+                    c: { type: 'expression', value: '3 * avg - a - b' },
+                },
+                answer_formula: 'avg',
+                hint: 'Сложите все три числа и разделите сумму на 3.',
+            },
+            3: {
+                template:
+                    'Среднее арифметическое четырёх чисел равно {avg}. Три из них: {a}, {b} и {c}. Найдите четвёртое число.',
+                parameters: {
+                    avg: { type: 'int', min: 8, max: 15 },
+                    a: { type: 'int', min: 1, max: 8 },
+                    b: { type: 'int', min: 1, max: 8 },
+                    c: { type: 'int', min: 1, max: 8 },
+                    d: { type: 'expression', value: '4 * avg - a - b - c' },
+                },
+                answer_formula: 'd',
+                constraints: ['d >= 1', 'd <= 30'],
+                hint: 'Сумма всех четырёх чисел = среднее × 4. Найдите сумму и вычтите известные три числа.',
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Decimal Arithmetic =====
+    {
+        id: 'grade5-decimals-add-sub',
+        class: 5,
+        subject: 'algebra',
+        section: 'Десятичные дроби',
+        topic: 'decimals',
+        topic_title: 'Десятичные дроби: сложение и вычитание',
+        problemType: 'numeric',
+        skills: ['addition', 'subtraction', 'decimal_add'],
+        difficulties: {
+            1: {
+                // a + b where both have 1 decimal place, sum is integer
+                template: 'Вычислите: {a} + {b}',
+                parameters: {
+                    a: { type: 'choice', values: [0.5, 1.5, 2.5, 3.5, 4.5] },
+                    b: { type: 'choice', values: [0.5, 1.5, 2.5, 3.5, 4.5] },
+                },
+                answer_formula: 'a + b',
+                constraints: ['a + b <= 9'],
+                hint: 'Складывайте десятичные дроби как обычные числа, не забывая про запятую.',
+                solution: [
+                    { explanation: 'Записываем числа столбиком, совмещая запятые:', expression: '{a} + {b}' },
+                    { explanation: 'Складываем:', result: '{answer}' },
+                ],
+            },
+            2: {
+                // a + b with 1 decimal place, result also has 1 decimal place
+                template: 'Вычислите: {a} + {b}',
+                parameters: {
+                    a: { type: 'int', min: 1, max: 9 },
+                    b: { type: 'choice', values: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] },
+                },
+                answer_formula: 'a + b',
+                hint: 'Целая часть складывается с целой, дробная — с дробной.',
+                solution: [
+                    { explanation: 'Складываем целые части: {a} + 0 = {a}' },
+                    { explanation: 'Добавляем дробную часть: {a} + {b} = {answer}' },
+                ],
+            },
+            3: {
+                // subtraction with 1 decimal place, result >= 0
+                template: 'Вычислите: {a} − {b}',
+                parameters: {
+                    b: { type: 'choice', values: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] },
+                    a: { type: 'int', min: 2, max: 9 },
+                },
+                answer_formula: 'a - b',
+                hint: 'Вычитайте десятичные дроби столбиком. Если нужно, дописывайте нули.',
+                solution: [
+                    { explanation: 'Записываем {a}.0 − {b} столбиком:' },
+                    { explanation: 'Вычитаем:', result: '{answer}' },
+                ],
+            },
+            4: {
+                // two-decimal-place addition/subtraction
+                template: 'Вычислите: {a} + {b}',
+                parameters: {
+                    a: { type: 'choice', values: [1.25, 2.75, 3.50, 4.25, 5.75, 6.50] },
+                    b: { type: 'choice', values: [1.25, 2.25, 3.25, 0.75, 1.75, 2.50] },
+                },
+                answer_formula: 'a + b',
+                constraints: ['a + b <= 10'],
+                hint: 'Совместите запятые и складывайте поразрядно.',
+                solution: [
+                    { explanation: 'Складываем: {a} + {b}', result: '{answer}' },
+                ],
+            },
+        },
+    },
+
+    // ===== ALGEBRA - Fraction Comparison =====
+    {
+        id: 'grade5-fraction-compare',
+        class: 5,
+        subject: 'algebra',
+        section: 'Дроби',
+        topic: 'fractionsIntro',
+        topic_title: 'Сравнение дробей',
+        problemType: 'comparison',
+        skills: ['fraction_concept', 'fraction_compare'],
+        difficulties: {
+            1: {
+                // same denominator
+                template: 'Сравните дроби: {a}/{d} и {b}/{d}',
+                parameters: {
+                    d: { type: 'choice', values: [4, 5, 6, 8, 10] },
+                    a: { type: 'int', min: 1, max: 7 },
+                    b: { type: 'int', min: 1, max: 7 },
+                },
+                answer_formula: 'a > b ? ">" : "<"',
+                constraints: ['a != b', 'a < d', 'b < d'],
+                answer_type: 'number',
+                hint: 'При одинаковых знаменателях сравнивайте числители.',
+                solution: [
+                    { explanation: 'Знаменатели одинаковые ({d}), сравниваем числители:' },
+                    { explanation: '{a} и {b} → {a}/{d} {answer_sign} {b}/{d}' },
+                ],
+            },
+            2: {
+                // same numerator
+                template: 'Сравните дроби: {n}/{a} и {n}/{b}',
+                parameters: {
+                    n: { type: 'int', min: 1, max: 5 },
+                    a: { type: 'choice', values: [3, 4, 5, 6, 8] },
+                    b: { type: 'choice', values: [4, 5, 6, 8, 10] },
+                },
+                answer_formula: 'a < b ? ">" : "<"',
+                constraints: ['a != b'],
+                answer_type: 'number',
+                hint: 'При одинаковых числителях: чем больше знаменатель, тем меньше дробь.',
+                solution: [
+                    { explanation: 'Числители одинаковые ({n}). Сравниваем знаменатели:' },
+                    { explanation: 'Больший знаменатель → меньшая дробь.' },
+                    { explanation: '{n}/{a} и {n}/{b}: знаменатель {a} и {b}.' },
+                ],
+            },
+            3: {
+                // compare with 1/2
+                template: 'Сравните дробь {a}/{b} с числом 1/2',
+                parameters: {
+                    b: { type: 'choice', values: [4, 6, 8, 10] },
+                    a: { type: 'int', min: 1, max: 9 },
+                },
+                answer_formula: '2 * a > b ? ">" : "<"',
+                constraints: ['a < b', '2 * a != b'],
+                answer_type: 'number',
+                hint: 'Дробь больше 1/2, если числитель больше половины знаменателя.',
+                solution: [
+                    { explanation: 'Половина от {b} равна {b}/2.' },
+                    { explanation: 'Сравниваем числитель {a} с {b}/2:' },
+                    { explanation: 'Если {a} > {b}/2, то {a}/{b} > 1/2.' },
+                ],
+            },
+        },
+    },
+
+    // ===== GEOMETRY - Coordinate Plane =====
+    {
+        id: 'grade5-coordinate',
+        class: 5,
+        subject: 'geometry',
+        section: 'Координатная плоскость',
+        topic: 'coordinates',
+        topic_title: 'Координатная плоскость: точки',
+        problemType: 'numeric',
+        skills: ['coordinate'],
+        relatedModule: 'coordinate-plane',
+        difficulties: {
+            1: {
+                // identify coordinate by description
+                template: 'Точка A имеет координаты ({x}; {y}). Чему равна абсцисса точки A?',
+                parameters: {
+                    x: { type: 'int', min: 1, max: 9 },
+                    y: { type: 'int', min: 1, max: 9 },
+                },
+                answer_formula: 'x',
+                hint: 'Абсцисса — это первая координата точки (по оси X).',
+                solution: [
+                    { explanation: 'Координаты точки A: ({x}; {y}).' },
+                    { explanation: 'Абсцисса — первое число в скобках.', result: '{answer}' },
+                ],
+            },
+            2: {
+                // identify ordinate
+                template: 'Точка B имеет координаты ({x}; {y}). Чему равна ордината точки B?',
+                parameters: {
+                    x: { type: 'int', min: 1, max: 9 },
+                    y: { type: 'int', min: 1, max: 9 },
+                },
+                answer_formula: 'y',
+                hint: 'Ордината — это вторая координата точки (по оси Y).',
+                solution: [
+                    { explanation: 'Координаты точки B: ({x}; {y}).' },
+                    { explanation: 'Ордината — второе число в скобках.', result: '{answer}' },
+                ],
+            },
+            3: {
+                // distance from origin
+                template: 'Точка C имеет координаты ({x}; 0). На каком расстоянии от начала координат она находится?',
+                parameters: {
+                    x: { type: 'int', min: 1, max: 10 },
+                },
+                answer_formula: 'x',
+                hint: 'Точка лежит на оси X. Расстояние от начала координат равно абсциссе.',
+                solution: [
+                    { explanation: 'Точка C({x}; 0) лежит на оси X.' },
+                    { explanation: 'Расстояние от O(0;0) до C({x};0) равно {x}.', result: '{answer}' },
+                ],
+            },
+            4: {
+                // which quadrant
+                template: 'Точка D({x}; {y}) лежит в I четверти координатной плоскости. Найдите сумму её координат.',
+                parameters: {
+                    x: { type: 'int', min: 1, max: 9 },
+                    y: { type: 'int', min: 1, max: 9 },
+                },
+                answer_formula: 'x + y',
+                hint: 'Просто сложите обе координаты.',
+                solution: [
+                    { explanation: 'Координаты точки D: ({x}; {y}).' },
+                    { explanation: 'Сумма координат: {x} + {y} = {answer}.' },
+                ],
+            },
+        },
+    },
+
+];

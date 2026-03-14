@@ -311,10 +311,48 @@ export function useAppState() {
     historyRef.current.clear();
   }, []);
 
+  // Remote sync: updates only canvas data (objects, pages, activePageId).
+  // Does NOT touch: mode, selectedObjectIds (only filters out deleted ones),
+  // isDirty, projectName, projectPath, or CommandHistory.
+  const setCanvasState = useCallback((canvasState: {
+    objects: AnyCanvasObject[];
+    pages: Page[];
+    activePageId: string;
+  }) => {
+    const { pages, activePageId, objects } = canvasState;
+
+    const activeObjects = cloneObjects(objects);
+    const activeObjectIds = new Set(activeObjects.map(o => o.id));
+
+    objectsRef.current = activeObjects;
+    pagesRef.current = pages;
+    activePageIdRef.current = activePageId;
+
+    setState(prev => ({
+      ...prev,
+      objects: activeObjects,
+      pages,
+      activePageId,
+      // Remove from selection any objects that no longer exist
+      selectedObjectIds: prev.selectedObjectIds.filter(id => activeObjectIds.has(id)),
+      // isDirty is NOT changed — remote sync is not a user edit
+      // mode, projectName, projectPath are preserved via ...prev
+    }));
+    // historyRef is NOT touched — remote sync bypasses command history
+  }, []);
+
   // Get selected objects
   const selectedObjects = state.objects.filter((obj) =>
     state.selectedObjectIds.includes(obj.id)
   );
+
+  // Returns the CURRENT canvas snapshot directly from refs — always up to date,
+  // even when called synchronously after addObject/moveObjects before React re-renders.
+  const getCanvasSnapshot = useCallback(() => ({
+    objects: objectsRef.current,
+    pages: pagesRef.current,
+    activePageId: activePageIdRef.current,
+  }), []);
 
   return {
     state,
@@ -339,5 +377,7 @@ export function useAppState() {
     addPage,
     removePage,
     switchPage,
+    setCanvasState,
+    getCanvasSnapshot,
   };
 }

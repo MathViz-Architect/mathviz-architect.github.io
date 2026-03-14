@@ -1,6 +1,14 @@
+// src/contexts/EditorContext.tsx
+//
+// Изменения относительно предыдущей версии:
+//   • loadRemoteState использует appState.setCanvasState() — не loadProject().
+//     setCanvasState обновляет только objects/pages/activePageId,
+//     не трогает mode, zoom, CommandHistory, projectName и т.д.
+//   • Всё остальное без изменений.
+
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
 import { useAppState, generateId } from '@/hooks/useAppState';
-import { AnyCanvasObject, AppMode, AppState } from '@/lib/types';
+import { AnyCanvasObject, AppMode, AppState, Page } from '@/lib/types';
 import { Template } from '@/lib/templates';
 
 interface SavedProject {
@@ -53,6 +61,18 @@ interface EditorContextValue {
   setPenSettings: (settings: Partial<{ width: number; color: string }>) => void;
   shapeType: 'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad';
   setShapeType: (type: 'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad') => void;
+  /**
+   * Применяет состояние холста от удалённого участника (Yjs).
+   * Обновляет только objects/pages/activePageId.
+   * Не пишет в CommandHistory, не меняет mode/zoom/selection.
+   */
+  loadRemoteState: (remoteState: { objects: AnyCanvasObject[]; pages: Page[]; activePageId: string }) => void;
+  /**
+   * Возвращает АКТУАЛЬНЫЙ snapshot холста напрямую из refs.
+   * Вызывать сразу после действия пользователя для публикации в Yjs —
+   * не ждёт следующего рендера React, никогда не устаревает.
+   */
+  getCanvasSnapshot: () => { objects: AnyCanvasObject[]; pages: Page[]; activePageId: string };
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -64,7 +84,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [interactiveModuleId, setInteractiveModuleId] = useState<string | null>(null);
   const [penSettings, setPenSettingsState] = useState<{ width: number; color: string }>({ width: 3, color: '#374151' });
   const [shapeType, setShapeType] = useState<'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad'>('rectangle');
-  const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setPenSettings = useCallback((settings: Partial<{ width: number; color: string }>) => {
     setPenSettingsState(prev => ({ ...prev, ...settings }));
@@ -98,10 +118,10 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     if (obj) appState.updateObject(obj.id, { locked: !obj.locked });
   }, [appState]);
 
-  // localStorage functions (web only)
+  // ─── localStorage persistence (web only) ────────────────────────────────────
+
   const saveProjectToStorage = useCallback((name: string) => {
     if (window.electronAPI) return;
-
     const projectId = generateId();
     const project = {
       id: projectId,
@@ -114,88 +134,67 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       canvasSize: { width: 800, height: 600 },
       backgroundColor: '#FFFFFF',
     };
-
-    // Save project
     localStorage.setItem(`mathviz_project_${projectId}`, JSON.stringify(project));
-
-    // Update index
     const indexKey = 'mathviz_projects_index';
     const indexStr = localStorage.getItem(indexKey);
     const index: SavedProject[] = indexStr ? JSON.parse(indexStr) : [];
     index.push({ id: projectId, name, updatedAt: project.updatedAt });
     localStorage.setItem(indexKey, JSON.stringify(index));
-  }, [appState.state.objects]);
+  }, [appState.state.objects, appState.state.pages, appState.state.activePageId]);
 
   const getSavedProjects = useCallback((): SavedProject[] => {
-    if (window.electronAPI) return []; // Skip in Electron
-
-    const indexKey = 'mathviz_projects_index';
-    const indexStr = localStorage.getItem(indexKey);
+    if (window.electronAPI) return [];
+    const indexStr = localStorage.getItem('mathviz_projects_index');
     if (!indexStr) return [];
-
     try {
       const index: SavedProject[] = JSON.parse(indexStr);
-      // Add autosave entry if it exists
       const autosave = localStorage.getItem('mathviz_autosave');
       if (autosave) {
         const autosaveProject = JSON.parse(autosave);
-        return [
-          { id: 'autosave', name: 'Автосохранение', updatedAt: autosaveProject.updatedAt },
-          ...index,
-        ];
+        return [{ id: 'autosave', name: 'Автосохранение', updatedAt: autosaveProject.updatedAt }, ...index];
       }
       return index;
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   }, []);
 
   const loadProjectFromStorage = useCallback((id: string) => {
-    if (window.electronAPI) return; // Skip in Electron
-
+    if (window.electronAPI) return;
     try {
       const key = id === 'autosave' ? 'mathviz_autosave' : `mathviz_project_${id}`;
       const projectStr = localStorage.getItem(key);
-      if (projectStr) {
-        const project = JSON.parse(projectStr);
-        appState.loadProject(project, '');
-      }
-    } catch (e) {
-      console.error('Failed to load project from storage:', e);
-    }
+      if (projectStr) appState.loadProject(JSON.parse(projectStr), '');
+    } catch (e) { console.error('Failed to load project from storage:', e); }
   }, [appState]);
 
   const deleteProjectFromStorage = useCallback((id: string) => {
-    if (window.electronAPI) return; // Skip in Electron
-    if (id === 'autosave') return; // Can't delete autosave
-
+    if (window.electronAPI) return;
+    if (id === 'autosave') return;
     try {
-      // Remove project
       localStorage.removeItem(`mathviz_project_${id}`);
-
-      // Update index
-      const indexKey = 'mathviz_projects_index';
-      const indexStr = localStorage.getItem(indexKey);
+      const indexStr = localStorage.getItem('mathviz_projects_index');
       if (indexStr) {
         const index: SavedProject[] = JSON.parse(indexStr);
-        const newIndex = index.filter(p => p.id !== id);
-        localStorage.setItem(indexKey, JSON.stringify(newIndex));
+        localStorage.setItem('mathviz_projects_index', JSON.stringify(index.filter(p => p.id !== id)));
       }
-    } catch (e) {
-      console.error('Failed to delete project from storage:', e);
-    }
+    } catch (e) { console.error('Failed to delete project from storage:', e); }
   }, []);
 
-  // Auto-save to localStorage (debounced)
+  // ─── Remote state application ────────────────────────────────────────────────
+  // Uses setCanvasState — a surgical update that only touches objects/pages/activePageId.
+  // Does NOT reset mode, zoom, CommandHistory, projectName, isDirty, or selection
+  // (selection is filtered to remove deleted objects, but not cleared entirely).
+  const loadRemoteState = useCallback((remoteState: {
+    objects: AnyCanvasObject[];
+    pages: Page[];
+    activePageId: string;
+  }) => {
+    appState.setCanvasState(remoteState);
+  }, [appState]);
+
+  // ─── Autosave (debounced, web only) ─────────────────────────────────────────
   useEffect(() => {
-    if (window.electronAPI) return; // Skip in Electron
-
-    // Clear existing timer
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
-    }
-
-    // Set new timer
+    if (window.electronAPI) return;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
       const project = {
         id: 'autosave',
@@ -207,28 +206,18 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       };
       localStorage.setItem('mathviz_autosave', JSON.stringify(project));
     }, 1000);
-
-    return () => {
-      if (autosaveTimerRef.current) {
-        clearTimeout(autosaveTimerRef.current);
-      }
-    };
+    return () => { if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current); };
   }, [appState.state.objects, appState.state.pages, appState.state.projectName]);
 
-  // Restore autosave on mount
+  // ─── Restore autosave on mount (web only) ───────────────────────────────────
   useEffect(() => {
-    if (window.electronAPI) return; // Skip in Electron
-
+    if (window.electronAPI) return;
     const saved = localStorage.getItem('mathviz_autosave');
     if (saved) {
       try {
         const project = JSON.parse(saved);
-        if (project.objects?.length > 0) {
-          appState.loadProject(project, '');
-        }
-      } catch (e) {
-        console.error('Failed to restore autosave:', e);
-      }
+        if (project.objects?.length > 0) appState.loadProject(project, '');
+      } catch (e) { console.error('Failed to restore autosave:', e); }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -256,6 +245,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setPenSettings,
       shapeType,
       setShapeType,
+      loadRemoteState,
     }}>
       {children}
     </EditorContext.Provider>
@@ -267,4 +257,3 @@ export function useEditorContext() {
   if (!ctx) throw new Error('useEditorContext must be used within EditorProvider');
   return ctx;
 }
-

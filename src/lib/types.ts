@@ -261,6 +261,7 @@ export type AnswerType =
   | 'number'       // ✅ реализовать
   | 'fraction'     // ✅ реализовать
   | 'coordinate'   // ✅ реализовать
+  | 'text'         // ✅ реализовать
   | 'expression'   // 🔜 зарезервировать
   | 'interval'     // 🔜 зарезервировать
   | 'set';         // 🔜 зарезервировать
@@ -368,4 +369,13 @@ export interface CurriculumCategory {
   name: string;
   color: string;
   subjects: Record<string, CurriculumSubject>;
+}
+
+// ── Room & Collaboration Types ──────────────────────────────────────────────
+export type UserRole = 'teacher' | 'student';
+export type BoardMode = 'view' | 'student_turn' | 'collaboration';
+
+export interface BoardSettings {
+  mode: BoardMode;
+  activeStudentId: string | null;
 }

@@ -1,137 +1,84 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useZenMode } from './hooks/useZenMode';
 import { ToolSidebar } from './components/ToolSidebar';
 import { TopBar } from './components/TopBar';
 import { Canvas } from './components/Canvas';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { TemplateLibrary } from './components/TemplateLibrary';
-import { ObjectCreator } from './components/ObjectCreator';
 import { InteractiveLibrary } from './components/interactive/InteractiveLibrary';
 import { ChallengeMode } from './components/challenge/ChallengeMode';
 import { WelcomeScreen } from './components/interactive/WelcomeScreen';
 import { ProjectsPanel } from './components/ProjectsPanel';
 import { ExportModal } from './components/ExportModal';
 import { PageSwitcher } from './components/PageSwitcher';
+import { AuthModal } from './components/AuthModal';
 import { EditorProvider, useEditorContext } from './contexts/EditorContext';
+import { CollaborationProvider, useCollaborationContext } from './hooks/useCollaborationContext';
+import { TeacherControlPanel } from './components/room/TeacherControlPanel';
 import { generateId } from './hooks/useAppState';
+import { useProgressSync } from './hooks/useProgressSync';
+import { migrateOfflineDataIfNeeded } from './lib/sync/migrateOfflineData';
 import { Project } from './lib/types';
 import './types/electron.d.ts';
-
-// Register all interactive modules
 import '@/modules/index';
 
 function AppContent() {
   const {
-    state,
-    selectedObjects,
-    removeObject,
-    undo,
-    redo,
-    setMode,
-    loadProject,
-    setProjectPath,
-    markAsSaved,
-    newProject,
-    handleSelectTemplate,
-    interactiveModuleId,
-    addPage,
-    removePage,
-    switchPage,
+    state, selectedObjects, removeObject, undo, redo, setMode, loadProject,
+    setProjectPath, markAsSaved, newProject, handleSelectTemplate,
+    interactiveModuleId, addPage, removePage, switchPage,
   } = useEditorContext();
 
-  const [showWelcome, setShowWelcome] = useState(() => {
-    return !localStorage.getItem('welcomeScreenShown');
-  });
+  const { roomState, canEdit, user } = useCollaborationContext();
 
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('welcomeScreenShown'));
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { zenMode, toggleZenMode } = useZenMode();
 
-  // Handle keyboard shortcuts
+  useProgressSync();
+
+  useEffect(() => { if (user) { migrateOfflineDataIfNeeded(user.id); } }, [user?.id]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!canEdit && e.key !== 'Escape') return;
+
       const key = e.key.toLowerCase();
+      if (e.ctrlKey && !e.shiftKey && (key === 'z' || key === 'я')) { e.preventDefault(); undo(); return; }
+      if ((e.ctrlKey && (key === 'y' || key === 'н')) || (e.ctrlKey && e.shiftKey && (key === 'z' || key === 'я'))) { e.preventDefault(); redo(); return; }
 
-      // Ctrl+Z or Ctrl+я - undo
-      const isUndo = e.ctrlKey && !e.shiftKey && (key === 'z' || key === 'я');
-      if (isUndo) {
-        e.preventDefault();
-        undo();
-        return;
-      }
-
-      // Ctrl+Y or Ctrl+н or Ctrl+Shift+Z or Ctrl+Shift+я - redo
-      const isRedo = (e.ctrlKey && (key === 'y' || key === 'н')) ||
-        (e.ctrlKey && e.shiftKey && (key === 'z' || key === 'я'));
-      if (isRedo) {
-        e.preventDefault();
-        redo();
-        return;
-      }
-
-      // Delete or Backspace - delete selected objects
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjects.length > 0) {
-        // Skip if user is editing text
         const activeTag = document.activeElement?.tagName.toLowerCase();
         if (activeTag === 'input' || activeTag === 'textarea') return;
-
-        // Prevent default backspace behavior (going back in browser)
         e.preventDefault();
         selectedObjects.forEach((obj) => removeObject(obj.id));
       }
 
-      // Tool hotkeys — use e.code to work regardless of keyboard layout
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         const activeTag = (e.target as HTMLElement).tagName.toLowerCase();
-        const isEditable = activeTag === 'input' || activeTag === 'textarea' ||
-          (e.target as HTMLElement).isContentEditable;
+        const isEditable = activeTag === 'input' || activeTag === 'textarea' || (e.target as HTMLElement).isContentEditable;
         if (!isEditable) {
-          const toolMap: Record<string, string> = {
-            KeyV: 'select',
-            KeyE: 'eraser',
-            KeyP: 'geopoint',
-            KeyS: 'geosegment',
-            KeyL: 'line',
-            KeyA: 'geoangle',
-            KeyF: 'freehand',
-            KeyT: 'text',
-          };
+          const toolMap: Record<string, string> = { KeyV: 'select', KeyE: 'eraser', KeyP: 'geopoint', KeyS: 'geosegment', KeyL: 'line', KeyA: 'geoangle', KeyF: 'freehand', KeyT: 'text' };
           const tool = toolMap[e.code];
-          if (tool) {
-            e.preventDefault();
-            setMode(tool as Parameters<typeof setMode>[0]);
-          }
+          if (tool) { e.preventDefault(); setMode(tool as Parameters<typeof setMode>[0]); }
         }
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedObjects, removeObject, undo, redo, setMode]);
+  }, [selectedObjects, removeObject, undo, redo, setMode, canEdit]);
 
-  // File operations
-  const handleNew = useCallback(() => {
-    if (state.isDirty) {
-      if (!window.confirm('Несохранённые изменения будут потеряны. Продолжить?')) {
-        return;
-      }
-    }
-    newProject();
-  }, [newProject, state.isDirty]);
+  const handleNew = useCallback(() => { if (state.isDirty && !window.confirm('Несохранённые изменения будут потеряны. Продолжить?')) return; newProject(); }, [newProject, state.isDirty]);
 
   const handleOpen = useCallback(async () => {
     if (window.electronAPI) {
       const result = await window.electronAPI.openFile();
       if (!result.canceled && result.filePaths.length > 0) {
         const fileResult = await window.electronAPI.readFile(result.filePaths[0]);
-        if (fileResult.success && fileResult.data) {
-          try {
-            const project: Project = JSON.parse(fileResult.data);
-            loadProject(project, result.filePaths[0]);
-          } catch (e) {
-            console.error('Failed to parse project file:', e);
-          }
-        }
+        if (fileResult.success && fileResult.data) { try { const project: Project = JSON.parse(fileResult.data); loadProject(project, result.filePaths[0]); } catch (e) { console.error('Failed to parse project file:', e); } }
       }
     } else {
-      // Web fallback: use file input
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.mvz,.json';
@@ -140,13 +87,7 @@ function AppContent() {
         if (file) {
           const reader = new FileReader();
           reader.onload = (event) => {
-            try {
-              const project: Project = JSON.parse(event.target?.result as string);
-              loadProject(project, '');
-            } catch (e) {
-              console.error('Failed to parse project file:', e);
-              alert('Ошибка при открытии файла. Проверьте формат файла.');
-            }
+            try { const project: Project = JSON.parse(event.target?.result as string); loadProject(project, ''); } catch (e) { console.error('Failed to parse project file:', e); alert('Ошибка при открытии файла.'); }
           };
           reader.readAsText(file);
         }
@@ -156,209 +97,53 @@ function AppContent() {
   }, [loadProject]);
 
   const handleSave = useCallback(async () => {
+    const project: Project = { id: generateId(), name: state.projectName, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), objects: state.objects, pages: state.pages, activePageId: state.activePageId, canvasSize: { width: 800, height: 600 }, backgroundColor: '#FFFFFF' };
     if (window.electronAPI) {
       let filePath = state.projectPath;
-      if (!filePath) {
-        const result = await window.electronAPI.saveFile(state.projectName + '.mvz');
-        if (result.canceled || !result.filePath) return;
-        filePath = result.filePath;
-      }
-
-      const project: Project = {
-        id: generateId(),
-        name: state.projectName,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        objects: state.objects,
-        pages: state.pages,
-        activePageId: state.activePageId,
-        canvasSize: { width: 800, height: 600 },
-        backgroundColor: '#FFFFFF',
-      };
-
+      if (!filePath) { const result = await window.electronAPI.saveFile(state.projectName + '.mvz'); if (result.canceled || !result.filePath) return; filePath = result.filePath; }
       const result = await window.electronAPI.writeFile(filePath, JSON.stringify(project, null, 2));
-      if (result.success) {
-        setProjectPath(filePath);
-        markAsSaved();
-      }
+      if (result.success) { setProjectPath(filePath); markAsSaved(); }
     } else {
-      // Web fallback: download as file
-      const project: Project = {
-        id: generateId(),
-        name: state.projectName,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        objects: state.objects,
-        pages: state.pages,
-        activePageId: state.activePageId,
-        canvasSize: { width: 800, height: 600 },
-        backgroundColor: '#FFFFFF',
-      };
-
       const json = JSON.stringify(project, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `${state.projectName}.mvz`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      a.href = url; a.download = `${state.projectName}.mvz`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
       markAsSaved();
     }
   }, [state, setProjectPath, markAsSaved]);
 
-  const handleExport = useCallback(async () => {
-    if (window.electronAPI) {
-      // Electron export will be implemented later
-      console.log('Export clicked (Electron)');
-      return;
-    }
-
-    // Web: Open export modal
-    setShowExportModal(true);
-  }, []);
-
-  // Menu events from Electron
   useEffect(() => {
     if (!window.electronAPI) return;
-
-    const cleanups = [
-      window.electronAPI.onMenuNewProject(handleNew),
-      window.electronAPI.onMenuOpenProject(async (filePath) => {
-        const fileResult = await window.electronAPI.readFile(filePath);
-        if (fileResult.success && fileResult.data) {
-          try {
-            const project: Project = JSON.parse(fileResult.data);
-            loadProject(project, filePath);
-          } catch (e) {
-            console.error('Failed to parse project file:', e);
-          }
-        }
-      }),
-      window.electronAPI.onMenuSaveProject(handleSave),
-      window.electronAPI.onMenuSaveProjectAs(async () => {
-        const result = await window.electronAPI.saveFile(state.projectName + '.mvz');
-        if (!result.canceled && result.filePath) {
-          const project: Project = {
-            id: generateId(),
-            name: state.projectName,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            objects: state.objects,
-            pages: state.pages,
-            activePageId: state.activePageId,
-            canvasSize: { width: 800, height: 600 },
-            backgroundColor: '#FFFFFF',
-          };
-          const writeResult = await window.electronAPI.writeFile(result.filePath, JSON.stringify(project, null, 2));
-          if (writeResult.success) {
-            setProjectPath(result.filePath);
-            markAsSaved();
-          }
-        }
-      }),
-      window.electronAPI.onMenuUndo(undo),
-      window.electronAPI.onMenuRedo(redo),
-    ];
-
-    return () => {
-      cleanups.forEach((cleanup) => cleanup());
-    };
+    const cleanups = [ window.electronAPI.onMenuNewProject(handleNew), window.electronAPI.onMenuOpenProject(async (filePath) => {}), window.electronAPI.onMenuSaveProject(handleSave), window.electronAPI.onMenuSaveProjectAs(async () => {}), window.electronAPI.onMenuUndo(undo), window.electronAPI.onMenuRedo(redo) ];
+    return () => { cleanups.forEach((cleanup) => cleanup()); };
   }, [handleNew, handleSave, state, loadProject, setProjectPath, markAsSaved, undo, redo]);
 
-  // Render main content based on mode
   const renderMainContent = () => {
-    // Interactive mode - full screen interactive modules
-    if (state.mode === 'interactive') {
-      return (
-        <div className="flex-1 bg-gray-100 overflow-hidden">
-          <InteractiveLibrary initialModule={interactiveModuleId ?? undefined} />
-        </div>
-      );
-    }
-
-    // Challenge mode - math challenges
-    if (state.mode === 'challenge') {
-      return (
-        <div className="flex-1 bg-gray-100 overflow-hidden">
-          <ChallengeMode />
-        </div>
-      );
-    }
-
-    // Projects mode - saved projects list
-    if (state.mode === 'projects') {
-      return (
-        <div className="flex-1 bg-gray-100 overflow-hidden">
-          <ProjectsPanel />
-        </div>
-      );
-    }
-
-    // Library mode - templates
-    if (state.mode === 'library') {
-      return (
-        <div className="flex-1 flex overflow-hidden">
-          <Canvas />
-          <TemplateLibrary onSelectTemplate={handleSelectTemplate} />
-        </div>
-      );
-    }
-
-    // Default mode - canvas only
-    return (
-      <div className="flex-1 flex overflow-hidden">
-        <Canvas />
-      </div>
-    );
+    if (state.mode === 'interactive') return <div className="flex-1 bg-gray-100 overflow-hidden"><InteractiveLibrary initialModule={interactiveModuleId ?? undefined} /></div>;
+    if (state.mode === 'challenge') return <div className="flex-1 bg-gray-100 overflow-hidden"><ChallengeMode /></div>;
+    if (state.mode === 'projects') return <div className="flex-1 bg-gray-100 overflow-hidden"><ProjectsPanel /></div>;
+    if (state.mode === 'library') return <div className="flex-1 flex overflow-hidden"><Canvas /><TemplateLibrary onSelectTemplate={handleSelectTemplate} /></div>;
+    return <div className="flex-1 flex overflow-hidden"><Canvas /></div>;
   };
 
   return (
-    <div className={`h-screen flex flex-col bg-gray-50 overflow-hidden ${state.mode !== 'interactive' && state.mode !== 'challenge' && state.mode !== 'projects' ? 'canvas-mode' : ''
-      }`}>
-      {/* Main content area */}
+    <div className={`h-screen flex flex-col bg-gray-50 overflow-hidden ${!['interactive', 'challenge', 'projects'].includes(state.mode) ? 'canvas-mode' : ''}`}>
       <div className="flex-1 flex overflow-hidden">
-        {/* Left sidebar - Tools */}
-        <ToolSidebar
-          onNew={handleNew}
-          onOpen={handleOpen}
-          onSave={handleSave}
-          onExport={handleExport}
-        />
-
-        {/* Center area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top bar */}
-          <TopBar />
-
-          {/* Main content */}
-          {renderMainContent()}
-
-          {/* Page switcher - only in canvas modes */}
-          {state.mode !== 'interactive' && state.mode !== 'challenge' && state.mode !== 'projects' && (
-            <PageSwitcher
-              pages={state.pages}
-              activePageId={state.activePageId}
-              onSwitch={switchPage}
-              onAdd={addPage}
-              onRemove={removePage}
-            />
-          )}
+        <div className={`transition-all duration-200 ${zenMode ? 'hidden' : ''}`}>
+          <ToolSidebar onNew={handleNew} onOpen={handleOpen} onSave={handleSave} onExport={() => setShowExportModal(true)} disabled={!canEdit && roomState.isConnected} />
         </div>
-
-        {/* Right panel - Properties */}
-        {state.mode !== 'interactive' && state.mode !== 'challenge' && state.mode !== 'library' && state.mode !== 'projects' && (selectedObjects.length > 0 || state.mode === 'freehand' || state.mode === 'shape' || state.mode === 'text') && (
-          <PropertiesPanel />
-        )}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {roomState.isConnected && roomState.role === 'teacher' && <TeacherControlPanel />}
+          <TopBar zenMode={zenMode} onToggleZenMode={toggleZenMode} onAuthClick={() => setShowAuthModal(true)} />
+          {renderMainContent()}
+          {!['interactive', 'challenge', 'projects'].includes(state.mode) && ( <PageSwitcher pages={state.pages} activePageId={state.activePageId} onSwitch={switchPage} onAdd={addPage} onRemove={removePage} /> )}
+        </div>
+        {!zenMode && !['interactive', 'challenge', 'library', 'projects'].includes(state.mode) && (selectedObjects.length > 0 || ['freehand', 'shape', 'text'].includes(state.mode)) && ( <PropertiesPanel /> )}
       </div>
-
-      {/* Welcome Screen */}
       {showWelcome && <WelcomeScreen onClose={() => setShowWelcome(false)} />}
-
-      {/* Export Modal */}
       {showExportModal && <ExportModal onClose={() => setShowExportModal(false)} />}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
   );
 }
@@ -366,7 +151,9 @@ function AppContent() {
 function App() {
   return (
     <EditorProvider>
-      <AppContent />
+      <CollaborationProvider>
+        <AppContent />
+      </CollaborationProvider>
     </EditorProvider>
   );
 }

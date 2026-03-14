@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { CheckCircle, XCircle, ArrowRight, HelpCircle, Award, Star, TrendingUp, Target, Search } from 'lucide-react';
 import { Challenge, GeneratedData, StaticChallenge, GeneratedChallenge, ProblemTemplate, GeneratedProblem, StudentProgress, TopicProgress, SkillLevel, CurriculumCategory } from '@/lib/types';
-import { problemTemplates } from '@/lib/problemTemplates';
+import { problemTemplates } from '@/lib/templates/index';
 import { generateProblem, validateAnswer, checkCommonMistake } from '@/lib/templateEngine';
-import { getUnmetPrerequisites } from '@/lib/topicGraph';
+import { getUnmetPrerequisites, topicGraph } from '@/lib/topicGraph';
 import { curriculum } from '@/lib/curriculum';
 import { createAdaptiveState, updateAdaptiveState, getDifficultyLabel, AdaptiveState } from '@/lib/adaptiveEngine';
 import { createProblemSession, selectTemplate as selectTemplateFromSession, updateSessionAfterSelection, ProblemSession } from '@/lib/problemSelector';
 import { useEditorContext } from '@/contexts/EditorContext';
+import SkillTree, { type SkillTreeTopic, type SkillTreeProgress } from '@/components/SkillTree/SkillTree';
+import { useStudentProgress, getSkillLevel } from '@/hooks/useStudentProgress';
 
 interface OldChallenge {
   id: string;
@@ -346,63 +348,8 @@ const staticChallenges: StaticChallenge[] = oldChallenges.map(c => ({
 const allChallenges: Challenge[] = [...staticChallenges];
 
 // Helper functions for student progress tracking
-function loadProgress(): StudentProgress {
-  try {
-    const saved = localStorage.getItem('mathviz_student_progress');
-    return saved ? JSON.parse(saved) : { topics: {} };
-  } catch {
-    return { topics: {} };
-  }
-}
-
-function saveProgress(progress: StudentProgress): void {
-  try {
-    localStorage.setItem('mathviz_student_progress', JSON.stringify(progress));
-  } catch (error) {
-    console.error('Failed to save progress:', error);
-  }
-}
-
-function getSkillLevel(correct: number, attempts: number): SkillLevel {
-  if (attempts === 0) return 'not_started';
-  const accuracy = correct / attempts;
-  if (correct >= 10 && accuracy >= 0.9) return 'mastered';
-  if (correct >= 5 && accuracy >= 0.75) return 'proficient';
-  return 'practicing';
-}
-
-function updateTopicProgress(
-  progress: StudentProgress,
-  topicKey: string,
-  isCorrect: boolean
-): StudentProgress {
-  const current = progress.topics[topicKey] || {
-    topicKey,
-    attempts: 0,
-    correct: 0,
-    streak: 0,
-    level: 'not_started' as SkillLevel,
-  };
-
-  const newCorrect = current.correct + (isCorrect ? 1 : 0);
-  const newAttempts = current.attempts + 1;
-  const newStreak = isCorrect ? current.streak + 1 : 0;
-  const newLevel = getSkillLevel(newCorrect, newAttempts);
-
-  return {
-    ...progress,
-    topics: {
-      ...progress.topics,
-      [topicKey]: {
-        topicKey,
-        attempts: newAttempts,
-        correct: newCorrect,
-        streak: newStreak,
-        level: newLevel,
-      },
-    },
-  };
-}
+// loadProgress / saveProgress / getSkillLevel / updateTopicProgress
+// перенесены в src/hooks/useStudentProgress.ts
 
 function skillIcon(level: SkillLevel): { icon: React.ReactNode; color: string; label: string } {
   switch (level) {
@@ -437,7 +384,13 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  const [studentProgress, setStudentProgress] = useState<StudentProgress>(() => loadProgress());
+  const [studentProgress, setStudentProgress] = useState<StudentProgress>({ topics: {} });
+  const { studentProgress: savedProgress, updateTopicProgress: saveTopicProgress } = useStudentProgress();
+
+  // Синхронизируем локальный стейт с загруженным из IndexedDB
+  React.useEffect(() => {
+    setStudentProgress(savedProgress);
+  }, [savedProgress]);
   const [achievementMessage, setAchievementMessage] = useState<string | null>(null);
   const [adaptiveState, setAdaptiveState] = useState<AdaptiveState>(() => createAdaptiveState());
   const [problemSession, setProblemSession] = useState<ProblemSession | null>(null);
@@ -520,7 +473,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
     return structure;
   }, [allChallenges]);
 
-  const handleCheck = () => {
+  const handleCheck = async () => {
     // Handle template-based problems
     if (activeTemplate && generatedProblem) {
       const isCorrect = validateAnswer(
@@ -531,9 +484,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
 
       // Update progress
       const topicKey = `${activeTemplate.class}-${activeTemplate.subject}-${activeTemplate.topic}`;
-      const newProgress = updateTopicProgress(studentProgress, topicKey, isCorrect);
+      const newProgress = await saveTopicProgress(topicKey, isCorrect);
       setStudentProgress(newProgress);
-      saveProgress(newProgress);
 
       // Update adaptive state
       const newAdaptiveState = updateAdaptiveState(adaptiveState, isCorrect);
@@ -1454,7 +1406,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="font-medium text-gray-800">Задача: {template.topic_title ?? template.section}</div>
+                  <div className="font-medium text-gray-800">{template.section}</div>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? 'bg-green-100 text-green-700' : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? 'bg-yellow-100 text-yellow-700' : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
                       {Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? 'Легко' : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? 'Средне' : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? 'Сложно' : 'Олимпиадное'}
@@ -1493,106 +1445,97 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
           <p className="text-gray-500 mt-1">Выберите предмет и тему для изучения</p>
         </div>
 
-        {/* Subjects and topics */}
-        <div className="space-y-6">
-          {Object.entries(category.subjects).map(([subjectKey, subject]) => (
-            <div key={subjectKey}>
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">{subject.name}</h3>
-              <div className="space-y-2">
-                {Object.entries(subject.topics).map(([topicKey, topic]) => {
-                  const completedChallenges_count = topic.challenges.filter(c => completedChallenges.includes(c.id)).length;
-                  const completedTemplates_count = topic.templates.filter(t => completedChallenges.includes(t.id)).length;
-                  const completed = completedChallenges_count + completedTemplates_count;
-                  const total = topic.challenges.length + topic.templates.length;
-                  const progress = total > 0 ? (completed / total) * 100 : 0;
-                  const isEmpty = total === 0;
+        {/* Skill Tree */}
+        {(() => {
+          // Build topics list for SkillTree from all subjects of this category
+          const skillTopics: SkillTreeTopic[] = Object.entries(category.subjects).flatMap(
+            ([, subject]) =>
+              Object.entries(subject.topics).map(([topicKey, topic]) => {
+                // Find prerequisites from topicGraph
+                const node = topicGraph?.find?.((n: { id: string }) => n.id === topicKey);
+                return {
+                  id: topicKey,
+                  title: topic.name,
+                  prerequisites: node?.prerequisites ?? [],
+                };
+              })
+          );
 
-                  // Get skill level for this topic
-                  const topicProgressKey = `${selectedCategory?.replace('grade', '')}-${subjectKey}-${topicKey}`;
-                  const topicProgress = studentProgress.topics[topicProgressKey];
-                  const skill = topicProgress ? skillIcon(topicProgress.level) : skillIcon('not_started');
+          // Build progress map for SkillTree
+          const gradeNum = selectedCategory?.replace('grade', '') ?? '';
 
-                  // Get mastered topics for prerequisite checking
-                  // Extract just the topic ID from all progress entries
-                  const masteredTopics = Object.entries(studentProgress.topics)
-                    .filter(([_, tp]) => tp.level === 'proficient' || tp.level === 'mastered')
-                    .map(([key, _]) => {
-                      // Extract topic ID from key format: "5-algebra-comparison" -> "comparison"
-                      const parts = key.split('-');
-                      // Handle both "5-algebra-comparison" and potential other formats
-                      return parts.length >= 3 ? parts.slice(2).join('-') : parts[parts.length - 1];
-                    });
+          // Collect topic IDs belonging to the current grade's curriculum
+          const currentGradeTopicIds = new Set<string>(
+            Object.values(category.subjects).flatMap(s => Object.keys(s.topics))
+          );
 
-                  // Check for unmet prerequisites
-                  const unmetPrereqs = getUnmetPrerequisites(topicKey, masteredTopics);
-                  const firstUnmetPrereq = unmetPrereqs.length > 0 ? unmetPrereqs[0] : null;
+          // Collect mastered topic IDs across ALL grades.
+          // Storage key format: "${gradeNum}-${subjectId}-${topicId}"
+          const globalMasteredIds = new Set<string>(
+            Object.entries(studentProgress.topics)
+              .filter(([, v]) => v.level === 'proficient' || v.level === 'mastered')
+              .map(([k]) => {
+                const parts = k.split('-');
+                return (parts.length >= 3 && /^\d+$/.test(parts[0]))
+                  ? parts.slice(2).join('-')
+                  : k;
+              })
+          );
 
-                  // Find the topic name for the first unmet prerequisite
-                  let prereqTopicName = '';
-                  if (firstUnmetPrereq) {
-                    // Search through all subjects to find the prerequisite topic
-                    for (const [, subj] of Object.entries(category.subjects)) {
-                      const prereqTopic = subj.topics[firstUnmetPrereq as keyof typeof subj.topics];
-                      if (prereqTopic) {
-                        prereqTopicName = prereqTopic.name;
-                        break;
-                      }
-                    }
-                  }
+          // KEY FIX: prerequisites from a PREVIOUS grade are auto-satisfied.
+          // This unlocks the first topics of each grade for new/returning students
+          // without requiring them to replay previous grade exercises.
+          const resolvedMasteredIds = new Set<string>(globalMasteredIds);
+          for (const topicId of currentGradeTopicIds) {
+            const node = topicGraph?.find?.((n: { id: string }) => n.id === topicId);
+            if (node) {
+              for (const prereqId of node.prerequisites) {
+                if (!currentGradeTopicIds.has(prereqId)) {
+                  resolvedMasteredIds.add(prereqId);
+                }
+              }
+            }
+          }
 
-                  return (
-                    <button
-                      key={topicKey}
-                      onClick={() => !isEmpty && setSelectedTopic(`${subjectKey}/${topicKey}`)}
-                      disabled={isEmpty}
-                      className={`w-full p-4 border border-gray-200 rounded-xl transition-all text-left ${isEmpty ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:border-indigo-500 hover:bg-indigo-50'}`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <div className={`font-medium ${isEmpty ? 'text-gray-500' : 'text-gray-800'} flex items-center gap-2`}>
-                            {topic.name}
-                            {!isEmpty && topicProgress && (
-                              <span className="flex items-center gap-1 text-xs">
-                                {skill.icon}
-                                <span className={skill.color}>{skill.label}</span>
-                              </span>
-                            )}
-                            {isEmpty && <span className="ml-2 text-xs text-gray-400">В разработке</span>}
-                          </div>
-                          {!isEmpty && (
-                            <div className="text-sm text-gray-500 mt-1">
-                              {completed} / {total} задач выполнено
-                              {topicProgress && topicProgress.streak > 0 && (
-                                <span className="ml-2 text-orange-600">🔥 {topicProgress.streak}</span>
-                              )}
-                            </div>
-                          )}
-                          {/* Prerequisite warning */}
-                          {!isEmpty && firstUnmetPrereq && prereqTopicName && (
-                            <div className="text-xs text-amber-600 mt-2 flex items-start gap-1">
-                              <span>⚠️</span>
-                              <span>Рекомендуем сначала пройти: {prereqTopicName}</span>
-                            </div>
-                          )}
-                        </div>
-                        {!isEmpty && <ArrowRight size={20} className="text-gray-400" />}
-                      </div>
-                      {/* Progress bar */}
-                      {!isEmpty && (
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                          <div
-                            className={`bg-${category.color}-600 h-1.5 rounded-full transition-all`}
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+          const skillProgress: SkillTreeProgress = {};
+          for (const [subjectKey, subject] of Object.entries(category.subjects)) {
+            for (const topicKey of Object.keys(subject.topics)) {
+              const key = `${gradeNum}-${subjectKey}-${topicKey}`;
+              const tp = studentProgress.topics[key];
+              const hasContent =
+                (subject.topics[topicKey].challenges.length + subject.topics[topicKey].templates.length) > 0;
+
+              if (tp && (tp.level === 'mastered' || tp.level === 'proficient')) {
+                skillProgress[topicKey] = 'completed';
+              } else if (!hasContent) {
+                skillProgress[topicKey] = 'locked';
+              } else {
+                const unmet = getUnmetPrerequisites(topicKey, Array.from(resolvedMasteredIds));
+                skillProgress[topicKey] = unmet.length === 0 ? 'unlocked' : 'locked';
+              }
+            }
+          }
+
+          // Handle topic click: find its subject and navigate
+          const handleSkillTopicClick = (topicId: string) => {
+            for (const [subjectKey, subject] of Object.entries(category.subjects)) {
+              if (topicId in subject.topics) {
+                const topic = subject.topics[topicId];
+                const hasContent = (topic.challenges.length + topic.templates.length) > 0;
+                if (hasContent) setSelectedTopic(`${subjectKey}/${topicId}`);
+                return;
+              }
+            }
+          };
+
+          return (
+            <SkillTree
+              topics={skillTopics}
+              progress={skillProgress}
+              onTopicClick={handleSkillTopicClick}
+            />
+          );
+        })()}
       </div>
     );
   }
