@@ -158,6 +158,18 @@ export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3
         }
     }
 
+    // Generate hints array if config has one
+    let hints: string[] | undefined;
+    if (config.hints && config.hints.length > 0) {
+        hints = config.hints.map(h => {
+            let hintText = h;
+            for (const [key, value] of Object.entries(params)) {
+                hintText = hintText.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
+            }
+            return hintText;
+        });
+    }
+
     // Generate solution steps if config has them
     let solution: SolutionStep[] | undefined;
     if (config.solution) {
@@ -228,6 +240,7 @@ export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3
         question,
         answer,
         hint,
+        hints,
         solution,
         answer_type: config.answer_type || 'number',
     };

@@ -5,6 +5,7 @@ export interface AdaptiveState {
     consecutiveCorrect: number;
     consecutiveWrong: number;
     recentAnswers: boolean[]; // последние 10 ответов
+    hintsUsedInCurrentProblem: number; // подсказки, использованные в текущей задаче
 }
 
 /**
@@ -16,6 +17,7 @@ export function createAdaptiveState(initialDifficulty: number = 1): AdaptiveStat
         consecutiveCorrect: 0,
         consecutiveWrong: 0,
         recentAnswers: [],
+        hintsUsedInCurrentProblem: 0,
     };
 }
 
@@ -76,6 +78,7 @@ export function updateAdaptiveState(
         consecutiveCorrect: newConsecutiveCorrect,
         consecutiveWrong: newConsecutiveWrong,
         recentAnswers: newRecentAnswers,
+        hintsUsedInCurrentProblem: 0,
     };
 }
 
@@ -132,4 +135,47 @@ export function getDifficultyLabel(difficulty: 1 | 2 | 3 | 4): string {
         case 3: return 'Сложно';
         case 4: return 'Олимпиадное';
     }
+}
+
+/**
+ * Calculate the "weight" of a correct answer based on hints used
+ * - No hints: full weight (1.0)
+ * - 1 hint used: reduced weight (0.5)
+ * - 2+ hints used: minimal weight (0.0)
+ * 
+ * This affects the progression algorithm:
+ * - 3 correct with full weight = +1 difficulty
+ * - Using hints reduces or cancels the streak bonus
+ */
+export function calculateAnswerWeight(hintsUsed: number): number {
+    if (hintsUsed === 0) {
+        return 1.0;
+    } else if (hintsUsed === 1) {
+        return 0.5;
+    } else {
+        return 0.0;
+    }
+}
+
+/**
+ * Update adaptive state with hints usage information
+ * Should be called when user requests a hint
+ */
+export function updateHintsUsed(state: AdaptiveState): AdaptiveState {
+    return {
+        ...state,
+        hintsUsedInCurrentProblem: state.hintsUsedInCurrentProblem + 1,
+    };
+}
+
+/**
+ * Get weighted answer for adaptive algorithm
+ * A correct answer with hints used is weighted less
+ */
+export function getWeightedAnswer(isCorrect: boolean, hintsUsed: number): boolean {
+    if (!isCorrect) {
+        return false;
+    }
+    const weight = calculateAnswerWeight(hintsUsed);
+    return Math.random() < weight;
 }

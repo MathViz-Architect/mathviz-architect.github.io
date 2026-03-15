@@ -104,3 +104,39 @@ export class BatchCommand implements Command {
         [...this.commands].reverse().forEach(c => c.undo());
     }
 }
+
+export class ResizeObjectCommand implements Command {
+    description = 'Изменить размер объекта';
+    private previousState: { x: number; y: number; width: number; height: number };
+    private nextState: { x: number; y: number; width: number; height: number };
+    private setObjects: (objects: AnyCanvasObject[]) => void;
+
+    constructor(
+        private objects: AnyCanvasObject[],
+        private id: string,
+        newBounds: { x: number; y: number; width: number; height: number },
+        setObjects: (objects: AnyCanvasObject[]) => void
+    ) {
+        const obj = objects.find(o => o.id === id)!;
+        this.previousState = { x: obj.x, y: obj.y, width: obj.width, height: obj.height };
+        this.nextState = newBounds;
+        this.setObjects = setObjects;
+    }
+
+    execute() {
+        this.applyState(this.nextState);
+    }
+
+    undo() {
+        this.applyState(this.previousState);
+    }
+
+    private applyState(bounds: { x: number; y: number; width: number; height: number }) {
+        this.setObjects(
+            this.objects.map(o => o.id === this.id 
+                ? { ...o, ...bounds } 
+                : o
+            )
+        );
+    }
+}

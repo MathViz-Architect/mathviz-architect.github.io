@@ -292,7 +292,7 @@ export const grade5Templates: ProblemTemplate[] = [
                     s: { type: 'expression', value: 'a * a' },
                 },
                 answer_formula: 'a',
-                hint: 'Сторона квадрата = √площадь',
+                hint: 'Сторона квадрата = \\sqrt{площадь}',
             },
         },
     },

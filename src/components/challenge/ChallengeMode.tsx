@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, ArrowRight, HelpCircle, Award, Star, TrendingUp, Target, Search } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, HelpCircle, Award, Star, TrendingUp, Target, Search, Lightbulb } from 'lucide-react';
 import { Challenge, GeneratedData, StaticChallenge, GeneratedChallenge, ProblemTemplate, GeneratedProblem, StudentProgress, TopicProgress, SkillLevel, CurriculumCategory } from '@/lib/types';
 import { problemTemplates } from '@/lib/templates/index';
 import { generateProblem, validateAnswer, checkCommonMistake } from '@/lib/templateEngine';
 import { getUnmetPrerequisites, topicGraph } from '@/lib/topicGraph';
 import { curriculum } from '@/lib/curriculum';
-import { createAdaptiveState, updateAdaptiveState, getDifficultyLabel, AdaptiveState } from '@/lib/adaptiveEngine';
+import { createAdaptiveState, updateAdaptiveState, getDifficultyLabel, AdaptiveState, updateHintsUsed, getWeightedAnswer } from '@/lib/adaptiveEngine';
 import { createProblemSession, selectTemplate as selectTemplateFromSession, updateSessionAfterSelection, ProblemSession } from '@/lib/problemSelector';
 import { useEditorContext } from '@/contexts/EditorContext';
 import SkillTree, { type SkillTreeTopic, type SkillTreeProgress } from '@/components/SkillTree/SkillTree';
 import { useStudentProgress, getSkillLevel } from '@/hooks/useStudentProgress';
+import MathText from './MathText';
 
 interface OldChallenge {
   id: string;
@@ -244,7 +245,7 @@ const oldChallenges: OldChallenge[] = [
     type: 'geometry',
     targetValue: 7.1,
     tolerance: 0.1,
-    hint: 'a² + b² = c², где a = b = 5. Вычислите √(5² + 5²)',
+    hint: 'a² + b² = c², где a = b = 5. Вычислите \\sqrt{5^2 + 5^2}',
     difficulty: 'medium',
   },
   {
@@ -255,7 +256,7 @@ const oldChallenges: OldChallenge[] = [
     type: 'geometry',
     targetValue: 8,
     tolerance: 0.1,
-    hint: 'Из формулы a² + b² = c² выразите b: b = √(c² - a²)',
+    hint: 'Из формулы a² + b² = c² выразите b: b = \\sqrt{c^2 - a^2}',
     difficulty: 'hard',
   },
   {
@@ -379,6 +380,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   const [selectedTriangleType, setSelectedTriangleType] = useState<'equilateral' | 'isosceles' | 'scalene' | null>(null);
   const [result, setResult] = useState<'correct' | 'incorrect' | null>(null);
   const [showHint, setShowHint] = useState(false);
+  const [activeHintIndex, setActiveHintIndex] = useState(-1);
+  const [hintsUsed, setHintsUsed] = useState(0);
   const [showSolution, setShowSolution] = useState(false);
   const [mistakeFeedback, setMistakeFeedback] = useState<string | null>(null);
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
@@ -482,13 +485,17 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         generatedProblem.answer_type || 'number'
       );
 
+      // Calculate weighted answer for adaptive algorithm based on hints used
+      // Using hints reduces the "weight" of a correct answer
+      const weightedIsCorrect = getWeightedAnswer(isCorrect, hintsUsed);
+
       // Update progress
       const topicKey = `${activeTemplate.class}-${activeTemplate.subject}-${activeTemplate.topic}`;
-      const newProgress = await saveTopicProgress(topicKey, isCorrect);
+      const newProgress = await saveTopicProgress(topicKey, weightedIsCorrect);
       setStudentProgress(newProgress);
 
-      // Update adaptive state
-      const newAdaptiveState = updateAdaptiveState(adaptiveState, isCorrect);
+      // Update adaptive state with weighted result
+      const newAdaptiveState = updateAdaptiveState(adaptiveState, weightedIsCorrect);
       setAdaptiveState(newAdaptiveState);
 
       // Sync session with updated adaptive state
@@ -633,6 +640,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         setSelectedTriangleType(null);
         setResult(null);
         setShowHint(false);
+        setActiveHintIndex(-1);
+        setHintsUsed(0);
         setShowSolution(false);
         setMistakeFeedback(null);
         setAchievementMessage(null);
@@ -649,6 +658,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
     setSelectedTriangleType(null);
     setResult(null);
     setShowHint(false);
+    setActiveHintIndex(-1);
+    setHintsUsed(0);
     setShowSolution(false);
     setMistakeFeedback(null);
     setAchievementMessage(null);
@@ -717,23 +728,84 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
 
         {/* Task */}
         <div className="bg-indigo-50 rounded-xl p-4 mb-6">
-          <h3 className="font-semibold text-indigo-800 mb-2">Задача:</h3>
-          <p className="text-indigo-700">{generatedProblem.question}</p>
+          <h3 className="font-semibold text-indigo-800 mb-3">Задача:</h3>
+          <div className="border-t border-indigo-200 pt-3">
+            <MathText className="text-indigo-700">
+              {generatedProblem.question}
+            </MathText>
+          </div>
         </div>
 
-        {/* Hint */}
-        {generatedProblem.hint && (
+        {/* Hint - support both single hint and hints array */}
+        {(generatedProblem.hint || (generatedProblem.hints && generatedProblem.hints.length > 0)) && (
           <div className="mb-6">
+            {/* Button to show/reveal next hint */}
             <button
-              onClick={() => setShowHint(!showHint)}
+              onClick={() => {
+                const hintsCount = generatedProblem.hints?.length || 0;
+                if (hintsCount > 0) {
+                  // Multi-hint mode: show next hint progressively
+                  if (activeHintIndex < hintsCount - 1) {
+                    const newIndex = activeHintIndex + 1;
+                    setActiveHintIndex(newIndex);
+                    setHintsUsed(hintsUsed + 1);
+                    setShowHint(true);
+                    // Update adaptive state to track hints usage
+                    setAdaptiveState(prev => updateHintsUsed(prev));
+                  } else if (!showHint && generatedProblem.hint) {
+                    // Fall back to single hint
+                    setShowHint(true);
+                    setHintsUsed(hintsUsed + 1);
+                    setAdaptiveState(prev => updateHintsUsed(prev));
+                  }
+                } else if (generatedProblem.hint) {
+                  // Single hint mode
+                  setShowHint(!showHint);
+                  if (!showHint) {
+                    setHintsUsed(hintsUsed + 1);
+                    setAdaptiveState(prev => updateHintsUsed(prev));
+                  }
+                }
+              }}
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
             >
-              <HelpCircle size={16} />
-              {showHint ? 'Скрыть подсказку' : 'Показать подсказку'}
+              <Lightbulb size={16} />
+              {generatedProblem.hints && generatedProblem.hints.length > 0
+                ? activeHintIndex < (generatedProblem.hints.length - 1)
+                  ? `Подсказка ${activeHintIndex + 2}/${generatedProblem.hints.length}`
+                  : activeHintIndex === (generatedProblem.hints.length - 1) && showHint
+                    ? 'Скрыть подсказки'
+                    : 'Показать подсказку'
+                : showHint
+                  ? 'Скрыть подсказку'
+                  : 'Показать подсказку'
+              }
             </button>
+            
+            {/* Display hints */}
             {showHint && (
-              <div className="mt-2 p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
-                💡 {generatedProblem.hint}
+              <div className="mt-2 space-y-2">
+                {/* Show progressive hints from the array */}
+                {generatedProblem.hints && generatedProblem.hints.length > 0 && (
+                  <>
+                    {generatedProblem.hints.slice(0, activeHintIndex + 1).map((hint, idx) => (
+                      <div key={idx} className="p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
+                        <span className="font-medium">Подсказка {idx + 1}:</span> <MathText>{hint}</MathText>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {/* Fallback to single hint */}
+                {generatedProblem.hint && (!generatedProblem.hints || generatedProblem.hints.length === 0) && (
+                  <div className="p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
+                    💡 <MathText>{generatedProblem.hint}</MathText>
+                  </div>
+                )}
+                {hintsUsed > 0 && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    Использовано подсказок: {hintsUsed}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -978,15 +1050,15 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                         {index + 1}
                       </div>
                       <div className="flex-1">
-                        <div className="text-blue-900">{step.explanation}</div>
+                        <div className="text-blue-900"><MathText>{step.explanation}</MathText></div>
                         {step.expression && (
                           <div className="mt-1 font-mono text-sm text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                            {step.expression}
+                            <MathText>{step.expression}</MathText>
                           </div>
                         )}
                         {step.result && (
                           <div className="mt-1 font-semibold text-blue-800">
-                            = {step.result}
+                            = <MathText>{step.result}</MathText>
                           </div>
                         )}
                       </div>

@@ -70,8 +70,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     setPenSettingsState(prev => ({ ...prev, ...settings }));
   }, []);
 
-  const handleZoomIn = useCallback(() => setZoom(z => Math.min(z + 0.1, 2)), []);
-  const handleZoomOut = useCallback(() => setZoom(z => Math.max(z - 0.1, 0.5)), []);
+  const handleZoomIn = useCallback(() => setZoom(z => Math.min(z + 0.1, 2.0)), []);
+  const handleZoomOut = useCallback(() => setZoom(z => Math.max(z - 0.1, 0.3)), []);
   const handleZoomReset = useCallback(() => setZoom(1), []);
   const handleToggleGrid = useCallback(() => setShowGrid(g => !g), []);
 

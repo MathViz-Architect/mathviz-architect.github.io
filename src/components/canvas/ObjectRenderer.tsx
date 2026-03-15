@@ -20,6 +20,8 @@
  *   - onTextEditComplete  – () => void
  *   - onTextEditCancel    – () => void
  *   - onAutoResize        – () => void
+ *   - zoom               – current zoom level (for resize handles)
+ *   - onImageResizeStart  – (handle: ResizeHandle, e: MouseEvent) => void
  */
 
 import React from 'react';
@@ -28,6 +30,8 @@ import {
   calculateArrowAngle,
   calculateArrowHeadPoints,
 } from '@/math-core';
+import { ImageResizeHandles } from './ImageResizeHandles';
+import { ResizeHandle } from '@/lib/canvas/resizeImage';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -65,11 +69,13 @@ interface ObjectRendererProps {
   onTextEditComplete: () => void;
   onTextEditCancel: () => void;
   onAutoResize: () => void;
+  zoom: number;
+  onImageResizeStart?: (handle: ResizeHandle, e: React.MouseEvent) => void;
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
 
-export const ObjectRenderer: React.FC<ObjectRendererProps> = ({
+const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
   obj,
   isSelected,
   dragDelta,
@@ -85,6 +91,8 @@ export const ObjectRenderer: React.FC<ObjectRendererProps> = ({
   onTextEditComplete,
   onTextEditCancel,
   onAutoResize,
+  zoom,
+  onImageResizeStart,
 }) => {
   const opacity = obj.visible ? obj.opacity : 0.3;
   const cursor = obj.locked ? 'not-allowed' : 'move';
@@ -533,6 +541,107 @@ export const ObjectRenderer: React.FC<ObjectRendererProps> = ({
       );
     }
 
+    // ── image ────────────────────────────────────────────────────────────────
+    case 'image': {
+      const d = obj.data as { url: string; alt?: string };
+      const ox = obj.x + dx;
+      const oy = obj.y + dy;
+      const [imageError, setImageError] = React.useState(false);
+      
+      const handleError = () => {
+        console.warn('[ObjectRenderer] Image failed to load:', d.url);
+        setImageError(true);
+      };
+      
+      if (imageError) {
+        // Fallback placeholder when image fails to load (CORS, 404, etc.)
+        const cx = obj.x + obj.width / 2;
+        const cy = obj.y + obj.height / 2;
+        return (
+          <g 
+            key={obj.id} 
+            onMouseDown={md} 
+            style={{ cursor }}
+            transform={obj.rotation ? `rotate(${obj.rotation} ${cx} ${cy})` : undefined}
+          >
+            <rect
+              x={ox}
+              y={oy}
+              width={obj.width}
+              height={obj.height}
+              fill="#E5E7EB"
+              stroke="#9CA3AF"
+              strokeWidth={1}
+              opacity={opacity}
+            />
+            <text
+              x={ox + obj.width / 2}
+              y={oy + obj.height / 2 - 8}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize={12}
+              fill="#6B7280"
+            >
+              Ошибка
+            </text>
+            <text
+              x={ox + obj.width / 2}
+              y={oy + obj.height / 2 + 8}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize={10}
+              fill="#9CA3AF"
+            >
+              загрузки
+            </text>
+            {isSelected && <rect x={ox - 2} y={oy - 2} width={obj.width + 4} height={obj.height + 4} {...SEL} />}
+            {isSelected && onImageResizeStart && (
+              <ImageResizeHandles
+                x={ox}
+                y={oy}
+                width={obj.width}
+                height={obj.height}
+                zoom={zoom}
+                onResizeStart={onImageResizeStart}
+              />
+            )}
+          </g>
+        );
+      }
+      
+      return (
+        <g 
+          key={obj.id} 
+          onMouseDown={md} 
+          style={{ cursor }}
+          transform={obj.rotation ? `rotate(${obj.rotation} ${obj.x + obj.width / 2} ${obj.y + obj.height / 2})` : undefined}
+        >
+          <image
+            href={d.url}
+            x={ox}
+            y={oy}
+            width={obj.width}
+            height={obj.height}
+            preserveAspectRatio="xMidYMid meet"
+            opacity={opacity}
+            crossOrigin="anonymous"
+            onError={handleError}
+          />
+          {isSelected && <rect x={ox - 2} y={oy - 2} width={obj.width + 4} height={obj.height + 4} {...SEL} />}
+          {isSelected && onImageResizeStart && (
+            <ImageResizeHandles
+              x={ox}
+              y={oy}
+              width={obj.width}
+              height={obj.height}
+              zoom={zoom}
+              onResizeStart={onImageResizeStart}
+            />
+          )}
+        </g>
+      );
+    }
+
     // ── default ───────────────────────────────────────────────────────────────
     default: {
       const ox = obj.x + dx; const oy = obj.y + dy;
@@ -547,4 +656,72 @@ export const ObjectRenderer: React.FC<ObjectRendererProps> = ({
   }
 };
 
-export default ObjectRenderer;
+// Custom comparison for memo - only re-render if these change
+function propsAreEqual(prev: ObjectRendererProps, next: ObjectRendererProps): boolean {
+  // Core object data - compare by id first (quick check)
+  if (prev.obj.id !== next.obj.id) return false;
+  
+  // Check if object itself changed (deep compare would be expensive, but necessary)
+  if (prev.obj.x !== next.obj.x ||
+      prev.obj.y !== next.obj.y ||
+      prev.obj.width !== next.obj.width ||
+      prev.obj.height !== next.obj.height ||
+      prev.obj.rotation !== next.obj.rotation ||
+      prev.obj.opacity !== next.obj.opacity ||
+      prev.obj.visible !== next.obj.visible ||
+      prev.obj.locked !== next.obj.locked ||
+      JSON.stringify(prev.obj.data) !== JSON.stringify(next.obj.data)) {
+    return false;
+  }
+  
+  // Selection state
+  if (prev.isSelected !== next.isSelected) return false;
+  
+  // Drag delta (only matters for selected objects)
+  if (prev.isSelected && next.isSelected) {
+    if ((prev.dragDelta?.dx ?? 0) !== (next.dragDelta?.dx ?? 0) ||
+        (prev.dragDelta?.dy ?? 0) !== (next.dragDelta?.dy ?? 0)) {
+      return false;
+    }
+  }
+  
+  // Zoom (for resize handles)
+  if (prev.zoom !== next.zoom) return false;
+  
+  // Text editing - only re-render if this specific object is being edited
+  if (prev.editingTextId !== next.editingTextId) {
+    // If the editing object changed, we need to re-render both the old and new
+    return false;
+  }
+  if (prev.editingTextId === prev.obj.id && prev.editingText !== next.editingText) return false;
+  if (prev.editingTextId === prev.obj.id && 
+      JSON.stringify(prev.editingTextSize) !== JSON.stringify(next.editingTextSize)) return false;
+  
+  // Canvas width (rarely changes)
+  if (prev.canvasWidth !== next.canvasWidth) return false;
+  
+  // For geosegment/geoangle - only re-render if referenced points changed
+  if (prev.obj.type === 'geosegment' || prev.obj.type === 'geoangle') {
+    const prevData = prev.obj.data as { pointAId?: string; pointBId?: string; pointCId?: string };
+    const nextData = next.obj.data as { pointAId?: string; pointBId?: string; pointCId?: string };
+    const pointIds = [prevData.pointAId, prevData.pointBId, prevData.pointCId].filter(Boolean);
+    if (pointIds.length > 0) {
+      const prevPoints = new Map(prev.objects.filter(o => pointIds.includes(o.id)).map(o => [o.id, o]));
+      const nextPoints = new Map(next.objects.filter(o => pointIds.includes(o.id)).map(o => [o.id, o]));
+      for (const id of pointIds) {
+        const prevPt = prevPoints.get(id);
+        const nextPt = nextPoints.get(id);
+        if (!prevPt || !nextPt || prevPt.x !== nextPt.x || prevPt.y !== nextPt.y) {
+          return false;
+        }
+      }
+    }
+  }
+  
+  // Reference equality for callbacks - if they're the same functions, skip
+  // This assumes stable callback references from parent (useCallback)
+  
+  return true;
+}
+
+export const ObjectRenderer = React.memo(ObjectRendererComponent, propsAreEqual);

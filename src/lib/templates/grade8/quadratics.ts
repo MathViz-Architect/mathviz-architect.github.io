@@ -209,13 +209,13 @@ export const grade8QuadraticTemplates: ProblemTemplate[] = [
                     c: { type: 'expression', value: 'r * r' },
                 },
                 answer_formula: 'r',
-                hint: 'x² = {c} → x = ±√{c}',
+                hint: 'x² = {c} → x = ±\\sqrt{c}',
                 solution: [
-                    { explanation: 'x = ±√{c} = ±{r}' },
+                    { explanation: 'x = ±\\sqrt{c} = ±{r}' },
                     { explanation: 'Положительный корень:', result: '{r}' },
                 ],
                 common_mistakes: [
-                    { pattern: 'c', feedback: 'Нужно √{c}, а не {c} — не забудьте извлечь корень.' },
+                    { pattern: 'c', feedback: 'Нужно \\sqrt{c}, а не {c} — не забудьте извлечь корень.' },
                 ],
             },
             // Уровень 2 — ax² = c (строим от корня)
@@ -231,7 +231,7 @@ export const grade8QuadraticTemplates: ProblemTemplate[] = [
                 solution: [
                     { explanation: '{a}x² = {c}' },
                     { explanation: 'x² = {c} ÷ {a} = {r*r}' },
-                    { explanation: 'x = ±√{r*r} = ±{r}. Положительный:', result: '{r}' },
+                    { explanation: 'x = ±\\sqrt{r*r} = ±{r}. Положительный:', result: '{r}' },
                 ],
             },
             // Уровень 3 — ax² + bx = 0 (один корень 0, другой -b/a)
@@ -314,10 +314,10 @@ export const grade8QuadraticTemplates: ProblemTemplate[] = [
                 },
                 constraints: ['r1 !== r2'],
                 answer_formula: 'Math.min(r1, r2)',
-                hint: 'Вычислите D, затем x = (−{b} ± √D) / 2',
+                hint: 'Вычислите D, затем x = (−{b} ± \\sqrt{D}) / 2',
                 solution: [
                     { explanation: 'D = ({b})² − 4·({c}) = {b*b - 4*c}' },
-                    { explanation: 'x₁,₂ = (−({b}) ± √{b*b - 4*c}) / 2' },
+                    { explanation: 'x₁,₂ = (−({b}) ± \\sqrt{{b*b - 4*c}}) / 2' },
                     { explanation: 'Меньший корень:', result: '{answer}' },
                 ],
             },
@@ -333,10 +333,10 @@ export const grade8QuadraticTemplates: ProblemTemplate[] = [
                 },
                 constraints: ['r1 !== r2'],
                 answer_formula: 'Math.max(r1, r2)',
-                hint: 'D = ({b})² − 4·{a}·({c}). Корни: x = (−{b} ± √D) / (2·{a})',
+                hint: 'D = ({b})² − 4·{a}·({c}). Корни: x = (−{b} ± \\sqrt{D}) / (2·{a})',
                 solution: [
                     { explanation: 'D = {b*b} − 4·{a}·{c} = {b*b - 4*a*c}' },
-                    { explanation: 'x₁,₂ = (−{b} ± √{b*b - 4*a*c}) / {2*a}' },
+                    { explanation: 'x₁,₂ = (−{b} ± \\sqrt{{b*b - 4*a*c}}) / {2*a}' },
                     { explanation: 'Больший корень:', result: '{answer}' },
                 ],
             },
@@ -355,10 +355,10 @@ export const grade8QuadraticTemplates: ProblemTemplate[] = [
                 // r1 === r2 разрешено (кратный корень)
                 // answer_formula возвращает строку "r1, r2" или "r1" если равны
                 answer_formula: 'r1 === r2 ? String(r1) : Math.min(r1,r2) + ", " + Math.max(r1,r2)',
-                hint: 'D = b² − 4ac = {a}²·(r1−r2)². Корни: (−b ± √D) / (2a)',
+                hint: 'D = b² − 4ac = {a}²·(r1−r2)². Корни: (−b ± \\sqrt{D}) / (2a)',
                 solution: [
                     { explanation: 'D = ({b})² − 4·{a}·({c}) = {b*b - 4*a*c}' },
-                    { explanation: 'x₁,₂ = (−({b}) ± √{b*b - 4*a*c}) / {2*a}', result: '{answer}' },
+                    { explanation: 'x₁,₂ = (−({b}) ± \\sqrt{{b*b - 4*a*c}}) / {2*a}', result: '{answer}' },
                 ],
             },
         },
@@ -531,7 +531,7 @@ export const grade8QuadraticTemplates: ProblemTemplate[] = [
                 hint: '(r₁+r₂)² = r₁² + r₂² + 2r₁r₂ = {sumSq} + 2·({prod})',
                 solution: [
                     { explanation: '(r₁+r₂)² = {sumSq} + 2·({prod}) = {sumSq + 2*prod}' },
-                    { explanation: 'r₁+r₂ = ±√{sumSq + 2*prod}' },
+                    { explanation: 'r₁+r₂ = ±\\sqrt{{sumSq + 2*prod}}' },
                     { explanation: 'Произведение {prod} < 0 → знаки разные → проверяем оба знака' },
                     { explanation: 'Ответ:', result: '{answer}' },
                 ],

@@ -130,6 +130,14 @@ export interface LineObject extends CanvasObject {
   };
 }
 
+export interface ImageObject extends CanvasObject {
+  type: 'image';
+  data: {
+    url: string;
+    alt?: string;
+  };
+}
+
 
 export interface GeoShapeObject extends CanvasObject {
   type: 'geoshape';
@@ -192,7 +200,7 @@ export interface FreehandPathObject extends CanvasObject {
   };
 }
 
-export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | PolygonObject | GeoShapeObject | GeoPointObject | GeoSegmentObject | GeoAngleObject | FreehandPathObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | CanvasObject;
+export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | PolygonObject | GeoShapeObject | GeoPointObject | GeoSegmentObject | GeoAngleObject | FreehandPathObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | ImageObject | CanvasObject;
 
 export interface Page {
   id: string;
@@ -258,13 +266,13 @@ export interface CommonMistake {
 }
 
 export type AnswerType =
-  | 'number'       // ✅ реализовать
-  | 'fraction'     // ✅ реализовать
-  | 'coordinate'   // ✅ реализовать
-  | 'text'         // ✅ реализовать
-  | 'expression'   // 🔜 зарезервировать
-  | 'interval'     // 🔜 зарезервировать
-  | 'set';         // 🔜 зарезервировать
+  | 'number'       // ✅ реализовано
+  | 'fraction'     // ✅ реализовано
+  | 'coordinate'   // ✅ реализовано
+  | 'text'         // ✅ реализовано
+  | 'expression'   // ✅ MathJS: symbolically equivalent expressions (x1=2, x2=5)
+  | 'interval'     // ✅ MathJS: intervals like [2; +inf) or (-3; 5]
+  | 'set';         // 🔜 зарезервировано
 
 export interface DifficultyConfig {
   template: string;
@@ -273,6 +281,7 @@ export interface DifficultyConfig {
   constraints?: string[];
   solution?: SolutionStep[];
   hint?: string;
+  hints?: string[];  // Multiple hints for progressive reveal
   common_mistakes?: CommonMistake[];
   answer_type?: AnswerType;  // default: 'number'
 }
@@ -284,7 +293,7 @@ export interface ProblemTemplate {
   section: string;
   topic: string;
   topic_title: string;
-  problemType: 'numeric' | 'multiple_choice' | 'comparison' | 'text' | 'magicSquare';
+  problemType: 'numeric' | 'multiple_choice' | 'comparison' | 'text' | 'magicSquare' | 'canvas_action';
   difficulties: Partial<Record<1 | 2 | 3 | 4, DifficultyConfig>>;
   relatedModule?: string;
   skills?: string[];
@@ -300,8 +309,21 @@ export interface GeneratedProblem {
   question: string;
   answer: number | string;
   hint?: string;
+  hints?: string[];          // Progressive hints for the task
   solution?: SolutionStep[];
   answer_type?: AnswerType;  // default: 'number'
+  canvasAction?: CanvasActionTarget;  // For canvas_action problem type
+}
+
+export interface CanvasActionTarget {
+  action: 'move_point' | 'draw_line' | 'plot_function' | 'place_point';
+  targetData: {
+    point?: { x: number; y: number };
+    line?: { x1: number; y1: number; x2: number; y2: number };
+    function?: string;
+    coordinates?: { x: number; y: number };
+  };
+  tolerance?: number;  // Pixel tolerance for canvas actions
 }
 
 // Legacy types for backward compatibility

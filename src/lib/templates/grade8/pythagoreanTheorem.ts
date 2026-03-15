@@ -36,7 +36,7 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 solution: [
                     { explanation: 'По теореме Пифагора: c² = a² + b²' },
                     { explanation: 'c² = {a}² + {b}² = {a*a} + {b*b} = {a*a + b*b}' },
-                    { explanation: 'c = √{a*a + b*b}' },
+                    { explanation: 'c = \\sqrt{a*a + b*b}' },
                     { explanation: 'Ответ:', result: 'Math.sqrt(a*a + b*b)' },
                 ],
                 common_mistakes: [
@@ -53,10 +53,10 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 },
                 constraints: ['a !== b', 'a*a + b*b !== Math.floor(Math.sqrt(a*a + b*b)) * Math.floor(Math.sqrt(a*a + b*b))'],
                 answer_formula: 'Math.sqrt(a*a + b*b)',
-                hint: 'Гипотенуза = √(a² + b²)',
+                hint: 'Гипотенуза = \\sqrt{a^2 + b^2}',
                 solution: [
                     { explanation: 'c² = {a}² + {b}² = {a*a + b*b}' },
-                    { explanation: 'c = √{a*a + b*b}' },
+                    { explanation: 'c = \\sqrt{a*a + b*b}' },
                     { explanation: 'Ответ:', result: 'Math.sqrt(a*a + b*b)' },
                 ],
             },
@@ -73,7 +73,7 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 hint: 'Примените теорему Пифагора.',
                 solution: [
                     { explanation: 'Катеты: {a}, {b}' },
-                    { explanation: 'Гипотенуза: √({a}² + {b}²) = √{a*a + b*b}' },
+                    { explanation: 'Гипотенуза: \\sqrt{{a}^2 + {b}^2} = \\sqrt{a*a + b*b}' },
                     { explanation: 'Ответ:', result: 'Math.sqrt(a*a + b*b)' },
                 ],
             },
@@ -88,7 +88,7 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 answer_formula: 'Math.sqrt(a*a + b*b)',
                 hint: 'Найдите гипотенузу и убедитесь, что c² = a² + b².',
                 solution: [
-                    { explanation: 'c = √({a}² + {b}²) = √{a*a + b*b} = {Math.sqrt(a*a + b*b)}' },
+                    { explanation: 'c = \\sqrt{{a}^2 + {b}^2} = \\sqrt{a*a + b*b} = {Math.sqrt(a*a + b*b)}' },
                     { explanation: 'Проверка: {Math.sqrt(a*a + b*b)}² = {a*a + b*b} ✓' },
                     { explanation: 'Ответ:', result: 'Math.sqrt(a*a + b*b)' },
                 ],
@@ -121,7 +121,7 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 solution: [
                     { explanation: 'b² = c² - a²' },
                     { explanation: 'b² = {c}² - {a}² = {c*c} - {a*a} = {c*c - a*a}' },
-                    { explanation: 'b = √{c*c - a*a}' },
+                    { explanation: 'b = \\sqrt{c*c - a*a}' },
                     { explanation: 'Ответ:', result: 'Math.sqrt(c*c - a*a)' },
                 ],
             },
@@ -134,10 +134,10 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 },
                 constraints: ['c > a', 'c*c - a*a > 0'],
                 answer_formula: 'Math.sqrt(c*c - a*a)',
-                hint: 'b = √(c² - a²)',
+                hint: 'b = \\sqrt{c^2 - a^2}',
                 solution: [
                     { explanation: 'b² = {c}² - {a}² = {c*c - a*a}' },
-                    { explanation: 'b = √{c*c - a*a}' },
+                    { explanation: 'b = \\sqrt{c*c - a*a}' },
                     { explanation: 'Ответ:', result: 'Math.sqrt(c*c - a*a)' },
                 ],
             },
@@ -151,9 +151,9 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 },
                 constraints: ['c > a', 'c*c - a*a > 0'],
                 answer_formula: 'Math.sqrt(c*c - a*a)',
-                hint: 'Второй катет = √(гипотенуза² - катет²)',
+                hint: 'Второй катет = \\sqrt{гипотенуза^2 - катет^2}',
                 solution: [
-                    { explanation: 'b = √({c}² - {a}²) = √{c*c - a*a}' },
+                    { explanation: 'b = \\sqrt{{c}^2 - {a}^2} = \\sqrt{c*c - a*a}' },
                     { explanation: 'Ответ:', result: 'Math.sqrt(c*c - a*a)' },
                 ],
             },
@@ -235,11 +235,11 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 },
                 constraints: ['x1 !== x2 || y1 !== y2'],
                 answer_formula: 'Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))',
-                hint: 'Расстояние = √((x₂ - x₁)² + (y₂ - y₁)²)',
+                hint: 'Расстояние = \\sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}',
                 solution: [
                     { explanation: 'Δx = {x2} - {x1} = {x2 - x1}' },
                     { explanation: 'Δy = {y2} - {y1} = {y2 - y1}' },
-                    { explanation: 'Расстояние = √(({x2 - x1})² + ({y2 - y1})²) = √{ (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) }' },
+                    { explanation: 'Расстояние = \\sqrt{({x2 - x1})^2 + ({y2 - y1})^2} = \\sqrt{ (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) }' },
                     { explanation: 'Ответ:', result: 'Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))' },
                 ],
             },
@@ -256,8 +256,8 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 answer_formula: 'Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))',
                 hint: 'Используйте формулу расстояния.',
                 solution: [
-                    { explanation: 'd = √((x₂ - x₁)² + (y₂ - y₁)²)' },
-                    { explanation: '= √({(x2 - x1)*(x2 - x1)} + {(y2 - y1)*(y2 - y1)}) = √{(x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1)}' },
+                    { explanation: 'd = \\sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}' },
+                    { explanation: '= \\sqrt{{(x2 - x1)*(x2 - x1)} + {(y2 - y1)*(y2 - y1)}} = \\sqrt{(x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1)}' },
                     { explanation: 'Ответ:', result: 'Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))' },
                 ],
             },
@@ -275,7 +275,7 @@ export const grade8PythagoreanTheoremTemplates: ProblemTemplate[] = [
                 answer_formula: 'Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))',
                 hint: 'Расстояние между точками на плоскости.',
                 solution: [
-                    { explanation: 'd = √((x₂ - x₁)² + (y₂ - y₁)²)' },
+                    { explanation: 'd = \\sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}' },
                     { explanation: 'Ответ:', result: 'Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1))' },
                 ],
             },

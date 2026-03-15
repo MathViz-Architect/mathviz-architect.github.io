@@ -15,6 +15,7 @@ interface UseYjsSyncOptions {
   roomId: string;
   role: UserRole;
   onCanvasChange: (canvasState: YjsCanvasState) => void;
+  onActivePageIdChange?: (pageId: string) => void;
 }
 
 // Any transaction tagged with this origin was authored locally.
@@ -68,6 +69,9 @@ export function useYjsSync(options: UseYjsSyncOptions | null) {
   // Always-current callback — no stale closure risk.
   const onCanvasChangeRef = useRef(options?.onCanvasChange);
   useEffect(() => { onCanvasChangeRef.current = options?.onCanvasChange; });
+
+  const onActivePageIdChangeRef = useRef(options?.onActivePageIdChange);
+  useEffect(() => { onActivePageIdChangeRef.current = options?.onActivePageIdChange; });
 
   // TRUE while WE are writing into Y.Doc so our observer skips the echo.
   const isApplyingLocalUpdateRef = useRef(false);
@@ -124,7 +128,20 @@ export function useYjsSync(options: UseYjsSyncOptions | null) {
       setBoardSettings(readBoardSettings(yBoardSettings));
     };
 
+    // ActivePageId observer — fires for REMOTE changes only (page switches).
+    const activePageIdObserver = (_event: Y.YMapEvent<unknown>, transaction: Y.Transaction) => {
+      if (transaction.origin === YJS_LOCAL_UPDATE_ORIGIN) return;
+      const newPageId = yCanvas.get('activePageId') as string;
+      if (newPageId && newPageId !== lastSyncedPageId) {
+        console.log('[yjs] activePageId changed to:', newPageId);
+        lastSyncedPageId = newPageId;
+        onActivePageIdChangeRef.current?.(newPageId);
+      }
+    };
+    let lastSyncedPageId = '';
+
     yCanvas.observeDeep(canvasObserver);
+    yCanvas.observe(activePageIdObserver);
     yBoardSettings.observe(boardSettingsObserver);
 
     // Provider is created AFTER observers are registered so we don't miss
@@ -144,6 +161,7 @@ export function useYjsSync(options: UseYjsSyncOptions | null) {
 
     return () => {
       yCanvas.unobserveDeep(canvasObserver);
+      yCanvas.unobserve(activePageIdObserver);
       yBoardSettings.unobserve(boardSettingsObserver);
       provider.destroy();
       doc.destroy();

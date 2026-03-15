@@ -21,6 +21,9 @@ interface EditorContextValue {
   state: AppState;
   selectedObjects: AnyCanvasObject[];
   updateObject: (id: string, updates: Partial<AnyCanvasObject>) => void;
+  updateObjectDirect: (id: string, updates: Partial<AnyCanvasObject>) => void;
+  executeCommand: (command: import('@/lib/commands').Command) => void;
+  setObjectsFn: () => (objects: AnyCanvasObject[]) => void;
   addObject: (obj: AnyCanvasObject) => void;
   removeObject: (id: string) => void;
   selectObject: (id: string | null, multi?: boolean) => void;
@@ -37,11 +40,14 @@ interface EditorContextValue {
   markAsSaved: () => void;
   clearCanvas: () => void;
   zoom: number;
+  setZoom: (zoom: number) => void;
   showGrid: boolean;
+  gridWeight: 'thin' | 'bold';
   handleZoomIn: () => void;
   handleZoomOut: () => void;
   handleZoomReset: () => void;
   handleToggleGrid: () => void;
+  handleToggleGridWeight: () => void;
   handleAddObject: (obj: AnyCanvasObject) => void;
   handleDeleteObject: (id: string) => void;
   handleSelectTemplate: (template: Template) => void;
@@ -55,6 +61,7 @@ interface EditorContextValue {
   addPage: () => void;
   removePage: (pageId: string) => void;
   switchPage: (pageId: string) => void;
+  setActivePageId: (pageId: string) => void;
   interactiveModuleId: string | null;
   setInteractiveModuleId: (moduleId: string | null) => void;
   penSettings: { width: number; color: string };
@@ -73,6 +80,10 @@ interface EditorContextValue {
    * не ждёт следующего рендера React, никогда не устаревает.
    */
   getCanvasSnapshot: () => { objects: AnyCanvasObject[]; pages: Page[]; activePageId: string };
+  copyToClipboard: () => void;
+  pasteFromClipboard: () => void;
+  selectAll: () => void;
+  duplicateSelected: () => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -81,6 +92,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const appState = useAppState();
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
+  const [gridWeight, setGridWeight] = useState<'thin' | 'bold'>('thin');
   const [interactiveModuleId, setInteractiveModuleId] = useState<string | null>(null);
   const [penSettings, setPenSettingsState] = useState<{ width: number; color: string }>({ width: 3, color: '#374151' });
   const [shapeType, setShapeType] = useState<'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad'>('rectangle');
@@ -90,10 +102,14 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     setPenSettingsState(prev => ({ ...prev, ...settings }));
   }, []);
 
-  const handleZoomIn = useCallback(() => setZoom(z => Math.min(z + 0.1, 2)), []);
-  const handleZoomOut = useCallback(() => setZoom(z => Math.max(z - 0.1, 0.5)), []);
+  const MIN_ZOOM = 0.3;
+  const MAX_ZOOM = 2.0;
+
+  const handleZoomIn = useCallback(() => setZoom(z => Math.min(z + 0.1, MAX_ZOOM)), []);
+  const handleZoomOut = useCallback(() => setZoom(z => Math.max(z - 0.1, MIN_ZOOM)), []);
   const handleZoomReset = useCallback(() => setZoom(1), []);
   const handleToggleGrid = useCallback(() => setShowGrid(g => !g), []);
+  const handleToggleGridWeight = useCallback(() => setGridWeight(w => w === 'thin' ? 'bold' : 'thin'), []);
 
   const handleAddObject = useCallback((obj: AnyCanvasObject) => {
     appState.addObject(obj);
@@ -225,11 +241,14 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     <EditorContext.Provider value={{
       ...appState,
       zoom,
+      setZoom,
       showGrid,
+      gridWeight,
       handleZoomIn,
       handleZoomOut,
       handleZoomReset,
       handleToggleGrid,
+      handleToggleGridWeight,
       handleAddObject,
       handleDeleteObject,
       handleSelectTemplate,
@@ -246,6 +265,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       shapeType,
       setShapeType,
       loadRemoteState,
+      setActivePageId: appState.setActivePageId,
     }}>
       {children}
     </EditorContext.Provider>

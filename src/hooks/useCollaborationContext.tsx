@@ -5,6 +5,7 @@ import { useRoom, RoomState as UseRoomState } from '@/hooks/useRoom';
 import { useYjsSync, YjsCanvasState } from '@/hooks/useYjsSync';
 import { useAwareness, AwarenessUser } from '@/hooks/useAwareness';
 import { useAuth } from '@/hooks/useAuth';
+import { usePageSync } from '@/hooks/usePageSync';
 import { BoardSettings, AnyCanvasObject, Page } from '@/lib/types';
 import { User } from '@supabase/supabase-js';
 
@@ -49,9 +50,18 @@ function CollaborationStateBridge({ children }: { children: ReactNode }) {
     [editor],
   );
 
+  // Callback для удалённых смен страницы (наблюдение Yjs напрямую).
+  const handleActivePageIdChange = useCallback(
+    (pageId: string) => {
+      console.log('[collab] remote page change received:', pageId);
+      editor.setActivePageId(pageId);
+    },
+    [editor],
+  );
+
   const { boardSettings, updateBoardSettings, publishCanvasChange, getProvider } = useYjsSync(
     roomState.isConnected && roomState.roomId
-      ? { roomId: roomState.roomId, role: roomState.role, onCanvasChange: handleCanvasChange }
+      ? { roomId: roomState.roomId, role: roomState.role, onCanvasChange: handleCanvasChange, onActivePageIdChange: handleActivePageIdChange }
       : null,
   );
 
@@ -85,19 +95,24 @@ function CollaborationStateBridge({ children }: { children: ReactNode }) {
     }
   }, [roomState, boardSettings, user]);
 
-  // publishLocalChange читает isConnected из ref — никогда не устаревает.
-  // publishCanvasChange стабилен (создан через useCallback с [] deps в useYjsSync).
+  // Page sync: students follow teacher in view mode
+  usePageSync({ boardSettings, role: roomState.role });
+
+  // publishLocalChange reads isConnected from ref - never stale.
+  // publishCanvasChange is stable (created via useCallback with [] deps in useYjsSync).
   const publishLocalChange = useCallback(
     (state: { objects: AnyCanvasObject[]; pages: Page[]; activePageId: string }) => {
       const { isConnected } = roomStateRef.current;
-      console.log('[collab] publishLocalChange called, isConnected=', isConnected, 'objects=', state.objects.length);
+      // Only log in debug mode when actually in a room (not for offline use)
+      if (isConnected) {
+        console.log('[collab] publishing canvas change:', state.objects.length, 'objects');
+      }
       if (!isConnected) {
-        console.warn('[collab] publishLocalChange skipped — not connected');
         return;
       }
       publishCanvasChange(state);
     },
-    // publishCanvasChange стабилен — не вызывает stale closure
+    // publishCanvasChange is stable - no stale closure
     [publishCanvasChange],
   );
 

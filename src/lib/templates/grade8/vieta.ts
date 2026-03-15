@@ -347,7 +347,7 @@ export const grade8VietaTemplates: ProblemTemplate[] = [
                 },
                 constraints: ['r1 !== r2', 's > 0', 'p > 0'],
                 answer_formula: 'r1 < r2 ? r1 + " и " + r2 : r2 + " и " + r1',
-                hint: 'Корни: x = [S ± √(S² - 4P)]/2, где S = сумма, P = произведение.',
+                hint: 'Корни: x = [S ± \\sqrt{S^2 - 4P}]/2, где S = сумма, P = произведение.',
                 solution: [
                     { explanation: 'Уравнение: x² - {s}x + {p} = 0' },
                     { explanation: 'По теореме Виета: сумма корней = {s}, произведение = {p}' },
@@ -385,11 +385,11 @@ export const grade8VietaTemplates: ProblemTemplate[] = [
                 },
                 constraints: ['r1 !== r2', 'r1 !== 0', 'r2 !== 0', 's * s - 4 * p >= 0'],
                 answer_formula: 'r1 < r2 ? r1 + " и " + r2 : r2 + " и " + r1',
-                hint: 'Дискриминант D = S² - 4P. Корни: [S ± √D]/2.',
+                hint: 'Дискриминант D = S² - 4P. Корни: [S ± \\sqrt{D}]/2.',
                 solution: [
                     { explanation: 'Уравнение: x² - {s}x + {p} = 0' },
                     { explanation: 'Дискриминант D = {s}² - 4×{p} = {s*s - 4*p}' },
-                    { explanation: 'Корни: [{s} ± √{s*s - 4*p}]/2 = {r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}' },
+                    { explanation: 'Корни: [{s} ± \\sqrt{{s*s - 4*p}}]/2 = {r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}' },
                     { explanation: 'Ответ:', result: '{r1 < r2 ? r1 : r2} и {r1 < r2 ? r2 : r1}' },
                 ],
             },

@@ -116,3 +116,94 @@ img {
 .tool-hover:hover {
   background-color: #f3f4f6;
 }
+
+/* KaTeX Math Styling */
+.math-text-wrapper {
+  font-size: 1.15rem;
+  line-height: 1.8;
+}
+
+.math-inline {
+  display: inline;
+}
+
+.math-inline .katex {
+  font-size: 1.1em;
+}
+
+.math-block-container {
+  display: block;
+  margin: 12px 0;
+  padding: 8px 0;
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.math-block-container .katex {
+  font-size: 1.6em;
+}
+
+.math-block-container .katex-display {
+  margin: 0;
+  display: block;
+  text-align: center;
+}
+
+.math-block-container .katex-display > .katex {
+  display: block;
+  text-align: center;
+}
+
+/* Task text styling */
+.task-text {
+  font-size: 1.25rem;
+  line-height: 1.7;
+}
+
+/* Hint styling */
+.math-hint {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Solution steps */
+.solution-step {
+  font-size: 1.05rem;
+}
+
+.solution-step .katex {
+  font-size: 1.1em;
+}
+
+/* Make fractions more visible */
+.katex .frac-line {
+  border-bottom-width: 2px;
+}
+
+/* Better spacing for display math */
+.katex-display {
+  font-size: 1.6em;
+  margin: 12px 0;
+}
+
+.katex-display > .katex {
+  text-align: center;
+  display: block;
+}
+
+.katex-display-container {
+  margin: 0.75rem 0;
+}
+
+.katex-display-container .katex {
+  font-size: 1.25em;
+}
+
+.katex {
+  font-size: 1.15em;
+}
+
+.katex .mord {
+  color: inherit;
+}

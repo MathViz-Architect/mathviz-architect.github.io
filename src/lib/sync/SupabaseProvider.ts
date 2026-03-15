@@ -133,7 +133,7 @@ export class SupabaseProvider {
     console.log(`[provider] creating channel room:${roomId}`);
 
     this.channel = supabase.channel(`room:${roomId}`, {
-      config: { broadcast: { ack: false, self: false } },
+      config: { broadcast: { ack: true, self: false } },
     });
 
     this.doc.on('update', this.onLocalUpdate);
@@ -175,13 +175,17 @@ export class SupabaseProvider {
       .subscribe((status, err) => {
         console.log(`[provider] channel status: ${status}`, err ?? '');
         if (status === 'SUBSCRIBED') {
-          console.log('[provider] subscribed — sending sync-request');
-          this.channel.send({
-            type: 'broadcast',
-            event: 'sync-request',
-            payload: { stateVector: Array.from(Y.encodeStateVector(this.doc)) },
-          });
-          this.broadcastLocalAwareness();
+          console.log('[provider] subscribed — warming up channel');
+          // Warm-up delay to prevent REST API fallback
+          setTimeout(() => {
+            console.log('[provider] warm-up complete — sending sync-request');
+            this.channel.send({
+              type: 'broadcast',
+              event: 'sync-request',
+              payload: { stateVector: Array.from(Y.encodeStateVector(this.doc)) },
+            });
+            this.broadcastLocalAwareness();
+          }, 50);
         }
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error('[provider] channel error:', status, err);

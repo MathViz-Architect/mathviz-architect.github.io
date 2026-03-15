@@ -7,6 +7,7 @@ import {
   UpdateObjectCommand,
   MoveObjectsCommand,
   BatchCommand,
+  Command,
 } from '@/lib/commands';
 
 // Generate unique ID
@@ -70,6 +71,21 @@ export function useAppState() {
     const command = new UpdateObjectCommand(objectsRef.current, id, updates, setObjects);
     historyRef.current.execute(command);
   }, [setObjects]);
+
+  // Update object directly without adding to command history (for real-time drag/resize preview)
+  const updateObjectDirect = useCallback((id: string, updates: Partial<AnyCanvasObject>) => {
+    setObjects(
+      objectsRef.current.map(o => o.id === id ? { ...o, ...updates } : o)
+    );
+  }, [setObjects]);
+
+  // Execute a custom command (for resize operations that need single undo entry)
+  const executeCommand = useCallback((command: Command) => {
+    historyRef.current.execute(command);
+  }, []);
+
+  // Get direct access to setObjects for custom commands
+  const setObjectsFn = useCallback(() => setObjects, [setObjects]);
 
   // Add object to canvas
   const addObject = useCallback((object: AnyCanvasObject) => {
@@ -291,7 +307,6 @@ export function useAppState() {
   const switchPage = useCallback((pageId: string) => {
     if (pageId === activePageIdRef.current) return;
 
-    // Save current objects to current page using refs (no stale state)
     const savedPages = pagesRef.current.map(p =>
       p.id === activePageIdRef.current ? { ...p, objects: cloneObjects(objectsRef.current) } : p
     );
@@ -309,6 +324,27 @@ export function useAppState() {
       selectedObjectIds: [],
     }));
     historyRef.current.clear();
+  }, []);
+
+  const setActivePageId = useCallback((pageId: string) => {
+    if (pageId === activePageIdRef.current) return;
+
+    const savedPages = pagesRef.current.map(p =>
+      p.id === activePageIdRef.current ? { ...p, objects: cloneObjects(objectsRef.current) } : p
+    );
+    const newObjects = cloneObjects(savedPages.find(p => p.id === pageId)?.objects ?? []);
+
+    objectsRef.current = newObjects;
+    pagesRef.current = savedPages;
+    activePageIdRef.current = pageId;
+
+    setState(prev => ({
+      ...prev,
+      pages: savedPages,
+      activePageId: pageId,
+      objects: newObjects,
+      selectedObjectIds: [],
+    }));
   }, []);
 
   // Remote sync: updates only canvas data (objects, pages, activePageId).
@@ -354,10 +390,103 @@ export function useAppState() {
     activePageId: activePageIdRef.current,
   }), []);
 
+  // Clipboard for copy/paste (internal state, not system clipboard)
+  const clipboardRef = useRef<AnyCanvasObject[]>([]);
+
+  // Copy selected objects to clipboard
+  const copyToClipboard = useCallback(() => {
+    const selected = objectsRef.current.filter(obj => 
+      state.selectedObjectIds.includes(obj.id)
+    );
+    clipboardRef.current = cloneObjects(selected);
+  }, [state.selectedObjectIds]);
+
+  // Paste objects from clipboard with offset
+  const pasteFromClipboard = useCallback(() => {
+    if (clipboardRef.current.length === 0) return;
+    
+    const offset = 20;
+    const newObjects: AnyCanvasObject[] = [];
+    const idMap = new Map<string, string>();
+    
+    clipboardRef.current.forEach(obj => {
+      const newId = generateId();
+      idMap.set(obj.id, newId);
+      const newObj: AnyCanvasObject = {
+        ...JSON.parse(JSON.stringify(obj)),
+        id: newId,
+        x: obj.x + offset,
+        y: obj.y + offset,
+      };
+      newObjects.push(newObj);
+    });
+    
+    if (newObjects.length > 0) {
+      const commands = newObjects.map(obj => 
+        new AddObjectCommand(objectsRef.current, obj, setObjects)
+      );
+      const batchCommand = new BatchCommand(commands, 'Вставить');
+      historyRef.current.execute(batchCommand);
+      
+      setState(prev => ({
+        ...prev,
+        selectedObjectIds: newObjects.map(obj => obj.id),
+      }));
+    }
+  }, []);
+
+  // Select all objects on current page
+  const selectAll = useCallback(() => {
+    const allIds = objectsRef.current.map(obj => obj.id);
+    setState(prev => ({
+      ...prev,
+      selectedObjectIds: allIds,
+    }));
+  }, []);
+
+  // Duplicate selected objects
+  const duplicateSelected = useCallback(() => {
+    const selected = objectsRef.current.filter(obj => 
+      state.selectedObjectIds.includes(obj.id)
+    );
+    
+    if (selected.length === 0) return;
+    
+    const offset = 20;
+    const newObjects: AnyCanvasObject[] = [];
+    
+    selected.forEach(obj => {
+      const newId = generateId();
+      const newObj: AnyCanvasObject = {
+        ...JSON.parse(JSON.stringify(obj)),
+        id: newId,
+        x: obj.x + offset,
+        y: obj.y + offset,
+      };
+      newObjects.push(newObj);
+    });
+    
+    if (newObjects.length > 0) {
+      const commands = newObjects.map(obj => 
+        new AddObjectCommand(objectsRef.current, obj, setObjects)
+      );
+      const batchCommand = new BatchCommand(commands, 'Дублировать');
+      historyRef.current.execute(batchCommand);
+      
+      setState(prev => ({
+        ...prev,
+        selectedObjectIds: newObjects.map(obj => obj.id),
+      }));
+    }
+  }, [state.selectedObjectIds]);
+
   return {
     state,
     selectedObjects,
     updateObject,
+    updateObjectDirect,
+    executeCommand,
+    setObjectsFn,
     addObject,
     removeObject,
     moveObjects,
@@ -377,7 +506,12 @@ export function useAppState() {
     addPage,
     removePage,
     switchPage,
+    setActivePageId,
     setCanvasState,
     getCanvasSnapshot,
+    copyToClipboard,
+    pasteFromClipboard,
+    selectAll,
+    duplicateSelected,
   };
 }

@@ -16,10 +16,12 @@ export const TopBar: React.FC<TopBarProps> = ({ zenMode, onToggleZenMode, onAuth
     setProjectName,
     zoom,
     showGrid,
+    gridWeight,
     handleZoomIn,
     handleZoomOut,
     handleZoomReset,
     handleToggleGrid,
+    handleToggleGridWeight,
     selectedObjects,
     handleToggleVisibility,
     handleToggleLock,
@@ -101,6 +103,11 @@ export const TopBar: React.FC<TopBarProps> = ({ zenMode, onToggleZenMode, onAuth
         <button onClick={handleZoomIn} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Увеличить"><ZoomIn size={18} /></button>
         <div className="w-px h-6 bg-gray-200 mx-2" />
         <button onClick={handleToggleGrid} className={`p-1.5 rounded ${showGrid ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-100 text-gray-600'}`} title="Сетка"><Grid3X3 size={18} /></button>
+        {showGrid && (
+          <button onClick={handleToggleGridWeight} className={`p-1.5 rounded text-xs font-bold ${gridWeight === 'bold' ? 'bg-indigo-200 text-indigo-800' : 'hover:bg-gray-100 text-gray-400'}`} title={gridWeight === 'bold' ? 'Тонкая сетка' : 'Жирная сетка'}>
+            {gridWeight === 'bold' ? 'Ж' : 'Т'}
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

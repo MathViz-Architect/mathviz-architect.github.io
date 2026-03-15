@@ -2871,10 +2871,10 @@ export const grade7Templates: ProblemTemplate[] = [
                     c: { type: 'expression', value: 'x * x' },
                 },
                 answer_formula: 'x',
-                hint: 'x² = {c} означает x = ±√{c}',
+                hint: 'x² = {c} означает x = ±\\sqrt{c}',
                 solution: [
                     { explanation: 'Из уравнения x² = {c}' },
-                    { explanation: 'x = ±√{c}', result: 'x = ±{x}' },
+                    { explanation: 'x = ±\\sqrt{c}', result: 'x = ±{x}' },
                 ],
                 common_mistakes: [
                     { pattern: '-x', feedback: 'Верно! Но задание просит положительный корень.' },
@@ -2951,10 +2951,10 @@ export const grade7Templates: ProblemTemplate[] = [
                 },
                 constraints: ['r1 !== r2'],
                 answer_formula: 'Math.min(r1, r2)',
-                hint: 'Вычислите D = {b}² − 4·{c}, затем x = (−{b} ± √D) / 2',
+                hint: 'Вычислите D = {b}² − 4·{c}, затем x = (−{b} ± \\sqrt{D}) / 2',
                 solution: [
                     { explanation: 'D = ({b})² − 4·({c}) = {b*b - 4*c}' },
-                    { explanation: 'x₁ = (−{b} − √D) / 2, x₂ = (−{b} + √D) / 2' },
+                    { explanation: 'x₁ = (−{b} − \\sqrt{D}) / 2, x₂ = (−{b} + \\sqrt{D}) / 2' },
                     { explanation: 'Меньший корень:', result: '{answer}' },
                 ],
             },
@@ -3279,21 +3279,21 @@ export const grade7Templates: ProblemTemplate[] = [
         skills: ['fractions', 'factoring'],
         difficulties: {
             1: {
-                template: 'Сократите дробь (x² − {a2}) / (x + {a}). При каком x она не определена?',
+                template: 'Сократите дробь $\\frac{x^2 - {a2}}{x + {a}}$. При каком x она не определена?',
                 parameters: {
                     a: { type: 'int', min: 1, max: 6 },
                     a2: { type: 'expression', value: 'a * a' },
                 },
                 answer_formula: '-a',
-                hint: 'x² − {a2} = (x−{a})(x+{a}). Сократите (x+{a}).',
+                hint: '$x^2 - {a2} = (x-{a})(x+{a})$. Сократите $(x+{a})$.',
                 solution: [
-                    { explanation: 'Числитель: x² − {a2} = (x−{a})(x+{a})' },
-                    { explanation: 'Сокращаем (x+{a}): результат = x − {a}' },
-                    { explanation: 'ОДЗ: x ≠ −{a}', result: 'x ≠ {answer}' },
+                    { explanation: 'Числитель: $x^2 - {a2} = (x-{a})(x+{a})$' },
+                    { explanation: 'Сокращаем $(x+{a})$: результат $= x - {a}$' },
+                    { explanation: 'ОДЗ: $x \\neq -{a}$', result: '$x \\neq {answer}$' },
                 ],
             },
             2: {
-                template: 'Упростите: (x² + {b}x) / ({a}x). Найдите значение при x = {xv}.',
+                template: 'Упростите: $\\frac{x^2 + {b}x}{a*x}$. Найдите значение при x = {xv}.',
                 parameters: {
                     a: { type: 'int', min: 1, max: 4 },
                     b: { type: 'int', min: -6, max: 6 },
@@ -3301,14 +3301,14 @@ export const grade7Templates: ProblemTemplate[] = [
                 },
                 constraints: ['b !== 0'],
                 answer_formula: '(xv + b) / a',
-                hint: 'Вынесите x в числителе: x(x+{b}). Сократите x.',
+                hint: 'Вынесите $x$ в числителе: $x(x+{b})$. Сократите $x$.',
                 solution: [
-                    { explanation: 'x(x+{b}) / ({a}x) = (x+{b})/{a}, при x ≠ 0' },
-                    { explanation: 'При x = {xv}: ({xv}+{b})/{a}', result: '{answer}' },
+                    { explanation: '$\\frac{x(x+{b})}{a*x} = \\frac{x+{b}}{a}$, при $x \\neq 0$' },
+                    { explanation: 'При $x = {xv}$: $\\frac{{xv}+{b}}{a}$', result: '{answer}' },
                 ],
             },
             3: {
-                template: 'Сократите дробь ({a}x² + {b}x + {c}) / (x − {r}). Найдите свободный член результата.',
+                template: 'Сократите дробь $\\frac{{a}x^2 + {b}x + {c}}{x - {r}}$. Найдите свободный член результата.',
                 parameters: {
                     a: { type: 'int', min: 1, max: 2 },
                     r: { type: 'int', min: 1, max: 4 },
@@ -3317,10 +3317,10 @@ export const grade7Templates: ProblemTemplate[] = [
                     c: { type: 'expression', value: 'a * (-r) * q' },
                 },
                 answer_formula: 'a * q',
-                hint: 'Разложите числитель: {a}(x−{r})(x−{q}), затем сократите (x−{r})',
+                hint: 'Разложите числитель: ${a}(x-{r})(x-{q})$, затем сократите $(x-{r})$',
                 solution: [
-                    { explanation: 'Числитель = {a}(x−{r})(x+{-q})' },
-                    { explanation: 'После сокращения: {a}(x+{-q})', result: 'свободный член = {answer}' },
+                    { explanation: 'Числитель $= {a}(x-{r})(x+{-q})$' },
+                    { explanation: 'После сокращения: ${a}(x+{-q})$', result: 'свободный член = {answer}' },
                 ],
             },
         },
@@ -3345,14 +3345,14 @@ export const grade7Templates: ProblemTemplate[] = [
                     c: { type: 'expression', value: 'Math.round(Math.sqrt(a*a + b*b) * 100) / 100' },
                 },
                 answer_formula: 'Math.round(Math.sqrt(a*a + b*b) * 100) / 100',
-                hint: 'c = √(a² + b²) = √({a*a} + {b*b})',
+                hint: 'c = \\sqrt{a^2 + b^2} = \\sqrt{{a*a} + {b*b}}',
                 solution: [
                     { explanation: 'По теореме Пифагора: c² = a² + b²' },
                     { explanation: 'c² = {a}² + {b}² = {a*a+b*b}' },
-                    { explanation: 'c = √{a*a+b*b} =', result: '{answer}' },
+                    { explanation: 'c = \\sqrt{a*a+b*b} =', result: '{answer}' },
                 ],
                 common_mistakes: [
-                    { pattern: 'a + b', feedback: 'Это сумма катетов, не гипотенуза. Нужно: √(a²+b²)' },
+                    { pattern: 'a + b', feedback: 'Это сумма катетов, не гипотенуза. Нужно: \\sqrt{a^2+b^2}' },
                 ],
             },
             2: {
@@ -3364,10 +3364,10 @@ export const grade7Templates: ProblemTemplate[] = [
                 },
                 constraints: ['a*a + b*b === c*c'],
                 answer_formula: 'b',
-                hint: 'b = √(c² − a²) = √({c*c} − {a*a})',
+                hint: 'b = \\sqrt{c^2 - a^2} = \\sqrt{{c*c} - {a*a}}',
                 solution: [
                     { explanation: 'b² = c² − a² = {c*c} − {a*a} = {c*c-a*a}' },
-                    { explanation: 'b = √{c*c-a*a} =', result: '{b}' },
+                    { explanation: 'b = \\sqrt{c*c-a*a} =', result: '{b}' },
                 ],
             },
             3: {
@@ -3379,9 +3379,9 @@ export const grade7Templates: ProblemTemplate[] = [
                 },
                 constraints: ['a*a + b*b === d*d'],
                 answer_formula: 'a * b',
-                hint: 'Из теоремы Пифагора: b = √(d²−a²). Площадь = a·b',
+                hint: 'Из теоремы Пифагора: b = \\sqrt{d^2-a^2}. Площадь = a·b',
                 solution: [
-                    { explanation: 'b = √({d*d}−{a*a}) = {b}' },
+                    { explanation: 'b = \\sqrt{{d*d}-{a*a}} = {b}' },
                     { explanation: 'Площадь = {a} · {b} =', result: '{answer} см²' },
                 ],
             },
@@ -3437,7 +3437,7 @@ export const grade7Templates: ProblemTemplate[] = [
                 hint: 'По свойству высоты: h² = p·q',
                 solution: [
                     { explanation: 'h² = p·q = {p}·{q} = {p*q}' },
-                    { explanation: 'h = √{p*q} =', result: '{answer}' },
+                    { explanation: 'h = \\sqrt{p*q} =', result: '{answer}' },
                 ],
             },
         },
@@ -3583,10 +3583,10 @@ export const grade7Templates: ProblemTemplate[] = [
                     y2: { type: 'int', min: -4, max: 4 },
                 },
                 answer_formula: 'Math.round(Math.sqrt((x2-x1)**2 + (y2-y1)**2) * 100) / 100',
-                hint: 'AB = √((x₂−x₁)² + (y₂−y₁)²)',
+                hint: 'AB = \\sqrt{(x_2-x_1)^2 + (y_2-y_1)^2}',
                 solution: [
-                    { explanation: 'AB = √(({x2}−{x1})² + ({y2}−{y1})²)' },
-                    { explanation: '= √({(x2-x1)**2} + {(y2-y1)**2})', result: '{answer}' },
+                    { explanation: 'AB = \\sqrt{({x2}-{x1})^2 + ({y2}-{y1})^2}' },
+                    { explanation: '= \\sqrt{{(x2-x1)**2} + {(y2-y1)**2}}', result: '{answer}' },
                 ],
             },
             3: {
