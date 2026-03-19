@@ -22317,7 +22317,7 @@ class DeleteObjectCommand {
     this.setObjects(this.objects.filter((o) => o.id !== this.objectId));
   }
   undo() {
-    this.setObjects([...this.objects, this.deletedObject]);
+    this.setObjects(this.objects);
   }
 }
 class UpdateObjectCommand {
@@ -22395,9 +22395,7 @@ class ResizeObjectCommand {
     );
   }
 }
-const generateId = () => {
-  return `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
+const generateId = () => crypto.randomUUID();
 const cloneObjects = (objects) => JSON.parse(JSON.stringify(objects));
 const createPage = (index2) => ({
   id: generateId(),
@@ -22664,18 +22662,20 @@ function useAppState() {
     const { pages, activePageId, objects } = canvasState;
     const activeObjects = cloneObjects(objects);
     const activeObjectIds = new Set(activeObjects.map((o) => o.id));
+    const localObjects = objectsRef.current;
+    const stateChanged = activePageId !== activePageIdRef.current || activeObjects.length !== localObjects.length;
     objectsRef.current = activeObjects;
     pagesRef.current = pages;
     activePageIdRef.current = activePageId;
+    if (stateChanged) {
+      historyRef.current.clear();
+    }
     setState((prev) => ({
       ...prev,
       objects: activeObjects,
       pages,
       activePageId,
-      // Remove from selection any objects that no longer exist
       selectedObjectIds: prev.selectedObjectIds.filter((id2) => activeObjectIds.has(id2))
-      // isDirty is NOT changed — remote sync is not a user edit
-      // mode, projectName, projectPath are preserved via ...prev
     }));
   }, []);
   const selectedObjects = state.objects.filter(
@@ -32768,18 +32768,31 @@ function isAwarenessMessage(msg) {
   var _a2;
   return typeof msg === "object" && msg !== null && "payload" in msg && typeof msg.payload === "object" && typeof ((_a2 = msg.payload) == null ? void 0 : _a2.clientId) === "string";
 }
+const AWARENESS_TTL_MS = 1e4;
 class SimpleAwareness {
   constructor() {
     __publicField(this, "clientId");
     __publicField(this, "states", /* @__PURE__ */ new Map());
     __publicField(this, "listeners", /* @__PURE__ */ new Set());
     __publicField(this, "localState", null);
+    __publicField(this, "ttlInterval", null);
     this.clientId = `client_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    this.ttlInterval = setInterval(() => {
+      const now = Date.now();
+      let changed = false;
+      this.states.forEach((state, id2) => {
+        if (id2 !== this.clientId && now - state._ts > AWARENESS_TTL_MS) {
+          this.states.delete(id2);
+          changed = true;
+        }
+      });
+      if (changed) this.emit();
+    }, 5e3);
   }
   setLocalState(state) {
     this.localState = state;
     if (state === null) this.states.delete(this.clientId);
-    else this.states.set(this.clientId, state);
+    else this.states.set(this.clientId, { ...state, _ts: Date.now() });
     this.emit();
   }
   setLocalStateField(field, value) {
@@ -32787,14 +32800,19 @@ class SimpleAwareness {
     this.setLocalState({ ...current, [field]: value });
   }
   getStates() {
-    return this.states;
+    const clean = /* @__PURE__ */ new Map();
+    this.states.forEach((state, id2) => {
+      const { _ts, ...rest } = state;
+      clean.set(id2, rest);
+    });
+    return clean;
   }
   getLocalState() {
     return this.localState;
   }
   applyRemoteState(clientId, state) {
     if (state === null) this.states.delete(clientId);
-    else this.states.set(clientId, state);
+    else this.states.set(clientId, { ...state, _ts: Date.now() });
     this.emit();
   }
   on(_event, listener) {
@@ -32804,9 +32822,10 @@ class SimpleAwareness {
     this.listeners.delete(listener);
   }
   emit() {
-    this.listeners.forEach((fn) => fn(new Map(this.states)));
+    this.listeners.forEach((fn) => fn(this.getStates()));
   }
   destroy() {
+    if (this.ttlInterval) clearInterval(this.ttlInterval);
     this.listeners.clear();
     this.states.clear();
   }
@@ -32823,6 +32842,7 @@ class SupabaseProvider {
     __publicField(this, "onSyncedCallback");
     __publicField(this, "syncedFired", false);
     __publicField(this, "syncTimeout", null);
+    __publicField(this, "syncPhase", "idle");
     // ─── Doc sync ───────────────────────────────────────────────────────────────
     __publicField(this, "onLocalUpdate", (update, origin) => {
       if (origin === this) {
@@ -32843,7 +32863,12 @@ class SupabaseProvider {
       config: { broadcast: { ack: true, self: false } }
     });
     this.doc.on("update", this.onLocalUpdate);
-    this.syncTimeout = setTimeout(() => this.fireSynced(), 2e3);
+    this.syncTimeout = setTimeout(() => {
+      if (this.syncPhase === "waiting_response") {
+        console.warn("[provider] sync timeout: peer was detected but did not respond — canvas may be incomplete");
+      }
+      this.fireSynced();
+    }, 2e3);
     this.channel.on("broadcast", { event: "update" }, (msg) => {
       console.log("[provider] received broadcast:update");
       if (!isUpdateMessage(msg)) {
@@ -32864,7 +32889,12 @@ class SupabaseProvider {
         console.warn("[provider] malformed sync-response message", msg);
         return;
       }
-      applyUpdate(this.doc, new Uint8Array(msg.payload.update), this);
+      try {
+        applyUpdate(this.doc, new Uint8Array(msg.payload.update), this);
+      } catch (err) {
+        console.error("[provider] failed to apply sync-response — payload may be corrupt", err);
+      }
+      this.syncPhase = "synced";
       if (this.syncTimeout) {
         clearTimeout(this.syncTimeout);
         this.syncTimeout = null;
@@ -32905,6 +32935,9 @@ class SupabaseProvider {
     applyUpdate(this.doc, update, this);
   }
   onSyncRequest(msg) {
+    if (this.syncPhase === "idle") {
+      this.syncPhase = "waiting_response";
+    }
     const sv = new Uint8Array(msg.payload.stateVector);
     const update = encodeStateAsUpdate(this.doc, sv);
     console.log("[provider] responding to sync-request with", update.length, "bytes");
@@ -33844,14 +33877,10 @@ const calculateDistance = (x1, y1, x2, y2) => {
   const dy = y2 - y1;
   return Math.sqrt(dx * dx + dy * dy);
 };
-const screenToCanvas = (screenX, screenY, viewportRect, canvasWidth, canvasHeight, zoom = 1, panX = 0, panY = 0) => {
-  const viewportX = screenX - viewportRect.left;
-  const viewportY = screenY - viewportRect.top;
-  const worldX = (viewportX - panX) / zoom;
-  const worldY = (viewportY - panY) / zoom;
+const screenToCanvas = (screenX, screenY, viewportRect, _canvasWidth, _canvasHeight, zoom = 1, panX = 0, panY = 0) => {
   return {
-    x: worldX,
-    y: worldY
+    x: (screenX - viewportRect.left - panX) / zoom,
+    y: (screenY - viewportRect.top - panY) / zoom
   };
 };
 const applyDelta = (obj, dx, dy) => {
@@ -34626,6 +34655,88 @@ function findNearbyPoint(objects, x, y, radius = SNAP_RADIUS) {
   }
   return best;
 }
+function useFreehandTool({ penSettings, onAddObject, publishState }) {
+  const isDrawingRef = reactExports.useRef(false);
+  const [isDrawing, setIsDrawing] = reactExports.useState(false);
+  const [points, setPoints] = reactExports.useState([]);
+  const lastPointRef = reactExports.useRef(null);
+  const pointsRef = reactExports.useRef([]);
+  const onMouseDown = reactExports.useCallback((x, y) => {
+    const firstPoint = { x, y };
+    isDrawingRef.current = true;
+    setIsDrawing(true);
+    pointsRef.current = [firstPoint];
+    setPoints([firstPoint]);
+    lastPointRef.current = firstPoint;
+  }, []);
+  const onMouseMove = reactExports.useCallback((x, y) => {
+    if (!isDrawingRef.current) return;
+    const last2 = lastPointRef.current;
+    if (!last2 || Math.hypot(x - last2.x, y - last2.y) > 2) {
+      const pt = { x, y };
+      pointsRef.current = [...pointsRef.current, pt];
+      setPoints(pointsRef.current);
+      lastPointRef.current = pt;
+    }
+  }, []);
+  const onMouseUp = reactExports.useCallback(() => {
+    if (!isDrawingRef.current) return;
+    isDrawingRef.current = false;
+    setIsDrawing(false);
+    lastPointRef.current = null;
+    const currentPoints = pointsRef.current;
+    setPoints([]);
+    if (currentPoints.length >= 2) {
+      const xs = currentPoints.map((p) => p.x);
+      const ys = currentPoints.map((p) => p.y);
+      const minX = Math.min(...xs), minY = Math.min(...ys);
+      const maxX = Math.max(...xs), maxY = Math.max(...ys);
+      const newPath = {
+        id: crypto.randomUUID(),
+        type: "freehand",
+        x: minX,
+        y: minY,
+        width: Math.max(maxX - minX, 1),
+        height: Math.max(maxY - minY, 1),
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: { points: currentPoints, color: penSettings.color, width: penSettings.width }
+      };
+      onAddObject(newPath);
+      publishState();
+    }
+  }, [isDrawing, penSettings, onAddObject, publishState]);
+  const overlay = isDrawing && points.length > 0 ? { points, color: penSettings.color, width: penSettings.width } : null;
+  return { isDrawing, onMouseDown, onMouseMove, onMouseUp, overlay };
+}
+const CULL_PADDING = 150;
+function getObjectBounds(obj) {
+  return {
+    left: obj.x,
+    top: obj.y,
+    right: obj.x + obj.width,
+    bottom: obj.y + obj.height
+  };
+}
+function getVisibleRect(viewportWidth, viewportHeight, zoom, panOffset) {
+  const left = -panOffset.x / zoom - CULL_PADDING;
+  const top = -panOffset.y / zoom - CULL_PADDING;
+  const right = (viewportWidth - panOffset.x) / zoom + CULL_PADDING;
+  const bottom = (viewportHeight - panOffset.y) / zoom + CULL_PADDING;
+  return { left, top, right, bottom };
+}
+function useViewportCulling(objects, zoom, panOffset, viewportWidth, viewportHeight) {
+  return reactExports.useMemo(() => {
+    if (viewportWidth === 0 || viewportHeight === 0) return objects;
+    const vr = getVisibleRect(viewportWidth, viewportHeight, zoom, panOffset);
+    return objects.filter((obj) => {
+      const b = getObjectBounds(obj);
+      return b.right >= vr.left && b.left <= vr.right && b.bottom >= vr.top && b.top <= vr.bottom;
+    });
+  }, [objects, zoom, panOffset, viewportWidth, viewportHeight]);
+}
 const Canvas = () => {
   const CANVAS_WIDTH = 2e3;
   const CANVAS_HEIGHT = 2e3;
@@ -34663,6 +34774,11 @@ const Canvas = () => {
   const publishState = reactExports.useCallback(() => {
     publishLocalChange(getCanvasSnapshot());
   }, [publishLocalChange, getCanvasSnapshot]);
+  const freehand = useFreehandTool({
+    penSettings,
+    onAddObject,
+    publishState
+  });
   const canvasRef = reactExports.useRef(null);
   const svgRef = reactExports.useRef(null);
   const [isDragging, setIsDragging] = reactExports.useState(false);
@@ -34673,6 +34789,10 @@ const Canvas = () => {
   const [canvasSize, setCanvasSize] = reactExports.useState({
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT
+  });
+  const [viewportSize, setViewportSize] = reactExports.useState({
+    width: 0,
+    height: 0
   });
   const [editingTextId, setEditingTextId] = reactExports.useState(null);
   const [editingText, setEditingText] = reactExports.useState("");
@@ -34700,13 +34820,11 @@ const Canvas = () => {
   const [anglePointBId, setAnglePointBId] = reactExports.useState(null);
   const [anglePreview, setAnglePreview] = reactExports.useState(null);
   const [snapTarget, setSnapTarget] = reactExports.useState(null);
-  const [isDrawingFreehand, setIsDrawingFreehand] = reactExports.useState(false);
-  const [freehandPoints, setFreehandPoints] = reactExports.useState([]);
-  const freehandLastPointRef = reactExports.useRef(null);
   const [panOffset, setPanOffset] = reactExports.useState({
     x: 0,
     y: 0
   });
+  const visibleObjects = useViewportCulling(objects, zoom, panOffset, viewportSize.width, viewportSize.height);
   const [isPanning, setIsPanning] = reactExports.useState(false);
   const [panStart, setPanStart] = reactExports.useState(null);
   const [isSpacePressed, setIsSpacePressed] = reactExports.useState(false);
@@ -34855,10 +34973,14 @@ const Canvas = () => {
   reactExports.useEffect(() => {
     const updateSize = () => {
       if (canvasRef.current) {
-        canvasRef.current.getBoundingClientRect();
+        const rect = canvasRef.current.getBoundingClientRect();
         setCanvasSize({
           width: CANVAS_WIDTH,
           height: CANVAS_HEIGHT
+        });
+        setViewportSize({
+          width: rect.width,
+          height: rect.height
         });
       }
     };
@@ -35213,13 +35335,7 @@ const Canvas = () => {
       e2.stopPropagation();
     }
     if (mode2 === "freehand") {
-      setIsDrawingFreehand(true);
-      const firstPoint = {
-        x,
-        y
-      };
-      setFreehandPoints([firstPoint]);
-      freehandLastPointRef.current = firstPoint;
+      freehand.onMouseDown(x, y);
       e2.stopPropagation();
     }
     if (mode2 === "shape") {
@@ -35363,16 +35479,8 @@ const Canvas = () => {
       });
       return;
     }
-    if (mode2 === "freehand" && isDrawingFreehand) {
-      const last2 = freehandLastPointRef.current;
-      if (!last2 || Math.hypot(x - last2.x, y - last2.y) > 2) {
-        const pt = {
-          x,
-          y
-        };
-        setFreehandPoints((prev) => [...prev, pt]);
-        freehandLastPointRef.current = pt;
-      }
+    if (mode2 === "freehand" && freehand.isDrawing) {
+      freehand.onMouseMove(x, y);
     }
   };
   const handleCanvasMouseUp = (e2) => {
@@ -35607,33 +35715,8 @@ const Canvas = () => {
       publishState();
       return;
     }
-    if (isDrawingFreehand) {
-      setIsDrawingFreehand(false);
-      freehandLastPointRef.current = null;
-      if (freehandPoints.length >= 2) {
-        const xs = freehandPoints.map((p) => p.x), ys = freehandPoints.map((p) => p.y);
-        const minX = Math.min(...xs), minY = Math.min(...ys), maxX = Math.max(...xs), maxY = Math.max(...ys);
-        const newPath = {
-          id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-          type: "freehand",
-          x: minX,
-          y: minY,
-          width: Math.max(maxX - minX, 1),
-          height: Math.max(maxY - minY, 1),
-          rotation: 0,
-          opacity: 1,
-          visible: true,
-          locked: false,
-          data: {
-            points: freehandPoints,
-            color: penSettings.color,
-            width: penSettings.width
-          }
-        };
-        onAddObject(newPath);
-      }
-      setFreehandPoints([]);
-      publishState();
+    if (freehand.isDrawing) {
+      freehand.onMouseUp();
       return;
     }
     if (isDragging) {
@@ -35799,9 +35882,9 @@ const Canvas = () => {
     for (let y = 0; y <= CANVAS_HEIGHT; y += gridSize) lines.push(/* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: 0, y1: y, x2: CANVAS_WIDTH, y2: y, stroke: strokeColor, strokeWidth }, `h-${y}`));
     return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: lines });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 bg-gray-100 overflow-hidden relative", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:595:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "595", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%20relative%22%7D", children: [
-    !canEdit && roomState.isConnected && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 left-0 right-0 z-20 bg-yellow-100 border-b border-yellow-300 text-yellow-800 text-sm text-center py-2 animate-pulse select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:597:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "597", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20top-0%20left-0%20right-0%20z-20%20bg-yellow-100%20border-b%20border-yellow-300%20text-yellow-800%20text-sm%20text-center%20py-2%20animate-pulse%20select-none%22%7D", children: "👀 Режим просмотра. Объясняет учитель." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-3 right-3 z-10", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:602:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "602", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20top-3%20right-3%20z-10%22%7D", children: roomState.isConnected && roomState.roomId && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-green-100 text-green-700 border border-green-300 rounded-full px-2 py-0.5 select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:603:56", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "603", "data-component-file": "Canvas.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20bg-green-100%20text-green-700%20border%20border-green-300%20rounded-full%20px-2%20py-0.5%20select-none%22%7D", children: "Комната активна" }) }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 bg-gray-100 overflow-hidden relative", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:596:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "596", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%20relative%22%7D", children: [
+    !canEdit && roomState.isConnected && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 left-0 right-0 z-20 bg-yellow-100 border-b border-yellow-300 text-yellow-800 text-sm text-center py-2 animate-pulse select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:598:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "598", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20top-0%20left-0%20right-0%20z-20%20bg-yellow-100%20border-b%20border-yellow-300%20text-yellow-800%20text-sm%20text-center%20py-2%20animate-pulse%20select-none%22%7D", children: "👀 Режим просмотра. Объясняет учитель." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-3 right-3 z-10", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:603:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "603", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20top-3%20right-3%20z-10%22%7D", children: roomState.isConnected && roomState.roomId && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-green-100 text-green-700 border border-green-300 rounded-full px-2 py-0.5 select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:604:54", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "604", "data-component-file": "Canvas.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20bg-green-100%20text-green-700%20border%20border-green-300%20rounded-full%20px-2%20py-0.5%20select-none%22%7D", children: "Комната активна" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: canvasRef, className: `canvas-viewport w-full h-full overflow-hidden select-none ${!canEdit ? "pointer-events-none" : ""}`, onClick: handleCanvasClick, onDoubleClick: handleCanvasDoubleClick, onMouseDown: handleCanvasMouseDown, onMouseMove: handleCanvasMouseMove, onMouseUp: handleCanvasMouseUp, onWheel: handleWheel, onMouseLeave: () => {
       updateCursor(null);
       setSnapTarget(null);
@@ -35820,10 +35903,8 @@ const Canvas = () => {
         setLineEnd(null);
       } else if (isErasing) {
         setIsErasing(false);
-      } else if (isDrawingFreehand) {
-        setIsDrawingFreehand(false);
-        setFreehandPoints([]);
-        freehandLastPointRef.current = null;
+      } else if (freehand.isDrawing) {
+        freehand.onMouseUp();
       } else if (isMarqueeSelecting) {
         setIsMarqueeSelecting(false);
         setMarqueeStart(null);
@@ -35831,10 +35912,10 @@ const Canvas = () => {
       } else handleMouseUp();
     }, style: {
       cursor: isPanning ? "grabbing" : isSpacePressed ? "grab" : isResizing && resizeHandle ? getHandleCursor(resizeHandle) : ["arrow", "line", "eraser", "draw", "fraction", "chart", "geopoint", "geosegment", "geoangle", "freehand", "shape"].includes(mode2) ? "crosshair" : "default"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:606:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "606", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22onDoubleClick%22%3A%22%5BIdentifier%5D%22%2C%22onMouseDown%22%3A%22%5BIdentifier%5D%22%2C%22onMouseMove%22%3A%22%5BIdentifier%5D%22%2C%22onMouseUp%22%3A%22%5BIdentifier%5D%22%2C%22onWheel%22%3A%22%5BIdentifier%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22style%22%3A%7B%22cursor%22%3A%22%5BConditionalExpression%5D%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "canvas-world", style: {
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:607:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "607", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22onDoubleClick%22%3A%22%5BIdentifier%5D%22%2C%22onMouseDown%22%3A%22%5BIdentifier%5D%22%2C%22onMouseMove%22%3A%22%5BIdentifier%5D%22%2C%22onMouseUp%22%3A%22%5BIdentifier%5D%22%2C%22onWheel%22%3A%22%5BIdentifier%5D%22%2C%22onMouseLeave%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22style%22%3A%7B%22cursor%22%3A%22%5BConditionalExpression%5D%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "canvas-world", style: {
       transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
       transformOrigin: "0 0"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:612:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "612", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22canvas-world%22%2C%22style%22%3A%7B%22transform%22%3A%22%5BTemplateLiteral%5D%22%2C%22transformOrigin%22%3A%220%200%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { ref: svgRef, "data-canvas-svg": true, width: CANVAS_WIDTH, height: CANVAS_HEIGHT, viewBox: `0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`, style: {
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:613:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "613", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22canvas-world%22%2C%22style%22%3A%7B%22transform%22%3A%22%5BTemplateLiteral%5D%22%2C%22transformOrigin%22%3A%220%200%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { ref: svgRef, "data-canvas-svg": true, width: CANVAS_WIDTH, height: CANVAS_HEIGHT, viewBox: `0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`, style: {
       backgroundColor: "#FFFFFF",
       filter: "drop-shadow(0 0 10px rgba(0,0,0,0.15))"
     }, onMouseDown: (e2) => {
@@ -35862,13 +35943,13 @@ const Canvas = () => {
         });
         e2.stopPropagation();
       }
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:619:10", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "619", "data-component-file": "Canvas.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22%5BIdentifier%5D%22%2C%22height%22%3A%22%5BIdentifier%5D%22%2C%22viewBox%22%3A%22%5BTemplateLiteral%5D%22%2C%22style%22%3A%7B%22backgroundColor%22%3A%22%23FFFFFF%22%2C%22filter%22%3A%22drop-shadow(0%200%2010px%20rgba(0%2C0%2C0%2C0.15))%22%7D%2C%22onMouseDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:620:10", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "620", "data-component-file": "Canvas.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22%5BIdentifier%5D%22%2C%22height%22%3A%22%5BIdentifier%5D%22%2C%22viewBox%22%3A%22%5BTemplateLiteral%5D%22%2C%22style%22%3A%7B%22backgroundColor%22%3A%22%23FFFFFF%22%2C%22filter%22%3A%22drop-shadow(0%200%2010px%20rgba(0%2C0%2C0%2C0.15))%22%7D%2C%22onMouseDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: [
       renderGrid(),
-      objects.filter((o) => o.visible).map((obj) => /* @__PURE__ */ jsxRuntimeExports.jsx(ObjectRenderer, { obj, isSelected: selectedObjectIds.includes(obj.id), dragDelta: isDragging ? dragDelta : null, objects, editingTextId, editingText, editingTextSize, canvasWidth: canvasSize.width, textareaRef, onMouseDown: handleObjectMouseDown, onTextDoubleClick: handleTextDoubleClick, onEditingTextChange: setEditingText, onTextEditComplete: handleTextEditComplete, onTextEditCancel: () => {
+      visibleObjects.filter((o) => o.visible).map((obj) => /* @__PURE__ */ jsxRuntimeExports.jsx(ObjectRenderer, { obj, isSelected: selectedObjectIds.includes(obj.id), dragDelta: isDragging ? dragDelta : null, objects, editingTextId, editingText, editingTextSize, canvasWidth: canvasSize.width, textareaRef, onMouseDown: handleObjectMouseDown, onTextDoubleClick: handleTextDoubleClick, onEditingTextChange: setEditingText, onTextEditComplete: handleTextEditComplete, onTextEditCancel: () => {
         setEditingTextId(null);
         setEditingText("");
         setEditingTextSize(null);
-      }, onAutoResize: autoResizeTextarea, zoom, onImageResizeStart: handleImageResizeStart, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:626:60", "data-matrix-name": "ObjectRenderer", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "626", "data-component-file": "Canvas.tsx", "data-component-name": "ObjectRenderer", "data-component-content": "%7B%22obj%22%3A%22%5BIdentifier%5D%22%2C%22isSelected%22%3A%22%5BCallExpression%5D%22%2C%22dragDelta%22%3A%22%5BConditionalExpression%5D%22%2C%22objects%22%3A%22%5BIdentifier%5D%22%2C%22editingTextId%22%3A%22%5BIdentifier%5D%22%2C%22editingText%22%3A%22%5BIdentifier%5D%22%2C%22editingTextSize%22%3A%22%5BIdentifier%5D%22%2C%22canvasWidth%22%3A%22%5BMemberExpression%5D%22%2C%22textareaRef%22%3A%22%5BIdentifier%5D%22%2C%22onMouseDown%22%3A%22%5BIdentifier%5D%22%2C%22onTextDoubleClick%22%3A%22%5BIdentifier%5D%22%2C%22onEditingTextChange%22%3A%22%5BIdentifier%5D%22%2C%22onTextEditComplete%22%3A%22%5BIdentifier%5D%22%2C%22onTextEditCancel%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onAutoResize%22%3A%22%5BIdentifier%5D%22%2C%22zoom%22%3A%22%5BIdentifier%5D%22%2C%22onImageResizeStart%22%3A%22%5BIdentifier%5D%22%7D" }, obj.id)),
+      }, onAutoResize: autoResizeTextarea, zoom, onImageResizeStart: handleImageResizeStart, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:627:67", "data-matrix-name": "ObjectRenderer", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "627", "data-component-file": "Canvas.tsx", "data-component-name": "ObjectRenderer", "data-component-content": "%7B%22obj%22%3A%22%5BIdentifier%5D%22%2C%22isSelected%22%3A%22%5BCallExpression%5D%22%2C%22dragDelta%22%3A%22%5BConditionalExpression%5D%22%2C%22objects%22%3A%22%5BIdentifier%5D%22%2C%22editingTextId%22%3A%22%5BIdentifier%5D%22%2C%22editingText%22%3A%22%5BIdentifier%5D%22%2C%22editingTextSize%22%3A%22%5BIdentifier%5D%22%2C%22canvasWidth%22%3A%22%5BMemberExpression%5D%22%2C%22textareaRef%22%3A%22%5BIdentifier%5D%22%2C%22onMouseDown%22%3A%22%5BIdentifier%5D%22%2C%22onTextDoubleClick%22%3A%22%5BIdentifier%5D%22%2C%22onEditingTextChange%22%3A%22%5BIdentifier%5D%22%2C%22onTextEditComplete%22%3A%22%5BIdentifier%5D%22%2C%22onTextEditCancel%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onAutoResize%22%3A%22%5BIdentifier%5D%22%2C%22zoom%22%3A%22%5BIdentifier%5D%22%2C%22onImageResizeStart%22%3A%22%5BIdentifier%5D%22%7D" }, obj.id)),
       canEdit && isDrawingArrow && arrowStart && arrowEnd && calculateDistance(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y) > 5 && (() => {
         const angle = calculateArrowAngle(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y);
         const head2 = calculateArrowHeadPoints(arrowEnd.x, arrowEnd.y, angle, 15, "forward");
@@ -35918,14 +35999,14 @@ const Canvas = () => {
       canEdit && snapTarget && ["geosegment", "geoangle", "geopoint"].includes(mode2) && /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: snapTarget.x, cy: snapTarget.y, r: snapTarget.snapped ? 9 : 5, fill: "none", stroke: snapTarget.snapped ? "#10B981" : "#7C3AED", strokeWidth: snapTarget.snapped ? 2.5 : 1.5, strokeDasharray: snapTarget.snapped ? void 0 : "3,3", opacity: 0.8, style: {
         pointerEvents: "none"
       } }),
-      canEdit && isDrawingFreehand && freehandPoints.length >= 2 && /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: buildSmoothPath2(freehandPoints), stroke: penSettings.color, strokeWidth: penSettings.width, fill: "none", strokeLinecap: "round", strokeLinejoin: "round", opacity: 0.7, style: {
+      canEdit && freehand.overlay && freehand.overlay.points.length >= 2 && /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: buildSmoothPath2(freehand.overlay.points), stroke: freehand.overlay.color, strokeWidth: freehand.overlay.width, fill: "none", strokeLinecap: "round", strokeLinejoin: "round", opacity: 0.7, style: {
         pointerEvents: "none"
       } })
     ] }) }) }),
-    canEdit && mode2 === "geosegment" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:639:43", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "639", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20bottom-4%20left-1%2F2%20-translate-x-1%2F2%20bg-gray-800%20text-white%20text-xs%20px-3%20py-1.5%20rounded-full%20pointer-events-none%20select-none%22%7D", children: segmentStep === 0 ? "Выберите первую точку" : "Выберите вторую точку" }),
-    canEdit && mode2 === "geoangle" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-1/2 -translate-x-1/2 bg-purple-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:640:41", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "640", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20bottom-4%20left-1%2F2%20-translate-x-1%2F2%20bg-purple-800%20text-white%20text-xs%20px-3%20py-1.5%20rounded-full%20pointer-events-none%20select-none%22%7D", children: angleStep === 0 ? "Выберите первую точку (A)" : angleStep === 1 ? "Выберите вершину угла (B)" : "Выберите третью точку (C)" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SmartShapeToolbar, { disabled: !canEdit, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:641:6", "data-matrix-name": "SmartShapeToolbar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "641", "data-component-file": "Canvas.tsx", "data-component-name": "SmartShapeToolbar", "data-component-content": "%7B%22disabled%22%3A%22%5BUnaryExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(RemoteCursors, { zoom, offset: panOffset, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:642:6", "data-matrix-name": "RemoteCursors", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "642", "data-component-file": "Canvas.tsx", "data-component-name": "RemoteCursors", "data-component-content": "%7B%22zoom%22%3A%22%5BIdentifier%5D%22%2C%22offset%22%3A%22%5BIdentifier%5D%22%7D" })
+    canEdit && mode2 === "geosegment" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:640:43", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "640", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20bottom-4%20left-1%2F2%20-translate-x-1%2F2%20bg-gray-800%20text-white%20text-xs%20px-3%20py-1.5%20rounded-full%20pointer-events-none%20select-none%22%7D", children: segmentStep === 0 ? "Выберите первую точку" : "Выберите вторую точку" }),
+    canEdit && mode2 === "geoangle" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-1/2 -translate-x-1/2 bg-purple-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:641:41", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "641", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20bottom-4%20left-1%2F2%20-translate-x-1%2F2%20bg-purple-800%20text-white%20text-xs%20px-3%20py-1.5%20rounded-full%20pointer-events-none%20select-none%22%7D", children: angleStep === 0 ? "Выберите первую точку (A)" : angleStep === 1 ? "Выберите вершину угла (B)" : "Выберите третью точку (C)" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(SmartShapeToolbar, { disabled: !canEdit, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:642:6", "data-matrix-name": "SmartShapeToolbar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "642", "data-component-file": "Canvas.tsx", "data-component-name": "SmartShapeToolbar", "data-component-content": "%7B%22disabled%22%3A%22%5BUnaryExpression%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(RemoteCursors, { zoom, offset: panOffset, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:643:6", "data-matrix-name": "RemoteCursors", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "643", "data-component-file": "Canvas.tsx", "data-component-name": "RemoteCursors", "data-component-content": "%7B%22zoom%22%3A%22%5BIdentifier%5D%22%2C%22offset%22%3A%22%5BIdentifier%5D%22%7D" })
   ] });
 };
 const ColorPicker = ({
@@ -46692,48 +46773,47 @@ const grade8RationalExpressionTemplates = [
     problemType: "text",
     skills: ["fractions", "polynomials"],
     difficulties: {
-      // Уровень 1 — простое сокращение
+      // Уровень 1 — простое сокращение (числовой коэффициент)
       1: {
-        template: "Упростите выражение $\\frac{{a}x + {b}}{{c}x + {d}}$.",
+        template: "Упростите выражение $\\frac{{k}({a}x + {b})}{{m}({a}x + {b})}$.",
         parameters: {
-          a: { type: "int", min: 1, max: 5 },
-          b: { type: "int", min: -5, max: 5 },
-          c: { type: "int", min: 1, max: 5 },
-          d: { type: "int", min: -5, max: 5 }
+          k: { type: "int", min: 2, max: 6 },
+          m: { type: "int", min: 2, max: 6 },
+          a: { type: "int", min: 1, max: 4 },
+          b: { type: "int", min: 1, max: 8 }
         },
-        constraints: ["a !== 0", "c !== 0", "b !== 0", "d !== 0"],
-        answer_formula: "1",
-        // Placeholder for text answer
-        answer_type: "text",
-        hint: "Выделите общий множитель в числителе и знаменателе.",
+        constraints: ["k !== m"],
+        answer_formula: 'k + "/" + m',
+        answer_type: "fraction",
+        hint: "Сократите общий множитель $({a}x + {b})$ в числителе и знаменателе.",
         solution: [
-          { explanation: "Выражение: $\\frac{{a}x + {b}}{{c}x + {d}}$" },
-          { explanation: "Общий множитель: 1" },
-          { explanation: "Ответ: $\\frac{{a}x + {b}}{{c}x + {d}}$" },
-          { explanation: "Ответ: $\\frac{{a}x + {b}}{{c}x + {d}}$" }
+          { explanation: "Исходное выражение: $\\frac{{k}({a}x + {b})}{{m}({a}x + {b})}$" },
+          { explanation: "Сокращаем общий множитель $({a}x + {b})$:" },
+          { explanation: "Результат:", result: "$\\frac{{k}}{{m}}$" }
         ]
       },
-      // Уровень 2 — с сокращением
+      // Уровень 2 — сокращение на НОД числовых коэффициентов
       2: {
-        template: "Упростите выражение $\\frac{{k}({a}x + {b})}{{m}({c}x + {d})}$, где {k} и {m} — целые числа.",
+        template: "Упростите выражение $\\frac{{k}({a}x + {b})}{{m}({c}x + {d})}$.",
         parameters: {
-          gcd: { type: "choice", values: [1, 2, 3, 5] },
-          k: { type: "int", min: 2, max: 10 },
-          m: { type: "int", min: 2, max: 10 },
+          g: { type: "choice", values: [2, 3, 5] },
+          p: { type: "int", min: 2, max: 4 },
+          q: { type: "int", min: 2, max: 4 },
           a: { type: "int", min: 1, max: 3 },
-          b: { type: "int", min: -3, max: 3 },
+          b: { type: "int", min: 1, max: 6 },
           c: { type: "int", min: 1, max: 3 },
-          d: { type: "int", min: -3, max: 3 }
+          d: { type: "int", min: 1, max: 6 },
+          k: { type: "expression", value: "g * p" },
+          m: { type: "expression", value: "g * q" }
         },
-        constraints: ["k % gcd === 0", "m % gcd === 0", "k / gcd !== m / gcd", "k / gcd > 1 || m / gcd > 1"],
-        answer_formula: '(k / gcd) === 1 ? ((m / gcd) === 1 ? "\\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}" : "\\\\frac{1}{" + (m / gcd) + "} \\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}") : "\\\\frac{" + (k / gcd) + "}{" + (m / gcd) + "} \\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}"',
-        answer_type: "text",
-        hint: "Сократите числовые коэффициенты.",
+        constraints: ["p !== q", "a !== c || b !== d"],
+        answer_formula: 'p + "/" + q',
+        answer_type: "fraction",
+        hint: "Найдите НОД числовых коэффициентов {k} и {m}, затем сократите.",
         solution: [
-          { explanation: "Выражение: $\\frac{{k}({a}x + {b})}{{m}({c}x + {d})}$" },
-          { explanation: "Сократим {k} и {m} на НОД = {gcd}" },
-          { explanation: "Получим: $\\frac{{nk}({a}x + {b})}{{nm}({c}x + {d})}$" },
-          { explanation: "Ответ:", result: '"$" + ((k / gcd) === 1 ? ((m / gcd) === 1 ? "\\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}" : "\\\\frac{1}{" + (m / gcd) + "} \\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}") : "\\\\frac{" + (k / gcd) + "}{" + (m / gcd) + "} \\\\frac{" + a + "x " + (b > 0 ? "+" + b : b) + "}{" + c + "x " + (d > 0 ? "+" + d : d) + "}") + "$"' }
+          { explanation: "Исходное выражение: $\\frac{{k}({a}x + {b})}{{m}({c}x + {d})}$" },
+          { explanation: "НОД({k}, {m}) = {g}. Делим числитель и знаменатель на {g}:" },
+          { explanation: "Результат:", result: "$\\frac{{p}({a}x + {b})}{{q}({c}x + {d})}$" }
         ]
       }
     }
@@ -46753,47 +46833,46 @@ const grade8RationalExpressionTemplates = [
       1: {
         template: "Вычислите $\\frac{{a}x + {b}}{{c}x + {d}} + \\frac{{e}x + {f}}{{c}x + {d}}$.",
         parameters: {
-          a: { type: "int", min: 1, max: 3 },
-          b: { type: "int", min: -5, max: 5 },
+          a: { type: "int", min: 1, max: 4 },
+          b: { type: "int", min: 1, max: 8 },
           c: { type: "int", min: 1, max: 3 },
-          d: { type: "int", min: -5, max: 5 },
-          e: { type: "int", min: 1, max: 3 },
-          f: { type: "int", min: -5, max: 5 }
+          d: { type: "int", min: 1, max: 6 },
+          e: { type: "int", min: 1, max: 4 },
+          f: { type: "int", min: 1, max: 8 },
+          ae: { type: "expression", value: "a + e" },
+          bf: { type: "expression", value: "b + f" }
         },
         constraints: ["c !== 0"],
-        answer_formula: '"\\\\frac{" + (a + e) + "x + " + (b + f) + "}{" + c + "x + " + d + "}"',
+        answer_formula: '"\\\\frac{" + ae + "x + " + bf + "}{" + c + "x + " + d + "}"',
         answer_type: "text",
         hint: "Сложите числители, знаменатель общий.",
         solution: [
-          { explanation: "Выражение: $\\frac{{a}x + {b}}{{c}x + {d}} + \\frac{{e}x + {f}}{{c}x + {d}}$" },
-          { explanation: "$= \\frac{({a}x + {b}) + ({e}x + {f})}{{c}x + {d}}$" },
-          { explanation: "$= \\frac{{a + e}x + {b + f}}{{c}x + {d}}$" },
-          { explanation: "Ответ:", result: '"$" + "\\\\frac{" + (a + e) + "x + " + (b + f) + "}{" + c + "x + " + d + "}" + "$"' }
+          { explanation: "Знаменатели одинаковы: $({c}x + {d})$" },
+          { explanation: "Складываем числители:" },
+          { explanation: "$({a}x + {b}) + ({e}x + {f}) = {ae}x + {bf}$" },
+          { explanation: "Результат:", result: "$\\frac{{ae}x + {bf}}{{c}x + {d}}$" }
         ]
       },
       // Уровень 2 — приведение к общему знаменателю
       2: {
-        template: "Вычислите $\\frac{{a}x + {b}}{{c}x + {d}} + \\frac{{e}x + {f}}{{g}x + {h}}$.",
+        template: "Вычислите $\\frac{{a}}{{c}x + {d}} + \\frac{{e}}{{g}x + {h}}$.",
         parameters: {
-          a: { type: "int", min: 1, max: 3 },
-          b: { type: "int", min: -5, max: 5 },
+          a: { type: "int", min: 1, max: 5 },
           c: { type: "int", min: 1, max: 3 },
-          d: { type: "int", min: -5, max: 5 },
-          e: { type: "int", min: 1, max: 3 },
-          f: { type: "int", min: -5, max: 5 },
+          d: { type: "int", min: 1, max: 6 },
+          e: { type: "int", min: 1, max: 5 },
           g: { type: "int", min: 1, max: 3 },
-          h: { type: "int", min: -5, max: 5 }
+          h: { type: "int", min: 1, max: 6 }
         },
-        constraints: ["c !== g", "c !== 0", "g !== 0"],
-        answer_formula: '"\\\\frac{(" + a + "x + " + b + ")(" + g + "x + " + h + ") + (" + e + "x + " + f + ")(" + c + "x + " + d + ")}{(" + c + "x + " + d + ")(" + g + "x + " + h + ")}"',
+        constraints: ["c !== g || d !== h"],
+        answer_formula: '"\\\\frac{" + a + "(" + g + "x + " + h + ") + " + e + "(" + c + "x + " + d + ")}{(" + c + "x + " + d + ")(" + g + "x + " + h + ")}"',
         answer_type: "text",
-        hint: "Приведите к общему знаменателю.",
+        hint: "Общий знаменатель: $({c}x + {d})({g}x + {h})$.",
         solution: [
           { explanation: "Общий знаменатель: $({c}x + {d})({g}x + {h})$" },
-          { explanation: "Первая дробь: $\\frac{({a}x + {b})({g}x + {h})}{({c}x + {d})({g}x + {h})}$" },
-          { explanation: "Вторая дробь: $\\frac{({e}x + {f})({c}x + {d})}{({c}x + {d})({g}x + {h})}$" },
-          { explanation: "Сумма: $\\frac{({a}x + {b})({g}x + {h}) + ({e}x + {f})({c}x + {d})}{({c}x + {d})({g}x + {h})}$" },
-          { explanation: "Ответ:", result: '"$" + "\\\\frac{(" + a + "x + " + b + ")(" + g + "x + " + h + ") + (" + e + "x + " + f + ")(" + c + "x + " + d + ")}{(" + c + "x + " + d + ")(" + g + "x + " + h + ")}" + "$"' }
+          { explanation: "Приводим первую дробь: умножаем числитель и знаменатель на $({g}x + {h})$" },
+          { explanation: "Приводим вторую дробь: умножаем числитель и знаменатель на $({c}x + {d})$" },
+          { explanation: "Результат:", result: "$\\frac{{a}({g}x + {h}) + {e}({c}x + {d})}{({c}x + {d})({g}x + {h})}$" }
         ]
       }
     }
@@ -46814,44 +46893,42 @@ const grade8RationalExpressionTemplates = [
         template: "Вычислите $\\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{e}x + {f}}{{g}x + {h}}$.",
         parameters: {
           a: { type: "int", min: 1, max: 3 },
-          b: { type: "int", min: -3, max: 3 },
+          b: { type: "int", min: 1, max: 6 },
           c: { type: "int", min: 1, max: 3 },
-          d: { type: "int", min: -3, max: 3 },
+          d: { type: "int", min: 1, max: 6 },
           e: { type: "int", min: 1, max: 3 },
-          f: { type: "int", min: -3, max: 3 },
+          f: { type: "int", min: 1, max: 6 },
           g: { type: "int", min: 1, max: 3 },
-          h: { type: "int", min: -3, max: 3 }
+          h: { type: "int", min: 1, max: 6 }
         },
         constraints: ["c !== 0", "g !== 0"],
         answer_formula: '"\\\\frac{(" + a + "x + " + b + ")(" + e + "x + " + f + ")}{(" + c + "x + " + d + ")(" + g + "x + " + h + ")}"',
         answer_type: "text",
         hint: "Перемножьте числители и знаменатели.",
         solution: [
-          { explanation: "Выражение: $\\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{e}x + {f}}{{g}x + {h}}$" },
-          { explanation: "$= \\frac{({a}x + {b})({e}x + {f})}{({c}x + {d})({g}x + {h})}$" },
-          { explanation: "Ответ:", result: '"$" + "\\\\frac{(" + a + "x + " + b + ")(" + e + "x + " + f + ")}{(" + c + "x + " + d + ")(" + g + "x + " + h + ")}" + "$"' }
+          { explanation: "Перемножаем числители и знаменатели:" },
+          { explanation: "Результат:", result: "$\\frac{({a}x + {b})({e}x + {f})}{({c}x + {d})({g}x + {h})}$" }
         ]
       },
-      // Уровень 2 — с сокращением
+      // Уровень 2 — с сокращением общего множителя
       2: {
         template: "Упростите $\\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{c}x + {d}}{{e}x + {f}}$.",
         parameters: {
           a: { type: "int", min: 1, max: 3 },
-          b: { type: "int", min: -3, max: 3 },
+          b: { type: "int", min: 1, max: 6 },
           c: { type: "int", min: 1, max: 3 },
-          d: { type: "int", min: -3, max: 3 },
+          d: { type: "int", min: 1, max: 6 },
           e: { type: "int", min: 1, max: 3 },
-          f: { type: "int", min: -3, max: 3 }
+          f: { type: "int", min: 1, max: 6 }
         },
-        constraints: ["c !== 0", "e !== 0"],
+        constraints: ["c !== 0", "e !== 0", "a !== e || b !== f"],
         answer_formula: '"\\\\frac{" + a + "x + " + b + "}{" + e + "x + " + f + "}"',
         answer_type: "text",
-        hint: "Сократите общий множитель.",
+        hint: "Сократите общий множитель $({c}x + {d})$.",
         solution: [
-          { explanation: "Выражение: $\\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{c}x + {d}}{{e}x + {f}}$" },
-          { explanation: "$({c}x + {d})$ сокращается" },
-          { explanation: "$= \\frac{{a}x + {b}}{{e}x + {f}}$" },
-          { explanation: "Ответ:", result: '"$" + "\\\\frac{" + a + "x + " + b + "}{" + e + "x + " + f + "}" + "$"' }
+          { explanation: "Множитель $({c}x + {d})$ присутствует в числителе второй дроби и знаменателе первой." },
+          { explanation: "Сокращаем $({c}x + {d})$:" },
+          { explanation: "Результат:", result: "$\\frac{{a}x + {b}}{{e}x + {f}}$" }
         ]
       }
     }
@@ -46872,23 +46949,22 @@ const grade8RationalExpressionTemplates = [
         template: "Вычислите $\\frac{{a}x + {b}}{{c}x + {d}} : \\frac{{e}x + {f}}{{g}x + {h}}$.",
         parameters: {
           a: { type: "int", min: 1, max: 3 },
-          b: { type: "int", min: -3, max: 3 },
+          b: { type: "int", min: 1, max: 6 },
           c: { type: "int", min: 1, max: 3 },
-          d: { type: "int", min: -3, max: 3 },
+          d: { type: "int", min: 1, max: 6 },
           e: { type: "int", min: 1, max: 3 },
-          f: { type: "int", min: -3, max: 3 },
+          f: { type: "int", min: 1, max: 6 },
           g: { type: "int", min: 1, max: 3 },
-          h: { type: "int", min: -3, max: 3 }
+          h: { type: "int", min: 1, max: 6 }
         },
         constraints: ["c !== 0", "g !== 0"],
         answer_formula: '"\\\\frac{(" + a + "x + " + b + ")(" + g + "x + " + h + ")}{(" + c + "x + " + d + ")(" + e + "x + " + f + ")}"',
         answer_type: "text",
-        hint: "Умножьте на обратную дробь.",
+        hint: "Деление на дробь — умножение на обратную дробь.",
         solution: [
-          { explanation: "Выражение: $\\frac{{a}x + {b}}{{c}x + {d}} : \\frac{{e}x + {f}}{{g}x + {h}}$" },
-          { explanation: "$= \\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{g}x + {h}}{{e}x + {f}}$" },
-          { explanation: "$= \\frac{({a}x + {b})({g}x + {h})}{({c}x + {d})({e}x + {f})}$" },
-          { explanation: "Ответ:", result: '"$" + "\\\\frac{(" + a + "x + " + b + ")(" + g + "x + " + h + ")}{(" + c + "x + " + d + ")(" + e + "x + " + f + ")}" + "$"' }
+          { explanation: "Заменяем деление умножением на обратную дробь:" },
+          { explanation: "$\\frac{{a}x + {b}}{{c}x + {d}} \\cdot \\frac{{g}x + {h}}{{e}x + {f}}$" },
+          { explanation: "Результат:", result: "$\\frac{({a}x + {b})({g}x + {h})}{({c}x + {d})({e}x + {f})}$" }
         ]
       }
     }
@@ -51915,7 +51991,9 @@ function safeEval(expr, params2) {
     if (peek().value === "?") {
       consume();
       const then = parseTernary();
-      if (peek().value !== ":") throw new Error("Expected :");
+      if (peek().value !== ":") {
+        return cond ? then : 0;
+      }
       consume();
       const else_ = parseTernary();
       return cond ? then : else_;
@@ -52036,6 +52114,8 @@ function safeEval(expr, params2) {
         if (name2 === "Math.pow" || name2 === "pow") return Math.pow(Number(args[0]), Number(args[1]));
         if (name2 === "Math.max" || name2 === "max") return Math.max(...args.map(Number));
         if (name2 === "Math.min" || name2 === "min") return Math.min(...args.map(Number));
+        if (name2 === "String" || name2 === "string") return String(args[0] ?? "");
+        if (name2 === "Number" || name2 === "number") return Number(args[0]);
         throw new Error(`Unknown function: ${name2}`);
       }
       if (name2 in params2) return params2[name2];
@@ -52054,6 +52134,101 @@ function evaluateFormula(formula, params2) {
     console.error("Formula evaluation error:", error, "Formula:", formula, "Params:", params2);
     return 0;
   }
+}
+function convertFractions(text2) {
+  if (!text2 || typeof text2 !== "string") return text2 || "";
+  if (!text2.includes("/")) return text2;
+  const protectedText = text2.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "__FRAC_PROTECTED__$1__$2__FRAC__");
+  let result = "";
+  let i = 0;
+  while (i < protectedText.length) {
+    const slashIdx = protectedText.indexOf("/", i);
+    if (slashIdx === -1) {
+      result += protectedText.slice(i);
+      break;
+    }
+    if (slashIdx > 0 && (protectedText.slice(slashIdx - 5, slashIdx) === "__FRAC" || protectedText[slashIdx - 1] === ":" || protectedText[slashIdx - 1] === "\\")) {
+      result += protectedText.slice(i, slashIdx + 1);
+      i = slashIdx + 1;
+      continue;
+    }
+    let numEnd = slashIdx;
+    while (numEnd > 0 && /\s/.test(protectedText[numEnd - 1])) numEnd--;
+    let numStart = numEnd;
+    while (numStart > 0 && /[a-zA-Z0-9^]/.test(protectedText[numStart - 1])) numStart--;
+    if (numStart === numEnd) {
+      result += protectedText.slice(i, slashIdx + 1);
+      i = slashIdx + 1;
+      continue;
+    }
+    let denStart = slashIdx + 1;
+    while (denStart < protectedText.length && /\s/.test(protectedText[denStart])) denStart++;
+    let denEnd = denStart;
+    while (denEnd < protectedText.length && /[a-zA-Z0-9^]/.test(protectedText[denEnd])) denEnd++;
+    if (denStart === denEnd) {
+      result += protectedText.slice(i, slashIdx + 1);
+      i = slashIdx + 1;
+      continue;
+    }
+    const numerator = protectedText.slice(numStart, numEnd);
+    const denominator = protectedText.slice(denStart, denEnd);
+    if (/^[a-zA-Z0-9^]+$/.test(numerator) && /^[a-zA-Z0-9^]+$/.test(denominator)) {
+      result += protectedText.slice(i, numStart);
+      result += `\\frac{${numerator}}{${denominator}}`;
+      i = denEnd;
+    } else {
+      result += protectedText.slice(i, slashIdx + 1);
+      i = slashIdx + 1;
+    }
+  }
+  return result.replace(/__FRAC_PROTECTED__([^_]+)__([^_]+)__FRAC__/g, "\\frac{$1}{$2}");
+}
+function normalizeMathExpression$1(text2) {
+  if (!text2 || typeof text2 !== "string") return "";
+  let result = text2;
+  result = result.split("\n").map((l) => l.trim()).join(" ");
+  result = result.replace(/[\s\u00A0\u2007\u202F\u2009]+/g, " ");
+  const hasLatex = /\\[a-zA-Z]/.test(result);
+  if (!hasLatex) {
+    result = convertFractions(result);
+    result = result.replace(/⋅/g, "\\cdot");
+    result = result.replace(/\s*\*\s*/g, " \\cdot ");
+    result = result.replace(/(\d)\s+([a-zA-Z])/g, "$1$2");
+    result = result.replace(/(\d)\s+(?=\d)/g, "$1");
+    result = result.replace(new RegExp("(?<!\\d)\\s*:\\s*(?!\\d)", "g"), " \\div ");
+    result = result.replace(/(\S)\s*([+\-*/^=])\s*(\S)/g, "$1 $2 $3");
+    result = result.replace(/\s*\+\s*-\s*/g, " − ");
+    result = result.replace(/\s*-\s*-\s*/g, " + ");
+    result = result.replace(/\b1([a-zA-Z])\b/g, "$1");
+    result = result.replace(/\b1([a-zA-Z])\^/g, "$1^");
+    result = result.replace(/\^1\s*([+\-]|$)/g, "$1");
+    result = result.replace(/[a-zA-Z]\^0(?=[^0-9])/g, "1");
+    result = result.replace(/\b0([a-zA-Z])\b/g, "0");
+    result = result.replace(/x\s*\+\s*0(\s|$|[^+−])/g, "x$1");
+    result = result.replace(/x\s*-\s*0(\s|$|[^+−])/g, "x$1");
+    result = result.replace(/\s*\+\s*0(\s|[+\-−]|$)/g, "$1");
+    result = result.replace(/\s*-\s*0(\s|[+\-−]|$)/g, "$1");
+  } else {
+    result = result.replace(/⋅/g, "\\cdot");
+    result = result.replace(/\s*\+\s*-\s*/g, " - ");
+    result = result.replace(/\s*-\s*-\s*/g, " + ");
+  }
+  result = result.replace(/²/g, "^2");
+  result = result.replace(/³/g, "^3");
+  return result.replace(/\s+/g, " ").trim();
+}
+function normalizeMathFragments(text2) {
+  if (!text2 || typeof text2 !== "string") return text2 ?? "";
+  return text2.replace(
+    /(\$\$[\s\S]*?\$\$|\$[^$\n]*?\$)/g,
+    (match2) => {
+      const isDisplay = match2.startsWith("$$");
+      const delim = isDisplay ? "$$" : "$";
+      const inner2 = match2.slice(delim.length, match2.length - delim.length);
+      const normalized = normalizeMathExpression$1(inner2);
+      return `${delim}${normalized}${delim}`;
+    }
+  );
 }
 function createSeededRng(seed) {
   let s = seed >>> 0;
@@ -52148,6 +52323,11 @@ function generateProblem(template, difficulty = 1, seed) {
     question = question.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
   }
   const answer = evaluateFormula(config3.answer_formula, params2);
+  if (typeof answer === "number" && !isFinite(answer)) {
+    console.warn(
+      `[variantGenerator] Template "${template.id}" answer_formula "${config3.answer_formula}" produced ${answer} with params ${JSON.stringify(params2)}. Check for division by zero or invalid param combinations.`
+    );
+  }
   let hint;
   if (config3.hint) {
     if (typeof config3.hint !== "string") {
@@ -52218,6 +52398,17 @@ function generateProblem(template, difficulty = 1, seed) {
       }
       return generatedStep;
     });
+  }
+  question = normalizeMathFragments(question);
+  if (hint) hint = normalizeMathFragments(hint);
+  if (hints) hints = hints.map(normalizeMathFragments);
+  if (solution) {
+    solution = solution.map((step) => ({
+      ...step,
+      explanation: normalizeMathFragments(step.explanation),
+      ...step.expression !== void 0 && { expression: normalizeMathFragments(step.expression) },
+      ...step.result !== void 0 && { result: normalizeMathFragments(step.result) }
+    }));
   }
   return {
     id: `${template.id}-${resolvedSeed}`,
@@ -97306,17 +97497,21 @@ function reduceFraction(numerator, denominator) {
   }
   return [num, den];
 }
-function parseFraction(input) {
+function parseStrictFractionValue(input) {
   const trimmed = input.trim();
-  const decimal = parseFloat(trimmed.replace(",", "."));
-  if (!isNaN(decimal)) {
-    return decimal;
+  if (!trimmed) return null;
+  if (trimmed.includes("/")) {
+    const rational = parseFractionToRational(trimmed);
+    if (!rational) return null;
+    const value = rational[0] / rational[1];
+    if (!isFinite(value)) return null;
+    return value;
   }
-  const rational = parseFractionToRational(trimmed);
-  if (rational) {
-    return rational[0] / rational[1];
-  }
-  return null;
+  const normalized = trimmed.replace(",", ".");
+  if (!/^-?\d+(\.\d+)?$/.test(normalized)) return null;
+  const decimal = Number(normalized);
+  if (!isFinite(decimal)) return null;
+  return decimal;
 }
 function parseCoordinate(input) {
   const trimmed = input.trim();
@@ -97394,17 +97589,27 @@ function compareExpressions(userAnswer, expectedAnswer) {
     }
     try {
       const diff2 = simplify(`(${simplifiedUser.toString()}) - (${simplifiedExpected.toString()})`);
-      const testValues = [0, 1, 2, -1, 0.5];
+      const testValues = [0, 1, 2, -1, 0.5, 3, -2, 0.1, 7, -0.5];
       let allZero = true;
+      let validSamples = 0;
       for (const val of testValues) {
-        const substituted = diff2.evaluate({ x: val });
-        const num = Number(substituted);
-        if (!isNaN(num) && Math.abs(num) > tolerance) {
-          allZero = false;
-          break;
+        try {
+          const substituted = diff2.evaluate({ x: val });
+          const num = Number(substituted);
+          if (!isNaN(num) && !isFinite(num)) {
+            continue;
+          }
+          if (!isNaN(num)) {
+            validSamples++;
+            if (Math.abs(num) > tolerance) {
+              allZero = false;
+              break;
+            }
+          }
+        } catch {
         }
       }
-      if (allZero) {
+      if (allZero && validSamples > 0) {
         return true;
       }
     } catch {
@@ -97457,23 +97662,30 @@ function compareIntervals(userAnswer, expectedAnswer) {
   return true;
 }
 function validateAnswer(problem, userAnswer, answerType = "number") {
+  if (userAnswer === null || userAnswer === void 0) return false;
+  const safeUserAnswer = String(userAnswer);
   const answer = problem.answer;
   const tolerance = 1e-3;
   switch (answerType) {
     case "number": {
-      const parsed2 = parseFloat(userAnswer.replace(",", ".").trim());
+      const normalized = safeUserAnswer.replace(",", ".").trim();
+      if (!/^-?(\d+\.?\d*|\.\d+)$/.test(normalized)) {
+        return normalized.toLowerCase() === String(answer).trim().toLowerCase();
+      }
+      const parsed2 = Number(normalized);
       const expected2 = parseFloat(String(answer));
-      if (!isNaN(parsed2) && !isNaN(expected2)) {
+      if (!isNaN(parsed2) && !isNaN(expected2) && isFinite(parsed2) && isFinite(expected2)) {
         return Math.abs(parsed2 - expected2) < tolerance;
       }
-      return userAnswer.trim().toLowerCase() === String(answer).trim().toLowerCase();
+      return false;
     }
     case "fraction": {
-      const userRational = parseFractionToRational(userAnswer);
+      const userRational = parseFractionToRational(safeUserAnswer);
       let expectedRational = null;
       if (typeof answer === "number") {
-        const userDecimal = userRational ? userRational[0] / userRational[1] : parseFraction(userAnswer);
-        if (userDecimal === null) {
+        if (!isFinite(answer)) return false;
+        const userDecimal = userRational ? userRational[0] / userRational[1] : parseStrictFractionValue(safeUserAnswer);
+        if (userDecimal === null || !isFinite(userDecimal)) {
           return false;
         }
         return Math.abs(userDecimal - answer) < 0.01;
@@ -97485,15 +97697,15 @@ function validateAnswer(problem, userAnswer, answerType = "number") {
         const [expNum, expDen] = reduceFraction(expectedRational[0], expectedRational[1]);
         return userNum === expNum && userDen === expDen;
       }
-      const userValue = parseFraction(userAnswer);
-      const expectedValue = typeof answer === "number" ? answer : parseFraction(String(answer));
+      const userValue = parseStrictFractionValue(safeUserAnswer);
+      const expectedValue = typeof answer === "number" ? isFinite(answer) ? answer : null : parseStrictFractionValue(String(answer));
       if (userValue === null || expectedValue === null) {
         return false;
       }
       return Math.abs(userValue - expectedValue) < 0.01;
     }
     case "coordinate": {
-      const userCoord = parseCoordinate(userAnswer);
+      const userCoord = parseCoordinate(safeUserAnswer);
       let expectedCoord = null;
       if (typeof answer === "string") {
         expectedCoord = parseCoordinate(answer);
@@ -97506,18 +97718,18 @@ function validateAnswer(problem, userAnswer, answerType = "number") {
       return Math.abs(userCoord[0] - expectedCoord[0]) < tolerance && Math.abs(userCoord[1] - expectedCoord[1]) < tolerance;
     }
     case "expression":
-      return compareExpressions(userAnswer, String(answer));
+      return compareExpressions(safeUserAnswer, String(answer));
     case "interval":
-      return compareIntervals(userAnswer, String(answer));
+      return compareIntervals(safeUserAnswer, String(answer));
     case "set":
       throw new Error('AnswerType "set" is not yet implemented');
     default:
-      const parsed = parseFloat(userAnswer.replace(",", ".").trim());
+      const parsed = parseFloat(safeUserAnswer.replace(",", ".").trim());
       const expected = parseFloat(String(answer));
-      if (!isNaN(parsed) && !isNaN(expected)) {
+      if (!isNaN(parsed) && !isNaN(expected) && isFinite(parsed) && isFinite(expected)) {
         return Math.abs(parsed - expected) < tolerance;
       }
-      return userAnswer.trim().toLowerCase() === String(answer).trim().toLowerCase();
+      return safeUserAnswer.trim().toLowerCase() === String(answer).trim().toLowerCase();
   }
 }
 function getDifficultyConfig(template, difficulty) {
@@ -97930,15 +98142,12 @@ function updateAdaptiveState(state, isCorrect) {
   if (newConsecutiveCorrect >= 3) {
     newDifficulty = Math.min(4, newDifficulty + 1);
     newConsecutiveCorrect = 0;
-  }
-  if (newConsecutiveWrong >= 3) {
+  } else if (newConsecutiveWrong >= 3) {
     newDifficulty = Math.max(1, newDifficulty - 1);
     newConsecutiveWrong = 0;
-  }
-  if (newRecentAnswers.length >= 10 && accuracy < 0.4) {
+  } else if (newRecentAnswers.length >= 10 && accuracy < 0.4) {
     newDifficulty = Math.max(1, newDifficulty - 1);
-  }
-  if (newRecentAnswers.length >= 10 && accuracy > 0.8) {
+  } else if (newRecentAnswers.length >= 10 && accuracy > 0.8) {
     newDifficulty = Math.min(4, newDifficulty + 1);
   }
   return {
@@ -116192,39 +116401,8 @@ var katex = {
    */
   __domTree
 };
-function normalizeMathExpression(text2) {
-  if (!text2 || typeof text2 !== "string") {
-    return "";
-  }
-  let result = text2;
-  result = result.split("\n").map((line) => line.trim()).join(" ");
-  result = result.replace(/[\s\u00A0\u2007\u202F\u2009]+/g, " ");
-  result = result.replace(/⋅/g, "\\cdot");
-  result = result.replace(/\s*\*\s*/g, " \\cdot ");
-  result = result.replace(/(\d)\s+([a-zA-Z])/g, "$1$2");
-  result = result.replace(/(\d)\s+(?=\d)/g, "$1");
-  result = result.replace(/\s*:\s*/g, " \\div ");
-  result = result.replace(/(\S)\s*([+\-*/^=])\s*(\S)/g, "$1 $2 $3");
-  result = result.replace(/\s*\+\s*-\s*/g, " − ");
-  result = result.replace(/\s*-\s*-\s*/g, " + ");
-  result = result.replace(/\b1([a-zA-Z])\b/g, "$1");
-  result = result.replace(/\b1([a-zA-Z])\^/g, "$1^");
-  result = result.replace(/\^1\s*([+\-]|$)/g, "$1");
-  result = result.replace(/[a-zA-Z]\^0(?=[^0-9])/g, "1");
-  result = result.replace(/\b0([a-zA-Z])\b/g, "0");
-  result = result.replace(/x\s*\+\s*0(\s|$|[^+−])/g, "x$1");
-  result = result.replace(/x\s*-\s*0(\s|$|[^+−])/g, "x$1");
-  result = result.replace(/\s*\+\s*0(\s|[+\-−]|$)/g, "$1");
-  result = result.replace(/\s*-\s*0(\s|[+\-−]|$)/g, "$1");
-  result = result.replace(/²/g, "^2");
-  result = result.replace(/³/g, "^3");
-  result = result.replace(/\s+/g, " ").trim();
-  return result;
-}
 function parseMathText(text2) {
-  if (!text2 || typeof text2 !== "string") {
-    return [];
-  }
+  if (!text2 || typeof text2 !== "string") return [];
   const segments = [];
   let remaining = text2;
   while (remaining.length > 0) {
@@ -116237,10 +116415,9 @@ function parseMathText(text2) {
         });
         break;
       }
-      const mathContent = remaining.slice(2, endIndex);
       segments.push({
         type: "math",
-        value: mathContent,
+        value: remaining.slice(2, endIndex),
         display: true
       });
       remaining = remaining.slice(endIndex + 2);
@@ -116249,11 +116426,7 @@ function parseMathText(text2) {
     if (remaining.startsWith("$")) {
       let endIndex = -1;
       for (let i = 1; i < remaining.length; i++) {
-        if (remaining[i] === "$") {
-          if (remaining[i + 1] === "$") {
-            i++;
-            continue;
-          }
+        if (remaining[i] === "$" && remaining[i + 1] !== "$") {
           endIndex = i;
           break;
         }
@@ -116265,87 +116438,769 @@ function parseMathText(text2) {
         });
         break;
       }
-      const mathContent = remaining.slice(1, endIndex);
       segments.push({
         type: "math",
-        value: mathContent,
+        value: remaining.slice(1, endIndex),
         display: false
       });
       remaining = remaining.slice(endIndex + 1);
       continue;
     }
-    let nextDelimiter = -1;
-    for (let i = 0; i < remaining.length; i++) {
-      if (remaining[i] === "$") {
-        nextDelimiter = i;
-        break;
-      }
-    }
-    if (nextDelimiter === -1) {
+    const next = remaining.indexOf("$");
+    if (next === -1) {
       segments.push({
         type: "text",
         value: remaining
       });
       break;
     }
-    const textPart = remaining.slice(0, nextDelimiter);
-    if (textPart.length > 0) {
-      segments.push({
-        type: "text",
-        value: textPart
-      });
-    }
-    remaining = remaining.slice(nextDelimiter);
+    if (next > 0) segments.push({
+      type: "text",
+      value: remaining.slice(0, next)
+    });
+    remaining = remaining.slice(next);
   }
   return segments;
 }
 function normalizeText(text2) {
-  let normalized = text2;
-  normalized = normalized.replace(/\.([A-Za-zА-Яа-я])/g, ". $1");
-  normalized = normalized.replace(/\?([A-Za-zА-Яа-я])/g, "? $1");
-  normalized = normalized.replace(/,([A-Za-zА-Яа-я])/g, ", $1");
-  normalized = normalized.replace(/([a-zA-Zа-яА-Я])\(/g, "$1 (");
-  normalized = normalized.replace(/\s+/g, " ").trim();
-  return normalized;
+  return text2.replace(/\.([A-Za-zА-Яа-я])/g, ". $1").replace(/\?([A-Za-zА-Яа-я])/g, "? $1").replace(/,([A-Za-zА-Яа-я])/g, ", $1").replace(/([a-zA-Zа-яА-Я])\(/g, "$1 (").replace(/\s+/g, " ").trim();
 }
 function renderMath(math2, displayMode) {
-  const content = math2.trim();
-  if (!content) return null;
-  const latex = `\\displaystyle ${content}`;
+  if (!math2.trim()) return null;
   try {
-    const html = katex.renderToString(latex, {
+    const html = katex.renderToString(`\\displaystyle ${math2}`, {
       displayMode,
       throwOnError: false,
       strict: false
     });
-    if (displayMode) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center my-4", dangerouslySetInnerHTML: {
-        __html: html
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:108:19", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "108", "data-component-file": "MathText.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-center%20my-4%22%2C%22dangerouslySetInnerHTML%22%3A%7B%22__html%22%3A%22%5Bvar%3Ahtml%5D%22%7D%7D" });
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { dangerouslySetInnerHTML: {
+    return displayMode ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center my-4", dangerouslySetInnerHTML: {
       __html: html
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:110:15", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "110", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22dangerouslySetInnerHTML%22%3A%7B%22__html%22%3A%22%5Bvar%3Ahtml%5D%22%7D%7D" });
-  } catch (e2) {
-    console.error("KaTeX render error:", content);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-500 font-mono text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:113:15", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "113", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-red-500%20font-mono%20text-sm%22%7D", children: content });
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:60:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "60", "data-component-file": "MathText.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-center%20my-4%22%2C%22dangerouslySetInnerHTML%22%3A%7B%22__html%22%3A%22%5Bvar%3Ahtml%5D%22%7D%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { dangerouslySetInnerHTML: {
+      __html: html
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:61:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "61", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22dangerouslySetInnerHTML%22%3A%7B%22__html%22%3A%22%5Bvar%3Ahtml%5D%22%7D%7D" });
+  } catch {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:62:21", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "62", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-red-500%22%7D", children: math2 });
   }
+}
+function splitTextAndFractions(text2) {
+  if (!text2 || !text2.includes("/")) return [{
+    type: "text",
+    value: text2
+  }];
+  const result = [];
+  let i = 0;
+  const len = text2.length;
+  while (i < len) {
+    if (text2[i] === "/") {
+      i++;
+      continue;
+    }
+    const remaining2 = text2.slice(i);
+    const digitMatch = remaining2.match(/^(\d+)\s*\/\s*(\d+)/);
+    const letterMatch = remaining2.match(/^([a-zA-Z])\s*\/\s*([a-zA-Z])/);
+    const exprMatch = remaining2.match(/^(\d*[a-zA-Z]+)\s*\/\s*(\d*[a-zA-Z]+)/);
+    let match2 = null;
+    if (digitMatch) match2 = digitMatch;
+    else if (letterMatch) match2 = letterMatch;
+    else if (exprMatch && exprMatch[0].length > 2) match2 = exprMatch;
+    if (match2 && match2[0].length > 1) {
+      const textBefore = text2.slice(0, i).trim();
+      if (textBefore) result.push({
+        type: "text",
+        value: textBefore
+      });
+      const latex = `\\frac{${match2[1]}}{${match2[2]}}`;
+      result.push({
+        type: "math",
+        value: latex
+      });
+      i += match2[0].length;
+    } else {
+      i++;
+    }
+  }
+  if (result.length === 0) return [{
+    type: "text",
+    value: text2
+  }];
+  const remaining = text2.slice(i).trim();
+  if (remaining) result.push({
+    type: "text",
+    value: remaining
+  });
+  return result;
 }
 const MathText = ({
   children,
   className = ""
 }) => {
-  if (!children || typeof children !== "string") return null;
+  if (!children) return null;
   const segments = parseMathText(children);
-  if (segments.length === 0) return null;
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xl md:text-2xl leading-relaxed ${className}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:130:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "130", "data-component-file": "MathText.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: segments.map((seg, i) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xl md:text-2xl leading-relaxed ${className}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:132:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "132", "data-component-file": "MathText.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: segments.map((seg, i) => {
     if (seg.type === "math") {
-      const normalizedMath = normalizeMathExpression(seg.value);
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mx-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:136:27", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "136", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22inline-block%20mx-1%22%7D", children: renderMath(normalizedMath, seg.display ?? false) }, i);
+      const normalized = normalizeMathExpression$1(seg.value);
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mx-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:136:27", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "136", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22inline-block%20mx-1%22%7D", children: renderMath(normalized, seg.display ?? false) }, i);
     }
-    const normalizedText = normalizeText(seg.value);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:140:23", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "140", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-slate-700%22%7D", children: normalizedText }, i);
+    const hasFractions = seg.value.includes("/");
+    if (!hasFractions) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:143:27", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "143", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-slate-700%22%7D", children: normalizeText(seg.value) }, i);
+    }
+    const subSegments = splitTextAndFractions(seg.value);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:150:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "150", "data-component-file": "MathText.tsx", "data-component-name": "span", children: subSegments.map((sub2, j) => {
+      if (sub2.type === "math") {
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mx-0.5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:153:39", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "153", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22inline-block%20mx-0.5%22%7D", children: renderMath(sub2.value, false) }, `${i}-${j}`);
+      }
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx:155:35", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathText.tsx", "data-component-line": "155", "data-component-file": "MathText.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-slate-700%22%7D", children: normalizeText(sub2.value) }, `${i}-${j}`);
+    }) }, i);
   }) });
+};
+const KEYBOARD_LAYOUT = [[{
+  label: "7",
+  variant: "digit"
+}, {
+  label: "8",
+  variant: "digit"
+}, {
+  label: "9",
+  variant: "digit"
+}, {
+  label: "(",
+  variant: "operator"
+}, {
+  label: ")",
+  variant: "operator"
+}, {
+  display: "x²",
+  label: "^2",
+  variant: "function"
+}, {
+  label: "^",
+  variant: "operator"
+}], [{
+  label: "4",
+  variant: "digit"
+}, {
+  label: "5",
+  variant: "digit"
+}, {
+  label: "6",
+  variant: "digit"
+}, {
+  label: "+",
+  variant: "operator"
+}, {
+  label: "-",
+  variant: "operator"
+}, {
+  display: "√",
+  label: "sqrt()",
+  variant: "function"
+}, {
+  display: "π",
+  label: "pi",
+  variant: "operator"
+}], [{
+  label: "1",
+  variant: "digit"
+}, {
+  label: "2",
+  variant: "digit"
+}, {
+  label: "3",
+  variant: "digit"
+}, {
+  label: "*",
+  display: "×",
+  variant: "operator"
+}, {
+  label: "/",
+  display: "÷",
+  variant: "operator"
+}, {
+  display: "a/b",
+  label: "/",
+  variant: "function",
+  isFraction: true
+}, {
+  display: "x³",
+  label: "^3",
+  variant: "function"
+}], [{
+  label: "0",
+  variant: "digit"
+}, {
+  label: ".",
+  variant: "digit"
+}, {
+  label: ",",
+  variant: "digit"
+}, {
+  display: "←",
+  label: "←",
+  action: "moveLeft",
+  variant: "action"
+}, {
+  display: "→",
+  label: "→",
+  action: "moveRight",
+  variant: "action"
+}, {
+  display: "⌫",
+  label: "⌫",
+  action: "delete",
+  variant: "action"
+}, {
+  display: "C",
+  label: "C",
+  action: "clear",
+  variant: "action"
+}]];
+const variantStyles = {
+  digit: "bg-slate-50 border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300",
+  operator: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-semibold",
+  function: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100",
+  action: "bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200"
+};
+const VirtualMathKeyboard = ({
+  onKeyPress,
+  onInsertFraction,
+  className = ""
+}) => {
+  const handleKeyPress = reactExports.useCallback((key) => {
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(5);
+    }
+    if (key.isFraction && onInsertFraction) {
+      onInsertFraction();
+      return;
+    }
+    onKeyPress(key);
+  }, [onKeyPress, onInsertFraction]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `bg-white rounded-xl shadow-lg border border-slate-200 p-2 sm:p-3 ${className} z-50`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathKeyboard.tsx:64:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathKeyboard.tsx", "data-component-line": "64", "data-component-file": "MathKeyboard.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1.5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathKeyboard.tsx:65:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathKeyboard.tsx", "data-component-line": "65", "data-component-file": "MathKeyboard.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20gap-1.5%22%7D", children: KEYBOARD_LAYOUT.map((row2, rowIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center gap-1 flex-wrap", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathKeyboard.tsx:67:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathKeyboard.tsx", "data-component-line": "67", "data-component-file": "MathKeyboard.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-center%20gap-1%20flex-wrap%22%7D", children: row2.map((key, keyIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => handleKeyPress(key), onMouseDown: (e2) => e2.preventDefault(), className: `min-w-[40px] sm:min-w-[44px] h-10 sm:h-11 px-2 sm:px-3 rounded-lg border transition-all duration-100 active:scale-95 flex items-center justify-center text-xs sm:text-sm font-medium select-none ${variantStyles[key.variant]}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathKeyboard.tsx:69:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathKeyboard.tsx", "data-component-line": "69", "data-component-file": "MathKeyboard.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseDown%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: key.display || key.label }, keyIndex)) }, rowIndex)) }) });
+};
+const OPERATORS = ["+", "-", "*", "/", "^"];
+const KEYWORDS = ["sqrt", "pi"];
+const getCursorState = (input, defaultPos) => {
+  const start = input.selectionStart ?? defaultPos;
+  const end = input.selectionEnd ?? defaultPos;
+  return { selectionStart: start, selectionEnd: end, hasSelection: start !== end };
+};
+const findKeywordAtPosition = (text2, pos) => {
+  for (const kw of KEYWORDS) {
+    let searchStart = 0;
+    let idx = text2.indexOf(kw);
+    while (idx !== -1) {
+      const end = idx + kw.length;
+      if (pos >= idx && pos <= end) {
+        return { keyword: kw, start: idx, end };
+      }
+      searchStart = end;
+      idx = text2.indexOf(kw, searchStart);
+    }
+  }
+  return null;
+};
+const isCursorInsideKeyword = (text2, pos) => {
+  return findKeywordAtPosition(text2, pos) !== null;
+};
+const moveCursorToKeywordBoundary = (text2, pos, direction = "right") => {
+  const kw = findKeywordAtPosition(text2, pos);
+  if (!kw) return pos;
+  if (direction === "right") {
+    const afterKw = kw.end;
+    if (text2[afterKw] === "(") {
+      return afterKw + 1;
+    }
+    return kw.end;
+  }
+  return kw.start;
+};
+const getClosingParen = (text2, openPos) => {
+  let depth = 1;
+  for (let i = openPos + 1; i < text2.length; i++) {
+    if (text2[i] === "(") depth++;
+    else if (text2[i] === ")") {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+};
+const normalizeMathExpression = (text2) => {
+  if (!text2.trim()) return "";
+  let result = text2;
+  result = result.replace(/pi/g, "\\pi").replace(/(\d+)\\pi/g, "$1\\pi");
+  result = result.replace(/\^(\d+)/g, "^{$1}");
+  result = result.replace(/\^$/g, "^{\\square}").replace(/\^(\d+)$/g, "^{$1}");
+  const processSqrt = (s) => {
+    const sqrtRegex = /sqrt\(([^()]*)\)/g;
+    let match2;
+    let localIterations = 0;
+    const maxIterations = 50;
+    while ((match2 = sqrtRegex.exec(s)) !== null && localIterations < maxIterations) {
+      const content = match2[1];
+      const replacement = content ? `\\sqrt{${content}}` : "\\sqrt{\\square}";
+      s = s.replace(match2[0], replacement);
+      localIterations++;
+    }
+    return s;
+  };
+  let prev;
+  let outerIterations = 0;
+  do {
+    prev = result;
+    result = processSqrt(result);
+    outerIterations++;
+  } while (result !== prev && outerIterations < 10);
+  result = autoConvertFractions(result);
+  return result;
+};
+const autoConvertFractions = (text2) => {
+  if (!text2.includes("/")) return text2;
+  const protected_ = [];
+  let s = text2.replace(/\\frac\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g, (m) => {
+    protected_.push(m);
+    return `\0FRAC${protected_.length - 1}\0`;
+  });
+  s = s.replace(
+    /\(([^()]+)\)\s*\/\s*\(([^()]+)\)/g,
+    (_, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+  s = s.replace(
+    /\(([^()]+)\)\s*\/\s*([\w.\\^_]+)/g,
+    (_, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+  s = s.replace(
+    /([\w.\\^_]+)\s*\/\s*\(([^()]+)\)/g,
+    (_, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+  s = s.replace(
+    /([\w.\\^_]+)\s*\/\s*([\w.\\^_]+)/g,
+    (_, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+  s = s.replace(/\x00FRAC(\d+)\x00/g, (_, i) => protected_[Number(i)]);
+  return s;
+};
+const replaceAt = (val, pos, insert, cursorOffset) => ({
+  value: val.slice(0, pos) + insert + val.slice(pos),
+  cursorPosition: pos + cursorOffset
+});
+const replaceSelection = (val, cur, insert, cursorOffset) => ({
+  value: val.slice(0, cur.selectionStart) + insert + val.slice(cur.selectionEnd),
+  cursorPosition: cur.selectionStart + cursorOffset
+});
+const hasDecimal = (text2, pos) => {
+  for (let i = pos - 1; i >= 0 && /[\d.]/.test(text2[i]); i--) {
+    if (text2[i] === ".") return true;
+  }
+  return false;
+};
+const getLastNumber = (text2, pos) => {
+  let i = pos - 1;
+  while (i >= 0 && /[\d.]/.test(text2[i])) i--;
+  const start = i + 1;
+  return start === pos ? null : { start, value: text2.slice(start, pos) };
+};
+const processDigitInput = (val, cur, digit) => {
+  if (digit === "." && hasDecimal(val, cur.selectionStart)) return null;
+  if (digit === ",") return null;
+  if (cur.hasSelection) {
+    return replaceSelection(val, cur, digit, 1);
+  }
+  if (isCursorInsideKeyword(val, cur.selectionStart)) {
+    const newPos = moveCursorToKeywordBoundary(val, cur.selectionStart, "right");
+    return replaceAt(val, newPos, digit, 1);
+  }
+  return replaceAt(val, cur.selectionStart, digit, 1);
+};
+const processOperatorInput = (val, cur, op2) => {
+  const { selectionStart, hasSelection } = cur;
+  if (hasSelection) return replaceSelection(val, cur, op2, op2.length);
+  if (selectionStart === 0) {
+    if (op2 === "*" || op2 === "/" || op2 === "^") return { value: val, cursorPosition: 0 };
+    return replaceAt(val, 0, op2, 1);
+  }
+  const prev = val[selectionStart - 1];
+  if (OPERATORS.includes(prev)) {
+    if (prev === "-") return { value: val.slice(0, selectionStart - 1) + "-" + val.slice(selectionStart), cursorPosition: selectionStart };
+    if (op2 === "-") return { value: val.slice(0, selectionStart - 1) + "-" + val.slice(selectionStart), cursorPosition: selectionStart };
+    return { value: val.slice(0, selectionStart - 1) + op2 + val.slice(selectionStart), cursorPosition: selectionStart };
+  }
+  if (prev === "(" && (op2 === "*" || op2 === "/" || op2 === "^")) return { value: val, cursorPosition: selectionStart };
+  if (isCursorInsideKeyword(val, selectionStart)) {
+    const newPos = moveCursorToKeywordBoundary(val, selectionStart, "right");
+    return replaceAt(val, newPos, op2, op2.length);
+  }
+  return replaceAt(val, selectionStart, op2, op2.length);
+};
+const processPiInput = (val, cur) => {
+  if (cur.hasSelection) {
+    return replaceSelection(val, cur, "pi", 2);
+  }
+  if (isCursorInsideKeyword(val, cur.selectionStart)) {
+    const newPos = moveCursorToKeywordBoundary(val, cur.selectionStart, "right");
+    return replaceAt(val, newPos, "pi", 2);
+  }
+  return replaceAt(val, cur.selectionStart, "pi", 2);
+};
+const processFunctionInput = (val, cur, func) => {
+  const { selectionStart, selectionEnd, hasSelection } = cur;
+  if (func === "sqrt()") {
+    if (hasSelection) {
+      return { value: val.slice(0, selectionStart) + `sqrt(${val.slice(selectionStart, selectionEnd)})` + val.slice(selectionEnd), cursorPosition: selectionStart + 5 };
+    }
+    return replaceAt(val, selectionStart, "sqrt()", 5);
+  }
+  if (func === "^2" || func === "^3") {
+    if (hasSelection) {
+      const selected = val.slice(selectionStart, selectionEnd);
+      const power = func === "^2" ? `(${selected})^2` : `(${selected})^3`;
+      return { value: val.slice(0, selectionStart) + power + val.slice(selectionEnd), cursorPosition: selectionStart + power.length };
+    }
+    return replaceAt(val, selectionStart, func, 0);
+  }
+  if (func === "/") {
+    const lastNum = getLastNumber(val, selectionStart);
+    if (lastNum) {
+      const newVal = val.slice(0, lastNum.start) + lastNum.value + "/" + val.slice(selectionStart);
+      return { value: newVal, cursorPosition: lastNum.start + lastNum.value.length + 1 };
+    }
+    return replaceAt(val, selectionStart, "/", 1);
+  }
+  if (isCursorInsideKeyword(val, selectionStart)) {
+    const newPos = moveCursorToKeywordBoundary(val, selectionStart, "right");
+    return replaceAt(val, newPos, func, func.length);
+  }
+  return replaceAt(val, selectionStart, func, func.length);
+};
+const processDelete = (val, cur) => {
+  if (cur.hasSelection) {
+    return { value: val.slice(0, cur.selectionStart) + val.slice(cur.selectionEnd), cursorPosition: cur.selectionStart };
+  }
+  if (cur.selectionStart === 0) return { value: val, cursorPosition: 0 };
+  const pos = cur.selectionStart;
+  const fracResult = processFracBackspace(val, cur);
+  if (fracResult) return fracResult;
+  if (pos >= 4) {
+    const before = val.slice(0, pos);
+    for (const kw of KEYWORDS) {
+      const kwStart = before.lastIndexOf(kw);
+      if (kwStart !== -1) {
+        const afterKw = kwStart + kw.length;
+        if (val[afterKw] === "(") {
+          const closeParenPos = getClosingParen(val, afterKw);
+          if (closeParenPos !== -1 && closeParenPos === pos) {
+            const newVal = val.slice(0, kwStart) + val.slice(closeParenPos + 1);
+            return { value: newVal, cursorPosition: kwStart };
+          }
+        }
+      }
+    }
+  }
+  return { value: val.slice(0, pos - 1) + val.slice(pos), cursorPosition: pos - 1 };
+};
+const processMoveCursor = (val, cur, dir) => {
+  let newPos = dir === "left" ? Math.max(0, cur.selectionStart - 1) : Math.min(val.length, cur.selectionStart + 1);
+  if (dir === "left" && newPos > 0) {
+    for (const kw of KEYWORDS) {
+      const kwEnd = val.slice(0, newPos).lastIndexOf(kw);
+      if (kwEnd !== -1 && kwEnd + kw.length === newPos) {
+        newPos = kwEnd;
+        break;
+      }
+    }
+  }
+  return { value: val, cursorPosition: newPos };
+};
+const FRAC_TEMPLATE = "\\frac{}{}";
+const FRAC_NUMERATOR_OFFSET = 7;
+const processFractionInsert = (val, cur) => {
+  const pos = cur.hasSelection ? cur.selectionStart : cur.selectionStart;
+  const before = val.slice(0, pos);
+  const after = val.slice(cur.hasSelection ? cur.selectionEnd : pos);
+  const newVal = before + FRAC_TEMPLATE + after;
+  return { value: newVal, cursorPosition: pos + FRAC_NUMERATOR_OFFSET };
+};
+const findFracAtCursor = (val, pos) => {
+  let searchFrom = pos;
+  while (searchFrom >= 0) {
+    const fracIdx = val.lastIndexOf("\\frac{", searchFrom);
+    if (fracIdx === -1) return null;
+    const openNum = fracIdx + 6;
+    let depth = 1;
+    let closeNum = -1;
+    for (let i = openNum; i < val.length; i++) {
+      if (val[i] === "{") depth++;
+      else if (val[i] === "}") {
+        depth--;
+        if (depth === 0) {
+          closeNum = i;
+          break;
+        }
+      }
+    }
+    if (closeNum === -1) {
+      searchFrom = fracIdx - 1;
+      continue;
+    }
+    if (val[closeNum + 1] !== "{") {
+      searchFrom = fracIdx - 1;
+      continue;
+    }
+    const openDen = closeNum + 2;
+    depth = 1;
+    let closeDen = -1;
+    for (let i = openDen; i < val.length; i++) {
+      if (val[i] === "{") depth++;
+      else if (val[i] === "}") {
+        depth--;
+        if (depth === 0) {
+          closeDen = i;
+          break;
+        }
+      }
+    }
+    if (closeDen === -1) {
+      searchFrom = fracIdx - 1;
+      continue;
+    }
+    if (pos >= openNum && pos <= closeDen + 1) {
+      return { fracStart: fracIdx, numStart: openNum, numEnd: closeNum, denStart: openDen, denEnd: closeDen };
+    }
+    searchFrom = fracIdx - 1;
+  }
+  return null;
+};
+const processFracNavigation = (val, cur, dir) => {
+  const frac = findFracAtCursor(val, cur.selectionStart);
+  if (!frac) return null;
+  const { numEnd, denStart, denEnd } = frac;
+  if (dir === "right" && cur.selectionStart === numEnd) {
+    return { value: val, cursorPosition: denStart };
+  }
+  if (dir === "left" && cur.selectionStart === denStart) {
+    return { value: val, cursorPosition: numEnd };
+  }
+  return null;
+};
+const processFracBackspace = (val, cur) => {
+  const frac = findFracAtCursor(val, cur.selectionStart);
+  if (!frac) return null;
+  const { fracStart, numStart, numEnd, denStart, denEnd } = frac;
+  const numeratorContent = val.slice(numStart, numEnd);
+  const denominatorContent = val.slice(denStart, denEnd);
+  if (numeratorContent === "" && denominatorContent === "") {
+    const fracEnd = denEnd + 1;
+    const newVal = val.slice(0, fracStart) + val.slice(fracEnd);
+    return { value: newVal, cursorPosition: fracStart };
+  }
+  return null;
+};
+const unifiedInputPipeline = (val, cur, input) => {
+  switch (input.type) {
+    case "digit":
+      return processDigitInput(val, cur, input.value || "");
+    case "operator":
+      return processOperatorInput(val, cur, input.value || "");
+    case "pi":
+      return processPiInput(val, cur);
+    case "function":
+      return processFunctionInput(val, cur, input.value || "");
+    case "fraction":
+      return processFractionInsert(val, cur);
+    case "delete":
+      return processDelete(val, cur);
+    case "clear":
+      return { value: "", cursorPosition: 0 };
+    case "move": {
+      const dir = input.direction || "left";
+      const fracNav = processFracNavigation(val, cur, dir);
+      if (fracNav) return fracNav;
+      return processMoveCursor(val, cur, dir);
+    }
+    default:
+      return null;
+  }
+};
+const processPhysicalKey = (key) => {
+  if (key === "Backspace" || key === "Delete") return { type: "delete" };
+  if (key === "ArrowLeft") return { type: "move", direction: "left" };
+  if (key === "ArrowRight") return { type: "move", direction: "right" };
+  if (key === "Escape") return { type: "clear" };
+  if (key === "Enter") return { type: "skip" };
+  if (/[\d]/.test(key)) return { type: "digit", value: key };
+  if (key === "." || key === ",") return { type: "digit", value: "." };
+  if (["+", "-", "*", "/", "^"].includes(key)) return { type: "operator", value: key };
+  if (key === "p" || key === "P") return { type: "pi" };
+  return { type: "none" };
+};
+const hasDecimalInNumber = hasDecimal;
+const PreviewDisplay = reactExports.memo(({
+  value
+}) => {
+  const html = reactExports.useMemo(() => {
+    const normalized = normalizeMathExpression(value);
+    if (!normalized) return "";
+    try {
+      return katex.renderToString(normalized, {
+        throwOnError: false,
+        strict: false,
+        displayMode: false
+      });
+    } catch {
+      return "";
+    }
+  }, [value]);
+  if (!html) return null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { dangerouslySetInnerHTML: {
+    __html: html
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/PreviewDisplay.tsx:27:9", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/PreviewDisplay.tsx", "data-component-line": "27", "data-component-file": "PreviewDisplay.tsx", "data-component-name": "span", "data-component-content": "%7B%22dangerouslySetInnerHTML%22%3A%7B%22__html%22%3A%22%5Bvar%3Ahtml%5D%22%7D%7D" });
+});
+PreviewDisplay.displayName = "PreviewDisplay";
+const MathInputField = ({
+  value,
+  onChange,
+  onSubmit,
+  placeholder = "Введите ответ...",
+  disabled = false,
+  className = "",
+  autoFocus = false
+}) => {
+  const [isKeyboardVisible, setIsKeyboardVisible] = reactExports.useState(false);
+  const inputRef = reactExports.useRef(null);
+  const isInternalUpdate = reactExports.useRef(false);
+  reactExports.useEffect(() => {
+    if (!isInternalUpdate.current && inputRef.current && inputRef.current.value !== value) {
+      inputRef.current.value = value;
+    }
+    isInternalUpdate.current = false;
+  }, [value]);
+  const applyInput = reactExports.useCallback((type, inputValue, direction) => {
+    const input = inputRef.current;
+    if (!input || disabled) return;
+    const currentValue = input.value;
+    const cursor = getCursorState(input, currentValue.length);
+    const result = unifiedInputPipeline(currentValue, cursor, {
+      type,
+      value: inputValue,
+      direction
+    });
+    if (!result) return;
+    isInternalUpdate.current = true;
+    input.value = result.value;
+    input.setSelectionRange(result.cursorPosition, result.cursorPosition);
+    input.focus();
+    onChange(result.value);
+  }, [disabled, onChange]);
+  const handleKeyPress = reactExports.useCallback((key) => {
+    if (key.action === "delete") {
+      applyInput("delete");
+    } else if (key.action === "clear") {
+      applyInput("clear");
+    } else if (key.action === "moveLeft") {
+      applyInput("move", void 0, "left");
+    } else if (key.action === "moveRight") {
+      applyInput("move", void 0, "right");
+    } else if (key.variant === "digit") {
+      applyInput("digit", key.label);
+    } else if (key.label === "pi") {
+      applyInput("pi");
+    } else if (key.variant === "operator") {
+      applyInput("operator", key.label);
+    } else if (key.variant === "function") {
+      applyInput("function", key.label);
+    }
+  }, [applyInput]);
+  const handleInsertFraction = reactExports.useCallback(() => {
+    applyInput("fraction");
+  }, [applyInput]);
+  const handleInputChange = reactExports.useCallback((e2) => {
+    const input = inputRef.current;
+    if (!input) return;
+    const newValue = e2.target.value;
+    const oldValue = value;
+    if (newValue.length > oldValue.length) {
+      const addedChar = newValue[oldValue.length];
+      if (addedChar === ".") {
+        if (hasDecimalInNumber(newValue, oldValue.length + 1)) {
+          input.value = oldValue;
+          onChange(oldValue);
+          return;
+        }
+      }
+      if ((addedChar === "*" || addedChar === "/" || addedChar === "^") && oldValue.length === 0) {
+        input.value = "";
+        onChange("");
+        return;
+      }
+    }
+    onChange(newValue);
+  }, [value, onChange]);
+  const handleKeyDown = reactExports.useCallback((e2) => {
+    if (disabled) return;
+    const input = inputRef.current;
+    if (!input) return;
+    const key = e2.key;
+    const currentValue = input.value;
+    if (key === "Enter") {
+      if (onSubmit && value.trim()) {
+        e2.preventDefault();
+        onSubmit();
+      }
+      return;
+    }
+    if (key === "Delete") {
+      e2.preventDefault();
+      if (input.selectionStart !== null && input.selectionStart < currentValue.length) {
+        const cursor = getCursorState(input, currentValue.length);
+        const result = unifiedInputPipeline(currentValue, cursor, {
+          type: "delete"
+        });
+        if (result) {
+          input.value = result.value;
+          input.setSelectionRange(result.cursorPosition, result.cursorPosition);
+          onChange(result.value);
+        }
+      }
+      return;
+    }
+    const action = processPhysicalKey(key);
+    if (action.type === "skip") {
+      e2.preventDefault();
+      return;
+    }
+    if (action.type === "none") {
+      return;
+    }
+    if (action.type === "digit" && action.value === ".") {
+      const cursor = getCursorState(input, currentValue.length);
+      if (hasDecimalInNumber(currentValue, cursor.selectionStart)) {
+        e2.preventDefault();
+        return;
+      }
+    }
+    if (action.type === "digit" && currentValue.length === 0) {
+      return;
+    }
+    if (action.type === "operator" && input.selectionStart === 0) {
+      if (action.value === "*" || action.value === "/" || action.value === "^") {
+        e2.preventDefault();
+        return;
+      }
+    }
+    e2.preventDefault();
+    applyInput(action.type, action.value, action.direction);
+  }, [disabled, applyInput, onChange, onSubmit, value]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `relative ${className}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:186:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "186", "data-component-file": "MathInputField.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:187:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "187", "data-component-file": "MathInputField.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 relative", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:188:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "188", "data-component-file": "MathInputField.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20relative%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { ref: inputRef, type: "text", inputMode: "numeric", value, onChange: handleInputChange, onKeyDown: handleKeyDown, placeholder, disabled, autoFocus, className: `w-full px-4 py-3 pr-12 text-lg font-mono border-2 rounded-xl transition-all outline-none
+              ${disabled ? "bg-slate-50 border-slate-300 text-slate-500 cursor-not-allowed" : "bg-white border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"}`, onFocus: () => setIsKeyboardVisible(true), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:189:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "189", "data-component-file": "MathInputField.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22inputMode%22%3A%22numeric%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BIdentifier%5D%22%2C%22onKeyDown%22%3A%22%5BIdentifier%5D%22%2C%22placeholder%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BIdentifier%5D%22%2C%22autoFocus%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22onFocus%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsKeyboardVisible(!isKeyboardVisible), onMouseDown: (e2) => e2.preventDefault(), className: `absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors
+              ${isKeyboardVisible ? "bg-indigo-100 text-indigo-600" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"}`, tabIndex: -1, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:206:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "206", "data-component-file": "MathInputField.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseDown%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22tabIndex%22%3A%22%5BUnaryExpression%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Keyboard, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:217:12", "data-matrix-name": "Keyboard", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "217", "data-component-file": "MathInputField.tsx", "data-component-name": "Keyboard", "data-component-content": "%7B%22size%22%3A20%7D" }) })
+    ] }) }),
+    value && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg max-h-24 overflow-y-auto", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:223:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "223", "data-component-file": "MathInputField.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-2%20px-3%20py-2%20bg-slate-50%20border%20border-slate-200%20rounded-lg%20max-h-24%20overflow-y-auto%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(PreviewDisplay, { value, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:224:10", "data-matrix-name": "PreviewDisplay", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "224", "data-component-file": "MathInputField.tsx", "data-component-name": "PreviewDisplay", "data-component-content": "%7B%22value%22%3A%22%5BIdentifier%5D%22%7D" }) }),
+    isKeyboardVisible && !disabled && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:229:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "229", "data-component-file": "MathInputField.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(VirtualMathKeyboard, { onKeyPress: handleKeyPress, onInsertFraction: handleInsertFraction, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx:230:10", "data-matrix-name": "VirtualMathKeyboard", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/MathInputField.tsx", "data-component-line": "230", "data-component-file": "MathInputField.tsx", "data-component-name": "VirtualMathKeyboard", "data-component-content": "%7B%22onKeyPress%22%3A%22%5BIdentifier%5D%22%2C%22onInsertFraction%22%3A%22%5BIdentifier%5D%22%7D" }) })
+  ] });
 };
 const oldChallenges = [
   // Numbers and Logic (Grade 5)
@@ -116664,6 +117519,8 @@ const ChallengeMode = ({
   const [generatedProblem, setGeneratedProblem] = reactExports.useState(null);
   const [generatedData, setGeneratedData] = reactExports.useState(null);
   const [userAnswer, setUserAnswer] = reactExports.useState("");
+  const [fractionNumerator, setFractionNumerator] = reactExports.useState("");
+  const [fractionDenominator, setFractionDenominator] = reactExports.useState("");
   const [selectedSign, setSelectedSign] = reactExports.useState(null);
   const [selectedTriangleType, setSelectedTriangleType] = reactExports.useState(null);
   const [result, setResult] = reactExports.useState(null);
@@ -116689,17 +117546,29 @@ const ChallengeMode = ({
   const [adaptiveState, setAdaptiveState] = reactExports.useState(() => createAdaptiveState());
   const [problemSession, setProblemSession] = reactExports.useState(null);
   const [problemKey, setProblemKey] = reactExports.useState(0);
+  const [isGenerating, setIsGenerating] = reactExports.useState(false);
+  const [sessionProgress, setSessionProgress] = reactExports.useState(0);
+  const [currentStreak, setCurrentStreak] = reactExports.useState(0);
+  const [streakAnimation, setStreakAnimation] = reactExports.useState(false);
   const currentDifficultyRef = React.useRef(adaptiveState.currentDifficulty);
   React.useEffect(() => {
     currentDifficultyRef.current = adaptiveState.currentDifficulty;
   }, [adaptiveState.currentDifficulty]);
   React.useEffect(() => {
-    if (activeTemplate) {
-      const problem = generateProblem(activeTemplate, currentDifficultyRef.current);
-      setGeneratedProblem(problem);
-    } else {
-      setGeneratedProblem(null);
-    }
+    if (!activeTemplate) return;
+    setGeneratedProblem(null);
+    setIsGenerating(true);
+    const timeoutId = setTimeout(() => {
+      try {
+        const problem = generateProblem(activeTemplate, currentDifficultyRef.current);
+        setGeneratedProblem(problem);
+      } catch (error) {
+        console.error("Error generating problem:", error);
+      } finally {
+        setIsGenerating(false);
+      }
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [activeTemplate, problemKey]);
   React.useEffect(() => {
     if (activeChallenge && activeChallenge.type === "generated") {
@@ -116774,6 +117643,11 @@ const ChallengeMode = ({
       if (isCorrect2) {
         setResult("correct");
         setMistakeFeedback(null);
+        const newStreak = currentStreak + 1;
+        setCurrentStreak(newStreak);
+        setStreakAnimation(true);
+        setTimeout(() => setStreakAnimation(false), 500);
+        setSessionProgress((prev) => Math.min(prev + 1, 10));
         const topicProgress = newProgress.topics[topicKey];
         if (topicProgress.streak === 3) {
           setAchievementMessage("🔥 Серия из 3 правильных ответов!");
@@ -116789,6 +117663,7 @@ const ChallengeMode = ({
         }
       } else {
         setResult("incorrect");
+        setCurrentStreak(0);
         const feedback = checkCommonMistake(generatedProblem, activeTemplate, userAnswer, adaptiveState.currentDifficulty);
         setMistakeFeedback(feedback);
       }
@@ -116860,6 +117735,7 @@ const ChallengeMode = ({
         if (nextTemplate !== activeTemplate) {
           setActiveTemplate(nextTemplate);
         }
+        setGeneratedProblem(null);
         setProblemKey((k) => k + 1);
         setUserAnswer("");
         setSelectedSign(null);
@@ -116871,6 +117747,11 @@ const ChallengeMode = ({
         setShowSolution(false);
         setMistakeFeedback(null);
         setAchievementMessage(null);
+        setFractionNumerator("");
+        setFractionDenominator("");
+        if (sessionProgress >= 10) {
+          setSessionProgress(0);
+        }
         return;
       }
     }
@@ -116878,6 +117759,8 @@ const ChallengeMode = ({
     setActiveTemplate(null);
     setGeneratedProblem(null);
     setUserAnswer("");
+    setFractionNumerator("");
+    setFractionDenominator("");
     setSelectedSign(null);
     setSelectedTriangleType(null);
     setResult(null);
@@ -116901,6 +117784,8 @@ const ChallengeMode = ({
       setSelectedCategory(null);
     }
     setUserAnswer("");
+    setFractionNumerator("");
+    setFractionDenominator("");
     setSelectedSign(null);
     setSelectedTriangleType(null);
     setResult(null);
@@ -116908,6 +117793,8 @@ const ChallengeMode = ({
     setShowSolution(false);
     setMistakeFeedback(null);
     setAchievementMessage(null);
+    setSessionProgress(0);
+    setCurrentStreak(0);
   };
   const getDifficultyColor = (difficulty) => {
     switch (difficulty) {
@@ -116924,287 +117811,311 @@ const ChallengeMode = ({
     }
   };
   if (activeTemplate && generatedProblem) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:704:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "704", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleBack, className: "mb-4 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:706:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "706", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mb-4%20text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-1%22%7D", children: "← Назад к задачам" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:714:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "714", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:715:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "715", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-3%20mb-2%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 rounded text-xs font-medium ${adaptiveState.currentDifficulty === 1 ? "bg-green-100 text-green-700" : adaptiveState.currentDifficulty === 2 ? "bg-yellow-100 text-yellow-700" : adaptiveState.currentDifficulty === 3 ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:716:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "716", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: adaptiveState.currentDifficulty === 1 ? "Легко" : adaptiveState.currentDifficulty === 2 ? "Средне" : adaptiveState.currentDifficulty === 3 ? "Сложно" : "Олимпиадное" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:719:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "719", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22px-2%20py-1%20rounded%20text-xs%20font-medium%20bg-purple-100%20text-purple-700%20flex%20items-center%20gap-1%22%7D", children: [
-            "⚡ ",
-            getDifficultyLabel(adaptiveState.currentDifficulty)
-          ] }),
-          completedChallenges.includes(activeTemplate.id) && /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 20, className: "text-green-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:723:14", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "723", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22text-green-500%22%7D" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:726:10", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "726", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: activeTemplate.section })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-indigo-50 rounded-xl p-4 mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:730:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "730", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-indigo-50%20rounded-xl%20p-4%20mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-indigo-800 mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:731:10", "data-matrix-name": "h3", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "731", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h3", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-indigo-800%20mb-3%22%7D", children: "Задача:" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-indigo-200 pt-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:732:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "732", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22border-t%20border-indigo-200%20pt-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { className: "text-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:733:12", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "733", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%22%7D", children: generatedProblem.question }) })
-      ] }),
-      (generatedProblem.hint || generatedProblem.hints && generatedProblem.hints.length > 0) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:741:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "741", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => {
-          var _a3;
-          const hintsCount = ((_a3 = generatedProblem.hints) == null ? void 0 : _a3.length) || 0;
-          if (hintsCount > 0) {
-            if (activeHintIndex < hintsCount - 1) {
-              const newIndex = activeHintIndex + 1;
-              setActiveHintIndex(newIndex);
-              setHintsUsed(hintsUsed + 1);
-              setShowHint(true);
-              setAdaptiveState((prev) => updateHintsUsed(prev));
-            } else if (!showHint && generatedProblem.hint) {
-              setShowHint(true);
-              setHintsUsed(hintsUsed + 1);
-              setAdaptiveState((prev) => updateHintsUsed(prev));
-            }
-          } else if (generatedProblem.hint) {
-            setShowHint(!showHint);
-            if (!showHint) {
-              setHintsUsed(hintsUsed + 1);
-              setAdaptiveState((prev) => updateHintsUsed(prev));
-            }
-          }
-        }, className: "flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:743:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "743", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-gray-500%20hover%3Atext-gray-700%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Lightbulb, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:772:14", "data-matrix-name": "Lightbulb", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "772", "data-component-file": "ChallengeMode.tsx", "data-component-name": "Lightbulb", "data-component-content": "%7B%22size%22%3A16%7D" }),
-          generatedProblem.hints && generatedProblem.hints.length > 0 ? activeHintIndex < generatedProblem.hints.length - 1 ? `Подсказка ${activeHintIndex + 2}/${generatedProblem.hints.length}` : activeHintIndex === generatedProblem.hints.length - 1 && showHint ? "Скрыть подсказки" : "Показать подсказку" : showHint ? "Скрыть подсказку" : "Показать подсказку"
-        ] }),
-        showHint && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:787:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "787", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-2%20space-y-2%22%7D", children: [
-          generatedProblem.hints && generatedProblem.hints.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: generatedProblem.hints.slice(0, activeHintIndex + 1).map((hint, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:792:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "792", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-3%20bg-yellow-50%20rounded-lg%20text-sm%20text-yellow-800%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:793:24", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "793", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22font-medium%22%7D", children: [
-              "Подсказка ",
-              idx + 1,
-              ":"
+    activeTemplate.problemType === "numeric" && generatedProblem.answer_type === "number";
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-gray-50 p-4 sm:p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:751:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "751", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-gray-50%20p-4%20sm%3Ap-6%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-3xl mx-auto mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:753:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "753", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22max-w-3xl%20mx-auto%20mb-4%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleBack, className: "text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:754:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "754", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-1%22%7D", children: "← Назад к задачам" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:763:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "763", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-2 bg-gray-200 rounded-t-2xl overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:765:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "765", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-2%20bg-gray-200%20rounded-t-2xl%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full bg-green-500 rounded-full transition-all duration-500", style: {
+          width: `${sessionProgress / 10 * 100}%`
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:766:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "766", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20bg-green-500%20rounded-full%20transition-all%20duration-500%22%2C%22style%22%3A%7B%22width%22%3A%22%5BTemplateLiteral%5D%22%7D%7D" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 sm:px-6 py-4 border-b border-gray-100", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:773:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "773", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22px-4%20sm%3Apx-6%20py-4%20border-b%20border-gray-100%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-2 flex-wrap", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:774:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "774", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20mb-2%20flex-wrap%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 rounded text-xs font-medium ${adaptiveState.currentDifficulty === 1 ? "bg-green-100 text-green-700" : adaptiveState.currentDifficulty === 2 ? "bg-yellow-100 text-yellow-700" : adaptiveState.currentDifficulty === 3 ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:775:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "775", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: adaptiveState.currentDifficulty === 1 ? "Легко" : adaptiveState.currentDifficulty === 2 ? "Средне" : adaptiveState.currentDifficulty === 3 ? "Сложно" : "Олимпиадное" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:778:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "778", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22px-2%20py-1%20rounded%20text-xs%20font-medium%20bg-purple-100%20text-purple-700%20flex%20items-center%20gap-1%22%7D", children: [
+              "⚡ ",
+              getDifficultyLabel(adaptiveState.currentDifficulty)
             ] }),
-            " ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:793:82", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "793", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: hint })
-          ] }, idx)) }),
-          generatedProblem.hint && (!generatedProblem.hints || generatedProblem.hints.length === 0) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:800:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "800", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-3%20bg-yellow-50%20rounded-lg%20text-sm%20text-yellow-800%22%7D", children: [
-            "💡 ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:801:23", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "801", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: generatedProblem.hint })
+            currentStreak > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `px-2 py-1 rounded text-xs font-medium bg-amber-50 text-amber-600 flex items-center gap-1 ${streakAnimation ? "animate-bounce" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:782:16", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "782", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
+              "🔥 ",
+              currentStreak
+            ] }),
+            completedChallenges.includes(activeTemplate.id) && /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 20, className: "text-green-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:787:16", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "787", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22text-green-500%22%7D" })
           ] }),
-          hintsUsed > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:805:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "805", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-400%20mt-1%22%7D", children: [
-            "Использовано подсказок: ",
-            hintsUsed
-          ] })
-        ] })
-      ] }),
-      (activeTemplate == null ? void 0 : activeTemplate.relatedModule) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:816:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "816", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleExploreModule, className: "flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:817:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "817", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20font-medium%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:821:14", "data-matrix-name": "Search", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "821", "data-component-file": "ChallengeMode.tsx", "data-component-name": "Search", "data-component-content": "%7B%22size%22%3A16%7D" }),
-        "🔍 Исследовать в интерактивном модуле"
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:828:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "828", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-700 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:829:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "829", "data-component-file": "ChallengeMode.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-sm%20font-medium%20text-gray-700%20mb-2%22%7D", children: "Ваш ответ:" }),
-        activeTemplate.problemType === "comparison" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-4 p-6 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:835:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "835", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-4%20p-6%20bg-gray-50%20rounded-xl%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:837:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "837", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-center%22%7D", children: generatedProblem.params.d || generatedProblem.params.d1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:839:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "839", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20items-center%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:840:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "840", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%20border-b-2%20border-gray-800%20px-2%22%7D", children: generatedProblem.params.a }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800 px-2 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:843:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "843", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%20px-2%20mt-1%22%7D", children: generatedProblem.params.d || generatedProblem.params.d1 })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:848:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "848", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%22%7D", children: generatedProblem.params.a }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:853:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "853", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-2%22%7D", children: [">", "<", "="].map((sign2) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
-            setSelectedSign(sign2);
-            if (result === "incorrect") setResult(null);
-          }, className: `w-16 h-16 text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign2 ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:855:18", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "855", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: sign2 }, sign2)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:872:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "872", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-center%22%7D", children: generatedProblem.params.d || generatedProblem.params.d2 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:874:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "874", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20items-center%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:875:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "875", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%20border-b-2%20border-gray-800%20px-2%22%7D", children: generatedProblem.params.b }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800 px-2 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:878:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "878", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%20px-2%20mt-1%22%7D", children: generatedProblem.params.d || generatedProblem.params.d2 })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:883:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "883", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%22%7D", children: generatedProblem.params.b }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl sm:text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:790:12", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "790", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-xl%20sm%3Atext-2xl%20font-bold%20text-gray-800%22%7D", children: activeTemplate.section })
         ] }),
-        activeTemplate.problemType === "text" && activeTemplate.topic === "triangles" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:891:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "891", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [{
-          value: "равносторонний",
-          label: "Равносторонний"
-        }, {
-          value: "равнобедренный",
-          label: "Равнобедренный"
-        }, {
-          value: "разносторонний",
-          label: "Разносторонний"
-        }].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
-          setUserAnswer(option.value);
-          if (result === "incorrect") setResult(null);
-        }, className: `w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${userAnswer === option.value ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:897:16", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "897", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: option.label }, option.value)) }),
-        activeTemplate.problemType === "magicSquare" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:916:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "916", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center p-6 bg-gray-50 rounded-xl mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:917:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "917", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-center%20p-6%20bg-gray-50%20rounded-xl%20mb-4%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "inline-grid grid-cols-3 gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:918:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "918", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22inline-grid%20grid-cols-3%20gap-2%22%7D", children: [0, 1, 2, 3, 4, 5, 6, 7, 8].map((index2) => {
-            const cellValue = generatedProblem.params[`c${index2}`];
-            const isHidden = generatedProblem.params.hiddenIndex === index2;
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-16 h-16 flex items-center justify-center text-xl font-bold rounded-lg border-2 ${isHidden ? "border-indigo-500 bg-indigo-100 text-indigo-600" : "border-gray-300 bg-white text-gray-800"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:924:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "924", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: isHidden ? "?" : cellValue }, index2);
-          }) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: userAnswer, onChange: (e2) => {
-            setUserAnswer(e2.target.value);
-            if (result === "incorrect") setResult(null);
-          }, placeholder: "Введите пропущенное число...", className: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", onKeyDown: (e2) => e2.key === "Enter" && result !== "correct" && handleCheck(), disabled: result === "correct", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:937:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "937", "data-component-file": "ChallengeMode.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%92%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D0%BF%D1%80%D0%BE%D0%BF%D1%83%D1%89%D0%B5%D0%BD%D0%BD%D0%BE%D0%B5%20%D1%87%D0%B8%D1%81%D0%BB%D0%BE...%22%2C%22className%22%3A%22w-full%20px-4%20py-2%20border%20border-gray-300%20rounded-lg%20focus%3Aring-2%20focus%3Aring-indigo-500%20focus%3Aborder-indigo-500%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" })
-        ] }),
-        activeTemplate.problemType === "numeric" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:954:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "954", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-3%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: userAnswer, onChange: (e2) => {
-            setUserAnswer(e2.target.value);
-            if (result === "incorrect") setResult(null);
-          }, placeholder: generatedProblem.answer_type === "fraction" ? "Например: 3/4" : generatedProblem.answer_type === "coordinate" ? "Например: (3, 4)" : "Введите число...", className: "flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", onKeyDown: (e2) => e2.key === "Enter" && result !== "correct" && handleCheck(), disabled: result === "correct", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:955:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "955", "data-component-file": "ChallengeMode.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%5BConditionalExpression%5D%22%2C%22className%22%3A%22flex-1%20px-4%20py-2%20border%20border-gray-300%20rounded-lg%20focus%3Aring-2%20focus%3Aring-indigo-500%20focus%3Aborder-indigo-500%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
-          result !== "correct" && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, disabled: !userAnswer.trim(), className: "px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:972:16", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "972", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BUnaryExpression%5D%22%2C%22className%22%3A%22px-6%20py-2%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20gap-2%20disabled%3Aopacity-40%20disabled%3Acursor-not-allowed%22%7D", children: [
-            "Проверить",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:978:18", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "978", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
-          ] })
-        ] }),
-        result !== "correct" && (activeTemplate.problemType === "comparison" || activeTemplate.problemType === "text" && activeTemplate.topic === "triangles" || activeTemplate.problemType === "magicSquare") && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, disabled: activeTemplate.problemType === "comparison" ? !selectedSign : activeTemplate.problemType === "magicSquare" ? !userAnswer : !userAnswer, className: "w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:990:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "990", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BConditionalExpression%5D%22%2C%22className%22%3A%22w-full%20mt-4%20px-6%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20justify-center%20gap-2%20disabled%3Aopacity-40%20disabled%3Acursor-not-allowed%22%7D", children: [
-          "Проверить",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1000:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1000", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
-        ] })
-      ] }),
-      result && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-4 rounded-xl flex items-center gap-3 ${result === "correct" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1007:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1007", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: result === "correct" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 24, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1010:16", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1010", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A24%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1011:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1011", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1012:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1012", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%22%7D", children: "Правильно! 🎉" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1013:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1013", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: "Вы успешно решили задачу." }),
-          achievementMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1015:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1015", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-2%20px-3%20py-2%20bg-yellow-100%20text-yellow-800%20rounded-lg%20text-sm%20font-medium%20flex%20items-center%20gap-2%22%7D", children: achievementMessage })
-        ] })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CircleX, { size: 24, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1023:16", "data-matrix-name": "XCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1023", "data-component-file": "ChallengeMode.tsx", "data-component-name": "XCircle", "data-component-content": "%7B%22size%22%3A24%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1024:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1024", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1025:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1025", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%22%7D", children: "Неправильно 😔" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1026:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1026", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: mistakeFeedback ?? "Попробуйте ещё раз или посмотрите подсказку." })
-        ] })
-      ] }) }),
-      result && (generatedProblem == null ? void 0 : generatedProblem.solution) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1035:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1035", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-4%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => setShowSolution(!showSolution), className: "text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1036:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1036", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-2%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(CircleHelp, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1040:14", "data-matrix-name": "HelpCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1040", "data-component-file": "ChallengeMode.tsx", "data-component-name": "HelpCircle", "data-component-content": "%7B%22size%22%3A16%7D" }),
-          showSolution ? "Скрыть решение" : "Показать решение"
-        ] }),
-        showSolution && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1044:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1044", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-3%20p-4%20bg-blue-50%20rounded-lg%20border%20border-blue-200%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-blue-800 mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1045:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1045", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-blue-800%20mb-3%22%7D", children: "Пошаговое решение:" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1046:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1046", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: generatedProblem.solution.map((step, index2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1048:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1048", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-3%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1049:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1049", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-shrink-0%20w-6%20h-6%20bg-blue-600%20text-white%20rounded-full%20flex%20items-center%20justify-center%20text-sm%20font-medium%22%7D", children: index2 + 1 }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1052:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1052", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-blue-900", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1053:24", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1053", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-blue-900%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1053:55", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1053", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: step.explanation }) }),
-              step.expression && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 font-mono text-sm text-blue-700 bg-blue-100 px-2 py-1 rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1055:26", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1055", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-1%20font-mono%20text-sm%20text-blue-700%20bg-blue-100%20px-2%20py-1%20rounded%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1056:28", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1056", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: step.expression }) }),
-              step.result && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 font-semibold text-blue-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1060:26", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1060", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-1%20font-semibold%20text-blue-800%22%7D", children: [
-                "= ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1061:30", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1061", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: step.result })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 sm:px-6 py-5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:794:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "794", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22px-4%20sm%3Apx-6%20py-5%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-indigo-50 rounded-xl p-4 sm:p-5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:795:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "795", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-indigo-50%20rounded-xl%20p-4%20sm%3Ap-5%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-indigo-800 mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:796:14", "data-matrix-name": "h3", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "796", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h3", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-indigo-800%20mb-3%22%7D", children: "Задача:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-indigo-200 pt-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:797:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "797", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22border-t%20border-indigo-200%20pt-3%22%7D", children: activeTemplate.topic === "fraction_property" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:800:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "800", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20items-center%20gap-4%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-indigo-700 text-base mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:801:20", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "801", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%20text-base%20mb-2%22%7D", children: "Примените основное свойство дроби:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-2 sm:gap-3 text-2xl sm:text-3xl font-bold text-indigo-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:802:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "802", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20sm%3Agap-3%20text-2xl%20sm%3Atext-3xl%20font-bold%20text-indigo-800%22%7D", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:803:22", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "803", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: `$\\frac{${String(generatedProblem.params.a)}}{${String(generatedProblem.params.b)}}$` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:804:22", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "804", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", children: "=" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:805:22", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "805", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: `$\\frac{?}{${String(generatedProblem.params.c)}}$` })
+              ] })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { className: "text-indigo-700 text-lg", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:809:18", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "809", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%20text-lg%22%7D", children: generatedProblem.question }) })
+          ] }),
+          (generatedProblem.hint || generatedProblem.hints && generatedProblem.hints.length > 0) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:818:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "818", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-5%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => {
+              var _a3;
+              const hintsCount = ((_a3 = generatedProblem.hints) == null ? void 0 : _a3.length) || 0;
+              if (hintsCount > 0) {
+                if (activeHintIndex < hintsCount - 1) {
+                  const newIndex = activeHintIndex + 1;
+                  setActiveHintIndex(newIndex);
+                  setHintsUsed(hintsUsed + 1);
+                  setShowHint(true);
+                  setAdaptiveState((prev) => updateHintsUsed(prev));
+                  setCurrentStreak(0);
+                } else if (!showHint && generatedProblem.hint) {
+                  setShowHint(true);
+                  setHintsUsed(hintsUsed + 1);
+                  setAdaptiveState((prev) => updateHintsUsed(prev));
+                  setCurrentStreak(0);
+                }
+              } else if (generatedProblem.hint) {
+                setShowHint(!showHint);
+                if (!showHint) {
+                  setHintsUsed(hintsUsed + 1);
+                  setAdaptiveState((prev) => updateHintsUsed(prev));
+                  setCurrentStreak(0);
+                }
+              }
+            }, className: "flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:819:16", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "819", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-gray-500%20hover%3Atext-gray-700%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Lightbulb, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:847:18", "data-matrix-name": "Lightbulb", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "847", "data-component-file": "ChallengeMode.tsx", "data-component-name": "Lightbulb", "data-component-content": "%7B%22size%22%3A16%7D" }),
+              generatedProblem.hints && generatedProblem.hints.length > 0 ? activeHintIndex < generatedProblem.hints.length - 1 ? `Подсказка ${activeHintIndex + 2}/${generatedProblem.hints.length}` : activeHintIndex === generatedProblem.hints.length - 1 && showHint ? "Скрыть подсказки" : "Показать подсказку" : showHint ? "Скрыть подсказку" : "Показать подсказку"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:861:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "861", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-1%22%7D", children: [
+              hintsUsed === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:863:20", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "863", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-400%22%7D", children: "Первая подсказка: -50% баллов" }),
+              hintsUsed >= 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:866:20", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "866", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-amber-500%22%7D", children: "Следующая подсказка: 0 баллов за задачу" })
+            ] }),
+            showHint && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:871:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "871", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-2%20space-y-2%22%7D", children: [
+              generatedProblem.hints && generatedProblem.hints.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: generatedProblem.hints.slice(0, activeHintIndex + 1).map((hint, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:875:26", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "875", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-3%20bg-yellow-50%20rounded-lg%20text-sm%20text-yellow-800%22%7D", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:876:28", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "876", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22font-medium%22%7D", children: [
+                  "Подсказка ",
+                  idx + 1,
+                  ":"
+                ] }),
+                " ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:876:86", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "876", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: hint })
+              ] }, idx)) }),
+              generatedProblem.hint && (!generatedProblem.hints || generatedProblem.hints.length === 0) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:882:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "882", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-3%20bg-yellow-50%20rounded-lg%20text-sm%20text-yellow-800%22%7D", children: [
+                "💡 ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:883:27", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "883", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: generatedProblem.hint })
               ] })
             ] })
-          ] }, index2)) })
+          ] }),
+          (activeTemplate == null ? void 0 : activeTemplate.relatedModule) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:893:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "893", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-5%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleExploreModule, className: "flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:894:16", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "894", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20font-medium%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:898:18", "data-matrix-name": "Search", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "898", "data-component-file": "ChallengeMode.tsx", "data-component-name": "Search", "data-component-content": "%7B%22size%22%3A16%7D" }),
+            "🔍 Исследовать в интерактивном модуле"
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:905:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "905", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-6%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-700 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:906:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "906", "data-component-file": "ChallengeMode.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-sm%20font-medium%20text-gray-700%20mb-2%22%7D", children: "Ваш ответ:" }),
+            (() => {
+              const problemType = activeTemplate.problemType;
+              const answerType = generatedProblem == null ? void 0 : generatedProblem.answer_type;
+              if (problemType === "comparison") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:917:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "917", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-3%20sm%3Agap-4%20p-4%20sm%3Ap-6%20bg-gray-50%20rounded-xl%22%7D", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:919:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "919", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-center%22%7D", children: generatedProblem.params.d || generatedProblem.params.d1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:921:26", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "921", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20items-center%22%7D", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl sm:text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:922:28", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "922", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-2xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%20border-b-2%20border-gray-800%20px-2%22%7D", children: generatedProblem.params.a }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl sm:text-3xl font-bold text-gray-800 px-2 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:925:28", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "925", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-2xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%20px-2%20mt-1%22%7D", children: generatedProblem.params.d || generatedProblem.params.d1 })
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl sm:text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:930:26", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "930", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-2xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%22%7D", children: generatedProblem.params.a }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:933:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "933", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-2%22%7D", children: [">", "<", "="].map((sign2) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
+                    setSelectedSign(sign2);
+                    if (result === "incorrect") setResult(null);
+                  }, className: `w-12 h-12 sm:w-16 sm:h-16 text-xl sm:text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign2 ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:935:26", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "935", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: sign2 }, sign2)) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:951:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "951", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-center%22%7D", children: generatedProblem.params.d || generatedProblem.params.d2 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:953:26", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "953", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20items-center%22%7D", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl sm:text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:954:28", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "954", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-2xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%20border-b-2%20border-gray-800%20px-2%22%7D", children: generatedProblem.params.b }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl sm:text-3xl font-bold text-gray-800 px-2 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:957:28", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "957", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-2xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%20px-2%20mt-1%22%7D", children: generatedProblem.params.d || generatedProblem.params.d2 })
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl sm:text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:962:26", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "962", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-2xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%22%7D", children: generatedProblem.params.b }) })
+                ] });
+              }
+              if (problemType === "text" && activeTemplate.topic === "triangles") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:971:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "971", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [{
+                  value: "равносторонний",
+                  label: "Равносторонний"
+                }, {
+                  value: "равнобедренный",
+                  label: "Равнобедренный"
+                }, {
+                  value: "разносторонний",
+                  label: "Разносторонний"
+                }].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
+                  setUserAnswer(option.value);
+                  if (result === "incorrect") setResult(null);
+                }, className: `w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${userAnswer === option.value ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:977:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "977", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: option.label }, option.value)) });
+              }
+              const placeholder = answerType === "coordinate" ? "Например: (3; 4)" : answerType === "interval" ? "Например: [-5; 10)" : answerType === "fraction" ? "Например: 3/4" : "Введите число или выражение...";
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1004:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1004", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20gap-3%22%7D", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(MathInputField, { value: userAnswer, onChange: (val) => {
+                  setUserAnswer(val);
+                  if (result === "incorrect") setResult(null);
+                }, onSubmit: handleCheck, placeholder, disabled: result === "correct", autoFocus: true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1005:20", "data-matrix-name": "MathInputField", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1005", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathInputField", "data-component-content": "%7B%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onSubmit%22%3A%22%5BIdentifier%5D%22%2C%22placeholder%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%2C%22autoFocus%22%3Atrue%7D" }),
+                result !== "correct" && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, disabled: !userAnswer.trim(), className: "px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed self-start", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1017:22", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1017", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BUnaryExpression%5D%22%2C%22className%22%3A%22px-6%20py-2%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20gap-2%20disabled%3Aopacity-40%20disabled%3Acursor-not-allowed%20self-start%22%7D", children: [
+                  "Проверить",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1023:24", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1023", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
+                ] })
+              ] });
+            })(),
+            result !== "correct" && (activeTemplate.problemType === "comparison" || activeTemplate.problemType === "text" && activeTemplate.topic === "triangles") && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, disabled: activeTemplate.problemType === "comparison" ? !selectedSign : !userAnswer, className: "w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1035:18", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1035", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BConditionalExpression%5D%22%2C%22className%22%3A%22w-full%20mt-4%20px-6%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20justify-center%20gap-2%20disabled%3Aopacity-40%20disabled%3Acursor-not-allowed%22%7D", children: [
+              "Проверить",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1043:20", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1043", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
+            ] })
+          ] }),
+          result && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-6 p-4 rounded-xl flex items-center gap-3 ${result === "correct" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1050:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1050", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: result === "correct" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 24, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1053:20", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1053", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A24%7D" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1054:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1054", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1055:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1055", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%22%7D", children: "Правильно! 🎉" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1056:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1056", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: "Вы успешно решили задачу." }),
+              achievementMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1058:24", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1058", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-2%20px-3%20py-2%20bg-yellow-100%20text-yellow-800%20rounded-lg%20text-sm%20font-medium%20flex%20items-center%20gap-2%22%7D", children: achievementMessage })
+            ] })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CircleX, { size: 24, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1066:20", "data-matrix-name": "XCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1066", "data-component-file": "ChallengeMode.tsx", "data-component-name": "XCircle", "data-component-content": "%7B%22size%22%3A24%7D" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1067:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1067", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1068:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1068", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%22%7D", children: "Неправильно 😔" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1069:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1069", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: mistakeFeedback ?? "Попробуйте ещё раз или посмотрите подсказку." })
+            ] })
+          ] }) }),
+          result && (generatedProblem == null ? void 0 : generatedProblem.solution) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1078:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1078", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-4%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => setShowSolution(!showSolution), className: "text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1079:16", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1079", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-2%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CircleHelp, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1083:18", "data-matrix-name": "HelpCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1083", "data-component-file": "ChallengeMode.tsx", "data-component-name": "HelpCircle", "data-component-content": "%7B%22size%22%3A16%7D" }),
+              showSolution ? "Скрыть решение" : "Показать решение"
+            ] }),
+            showSolution && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1087:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1087", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-3%20p-4%20bg-blue-50%20rounded-lg%20border%20border-blue-200%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-blue-800 mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1088:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1088", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-blue-800%20mb-3%22%7D", children: "Пошаговое решение:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1089:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1089", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: generatedProblem.solution.map((step, index2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1091:24", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1091", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-3%22%7D", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1092:26", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1092", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-shrink-0%20w-6%20h-6%20bg-blue-600%20text-white%20rounded-full%20flex%20items-center%20justify-center%20text-sm%20font-medium%22%7D", children: index2 + 1 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1095:26", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1095", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-blue-900", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1096:28", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1096", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-blue-900%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1096:59", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1096", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: step.explanation }) }),
+                  step.expression && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 font-mono text-sm text-blue-700 bg-blue-100 px-2 py-1 rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1098:30", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1098", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-1%20font-mono%20text-sm%20text-blue-700%20bg-blue-100%20px-2%20py-1%20rounded%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1099:32", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1099", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: step.expression }) }),
+                  step.result && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 font-semibold text-blue-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1103:30", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1103", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-1%20font-semibold%20text-blue-800%22%7D", children: [
+                    "= ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(MathText, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1104:34", "data-matrix-name": "MathText", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1104", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathText", children: step.result })
+                  ] })
+                ] })
+              ] }, index2)) })
+            ] })
+          ] }),
+          result === "correct" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleNextChallenge, className: "mt-6 w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1118:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1118", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mt-6%20w-full%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%22%7D", children: "Следующая задача →" })
         ] })
-      ] }),
-      result === "correct" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleNextChallenge, className: "mt-4 w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1075:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1075", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mt-4%20w-full%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%22%7D", children: "Следующая задача →" })
+      ] })
     ] });
   }
   if (activeChallenge) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1089:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1089", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleBack, className: "mb-4 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1091:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1091", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mb-4%20text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-1%22%7D", children: "← Назад к задачам" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1099:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1099", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1100:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1100", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-3%20mb-2%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(activeChallenge.difficulty)}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1101:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1101", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: activeChallenge.difficulty === 1 ? "Легко" : activeChallenge.difficulty === 2 ? "Средне" : activeChallenge.difficulty === 3 ? "Сложно" : "Очень сложно" }),
-          completedChallenges.includes(activeChallenge.id) && /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 20, className: "text-green-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1105:14", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1105", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22text-green-500%22%7D" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1108:10", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1108", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: activeChallenge.title }),
-        activeChallenge.type === "static" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-600 mt-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1110:12", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1110", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-600%20mt-2%22%7D", children: activeChallenge.description })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-indigo-50 rounded-xl p-4 mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1115:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1115", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-indigo-50%20rounded-xl%20p-4%20mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-indigo-800 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1116:10", "data-matrix-name": "h3", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1116", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h3", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-indigo-800%20mb-2%22%7D", children: "Задача:" }),
-        activeChallenge.type === "generated" && generatedData ? activeChallenge.topic === "magicSquare" && "sq" in generatedData ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1119:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1119", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-indigo-700 mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1120:16", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1120", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%20mb-3%22%7D", children: [
-            "Магический квадрат (сумма строк, столбцов и диагоналей = ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1121:75", "data-matrix-name": "strong", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1121", "data-component-file": "ChallengeMode.tsx", "data-component-name": "strong", children: generatedData.magicSum }),
-            "). Найдите пропущенное число:"
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-gray-50 p-4 sm:p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1134:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1134", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-gray-50%20p-4%20sm%3Ap-6%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-3xl mx-auto mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1136:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1136", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22max-w-3xl%20mx-auto%20mb-4%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleBack, className: "text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1137:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1137", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-1%22%7D", children: "← Назад к задачам" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1146:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1146", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22max-w-2xl%20mx-auto%20bg-white%20rounded-2xl%20shadow-sm%20border%20border-gray-200%20overflow-hidden%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 sm:px-6 py-4 border-b border-gray-100", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1148:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1148", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22px-4%20sm%3Apx-6%20py-4%20border-b%20border-gray-100%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-2 flex-wrap", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1149:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1149", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-3%20mb-2%20flex-wrap%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(activeChallenge.difficulty)}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1150:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1150", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: activeChallenge.difficulty === 1 ? "Легко" : activeChallenge.difficulty === 2 ? "Средне" : activeChallenge.difficulty === 3 ? "Сложно" : "Очень сложно" }),
+            completedChallenges.includes(activeChallenge.id) && /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 20, className: "text-green-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1154:16", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1154", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22text-green-500%22%7D" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "inline-grid grid-cols-3 gap-1 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1124:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1124", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22inline-grid%20grid-cols-3%20gap-1%20mb-1%22%7D", children: generatedData.sq.map((val, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-12 h-12 flex items-center justify-center text-lg font-bold rounded border-2 ${val === 0 ? "border-indigo-500 bg-indigo-100 text-indigo-600" : "border-gray-300 bg-white text-gray-800"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1126:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1126", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: val === 0 ? "?" : val }, i)) })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1139:14", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1139", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%22%7D", children: activeChallenge.render(generatedData).question }) : activeChallenge.type === "static" ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1142:12", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1142", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%22%7D", children: activeChallenge.question }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1144:12", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1144", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%22%7D", children: "Загрузка..." })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1149:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1149", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => setShowHint(!showHint), className: "flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1150:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1150", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-gray-500%20hover%3Atext-gray-700%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(CircleHelp, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1154:12", "data-matrix-name": "HelpCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1154", "data-component-file": "ChallengeMode.tsx", "data-component-name": "HelpCircle", "data-component-content": "%7B%22size%22%3A16%7D" }),
-          showHint ? "Скрыть подсказку" : "Показать подсказку"
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl sm:text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1157:12", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1157", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-xl%20sm%3Atext-2xl%20font-bold%20text-gray-800%22%7D", children: activeChallenge.title }),
+          activeChallenge.type === "static" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-600 mt-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1159:14", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1159", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-600%20mt-2%22%7D", children: activeChallenge.description })
         ] }),
-        showHint && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1158:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1158", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-2%20p-3%20bg-yellow-50%20rounded-lg%20text-sm%20text-yellow-800%22%7D", children: [
-          "💡 ",
-          activeChallenge.type === "generated" && generatedData ? activeChallenge.render(generatedData).hint || "Подсказка недоступна" : activeChallenge.type === "static" ? activeChallenge.hint : "Подсказка недоступна"
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1169:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1169", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-700 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1170:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1170", "data-component-file": "ChallengeMode.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-sm%20font-medium%20text-gray-700%20mb-2%22%7D", children: "Ваш ответ:" }),
-        activeChallenge.type === "generated" && generatedData && "num1" in generatedData && "num2" in generatedData && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-4 p-6 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1176:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1176", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-4%20p-6%20bg-gray-50%20rounded-xl%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1177:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1177", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%22%7D", children: generatedData.num1 }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1178:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1178", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-2%22%7D", children: [">", "<", "="].map((sign2) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelectedSign(sign2), className: `w-16 h-16 text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign2 ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1180:18", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1180", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: sign2 }, sign2)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1192:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1192", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%22%7D", children: generatedData.num2 })
-        ] }),
-        activeChallenge.type === "static" && activeChallenge.type === "comparison" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-4 p-6 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1198:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1198", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-4%20p-6%20bg-gray-50%20rounded-xl%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1199:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1199", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%22%7D", children: activeChallenge.num1 }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1200:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1200", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-2%22%7D", children: [">", "<", "="].map((sign2) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelectedSign(sign2), className: `w-16 h-16 text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign2 ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1202:18", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1202", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: sign2 }, sign2)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1214:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1214", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-3xl%20font-bold%20text-gray-800%22%7D", children: activeChallenge.num2 })
-        ] }),
-        activeChallenge.type === "static" && activeChallenge.type === "sequence" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1220:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1220", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center gap-3 p-6 bg-gray-50 rounded-xl mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1221:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1221", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-3%20p-6%20bg-gray-50%20rounded-xl%20mb-4%22%7D", children: (_a2 = activeChallenge.sequence) == null ? void 0 : _a2.map((num, idx) => {
-            var _a3;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1223:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1223", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: [
-              num !== null ? num : "?",
-              idx < (((_a3 = activeChallenge.sequence) == null ? void 0 : _a3.length) || 0) - 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-2 text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1225:83", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1225", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22mx-2%20text-gray-400%22%7D", children: "," })
-            ] }, idx);
-          }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: userAnswer, onChange: (e2) => setUserAnswer(e2.target.value), placeholder: "Введите пропущенное число...", className: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", onKeyDown: (e2) => e2.key === "Enter" && handleCheck(), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1229:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1229", "data-component-file": "ChallengeMode.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%92%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D0%BF%D1%80%D0%BE%D0%BF%D1%83%D1%89%D0%B5%D0%BD%D0%BD%D0%BE%D0%B5%20%D1%87%D0%B8%D1%81%D0%BB%D0%BE...%22%2C%22className%22%3A%22w-full%20px-4%20py-2%20border%20border-gray-300%20rounded-lg%20focus%3Aring-2%20focus%3Aring-indigo-500%20focus%3Aborder-indigo-500%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
-        ] }),
-        activeChallenge.type === "static" && activeChallenge.type === "perimeter" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1242:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1242", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col items-center p-6 bg-gray-50 rounded-xl mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1243:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1243", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20items-center%20p-6%20bg-gray-50%20rounded-xl%20mb-4%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "200", height: "150", className: "mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1244:16", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1244", "data-component-file": "ChallengeMode.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22200%22%2C%22height%22%3A%22150%22%2C%22className%22%3A%22mb-4%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "50", y: "25", width: activeChallenge.width * 10, height: activeChallenge.height * 10, fill: "none", stroke: "#4F46E5", strokeWidth: "2" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "100", y: "15", textAnchor: "middle", className: "text-sm fill-gray-700", children: [
-              activeChallenge.width,
-              " см"
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 sm:px-6 py-5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1164:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1164", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22px-4%20sm%3Apx-6%20py-5%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-indigo-50 rounded-xl p-4 sm:p-5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1165:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1165", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-indigo-50%20rounded-xl%20p-4%20sm%3Ap-5%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-indigo-800 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1166:14", "data-matrix-name": "h3", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1166", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h3", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-indigo-800%20mb-2%22%7D", children: "Задача:" }),
+            activeChallenge.type === "generated" && generatedData ? activeChallenge.topic === "magicSquare" && "sq" in generatedData ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1169:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1169", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-indigo-700 mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1170:20", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1170", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%20mb-3%22%7D", children: [
+                "Магический квадрат (сумма строк, столбцов и диагоналей = ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1171:79", "data-matrix-name": "strong", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1171", "data-component-file": "ChallengeMode.tsx", "data-component-name": "strong", children: generatedData.magicSum }),
+                "). Найдите пропущенное число:"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "inline-grid grid-cols-3 gap-1 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1174:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1174", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22inline-grid%20grid-cols-3%20gap-1%20mb-1%22%7D", children: generatedData.sq.map((val, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-base sm:text-lg font-bold rounded border-2 ${val === 0 ? "border-indigo-500 bg-indigo-100 text-indigo-600" : "border-gray-300 bg-white text-gray-800"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1176:24", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1176", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: val === 0 ? "?" : val }, i)) })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1189:18", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1189", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%22%7D", children: activeChallenge.render(generatedData).question }) : activeChallenge.type === "static" ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1192:16", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1192", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%22%7D", children: activeChallenge.question }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1194:16", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1194", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-indigo-700%22%7D", children: "Загрузка..." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1199:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1199", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-5%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => setShowHint(!showHint), className: "flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1200:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1200", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-gray-500%20hover%3Atext-gray-700%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CircleHelp, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1204:16", "data-matrix-name": "HelpCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1204", "data-component-file": "ChallengeMode.tsx", "data-component-name": "HelpCircle", "data-component-content": "%7B%22size%22%3A16%7D" }),
+              showHint ? "Скрыть подсказку" : "Показать подсказку"
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "30", y: "75", textAnchor: "middle", className: "text-sm fill-gray-700", children: [
-              activeChallenge.height,
-              " см"
+            showHint && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1208:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1208", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-2%20p-3%20bg-yellow-50%20rounded-lg%20text-sm%20text-yellow-800%22%7D", children: [
+              "💡 ",
+              activeChallenge.type === "generated" && generatedData ? activeChallenge.render(generatedData).hint || "Подсказка недоступна" : activeChallenge.type === "static" ? activeChallenge.hint : "Подсказка недоступна"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1219:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1219", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-6%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-700 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1220:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1220", "data-component-file": "ChallengeMode.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-sm%20font-medium%20text-gray-700%20mb-2%22%7D", children: "Ваш ответ:" }),
+            activeChallenge.type === "generated" && generatedData && "num1" in generatedData && "num2" in generatedData && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1226:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1226", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-3%20sm%3Agap-4%20p-4%20sm%3Ap-6%20bg-gray-50%20rounded-xl%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl sm:text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1227:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1227", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%22%7D", children: generatedData.num1 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1228:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1228", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-2%22%7D", children: [">", "<", "="].map((sign2) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelectedSign(sign2), className: `w-12 h-12 sm:w-16 sm:h-16 text-xl sm:text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign2 ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1230:22", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1230", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: sign2 }, sign2)) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl sm:text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1242:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1242", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%22%7D", children: generatedData.num2 })
+            ] }),
+            activeChallenge.type === "static" && activeChallenge.type === "comparison" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1248:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1248", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-3%20sm%3Agap-4%20p-4%20sm%3Ap-6%20bg-gray-50%20rounded-xl%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl sm:text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1249:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1249", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%22%7D", children: activeChallenge.num1 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1250:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1250", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-2%22%7D", children: [">", "<", "="].map((sign2) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelectedSign(sign2), className: `w-12 h-12 sm:w-16 sm:h-16 text-xl sm:text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign2 ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1252:22", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1252", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: sign2 }, sign2)) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl sm:text-3xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1264:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1264", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-xl%20sm%3Atext-3xl%20font-bold%20text-gray-800%22%7D", children: activeChallenge.num2 })
+            ] }),
+            activeChallenge.type === "static" && activeChallenge.type === "sequence" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1270:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1270", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gray-50 rounded-xl mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1271:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1271", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20sm%3Agap-3%20p-4%20sm%3Ap-6%20bg-gray-50%20rounded-xl%20mb-4%22%7D", children: (_a2 = activeChallenge.sequence) == null ? void 0 : _a2.map((num, idx) => {
+                var _a3;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-lg sm:text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1273:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1273", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-lg%20sm%3Atext-2xl%20font-bold%20text-gray-800%22%7D", children: [
+                  num !== null ? num : "?",
+                  idx < (((_a3 = activeChallenge.sequence) == null ? void 0 : _a3.length) || 0) - 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-1 sm:mx-2 text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1275:87", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1275", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22mx-1%20sm%3Amx-2%20text-gray-400%22%7D", children: "," })
+                ] }, idx);
+              }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: userAnswer, onChange: (e2) => setUserAnswer(e2.target.value), placeholder: "Введите пропущенное число...", className: "w-full sm:max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", onKeyDown: (e2) => e2.key === "Enter" && handleCheck(), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1279:18", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1279", "data-component-file": "ChallengeMode.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%92%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D0%BF%D1%80%D0%BE%D0%BF%D1%83%D1%89%D0%B5%D0%BD%D0%BD%D0%BE%D0%B5%20%D1%87%D0%B8%D1%81%D0%BB%D0%BE...%22%2C%22className%22%3A%22w-full%20sm%3Amax-w-xs%20px-4%20py-2%20border%20border-gray-300%20rounded-lg%20focus%3Aring-2%20focus%3Aring-indigo-500%20focus%3Aborder-indigo-500%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
+            ] }),
+            activeChallenge.type === "static" && activeChallenge.type === "perimeter" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1292:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1292", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col items-center p-4 sm:p-6 bg-gray-50 rounded-xl mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1293:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1293", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20items-center%20p-4%20sm%3Ap-6%20bg-gray-50%20rounded-xl%20mb-4%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "180", height: "130", className: "mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1294:20", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1294", "data-component-file": "ChallengeMode.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22180%22%2C%22height%22%3A%22130%22%2C%22className%22%3A%22mb-4%22%7D", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "50", y: "25", width: activeChallenge.width * 10, height: activeChallenge.height * 10, fill: "none", stroke: "#4F46E5", strokeWidth: "2" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "100", y: "15", textAnchor: "middle", className: "text-sm fill-gray-700", children: [
+                  activeChallenge.width,
+                  " см"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "30", y: "75", textAnchor: "middle", className: "text-sm fill-gray-700", children: [
+                  activeChallenge.height,
+                  " см"
+                ] })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: userAnswer, onChange: (e2) => setUserAnswer(e2.target.value), placeholder: "Введите периметр в см...", className: "w-full sm:max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", onKeyDown: (e2) => e2.key === "Enter" && handleCheck(), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1312:18", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1312", "data-component-file": "ChallengeMode.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%92%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D0%BF%D0%B5%D1%80%D0%B8%D0%BC%D0%B5%D1%82%D1%80%20%D0%B2%20%D1%81%D0%BC...%22%2C%22className%22%3A%22w-full%20sm%3Amax-w-xs%20px-4%20py-2%20border%20border-gray-300%20rounded-lg%20focus%3Aring-2%20focus%3Aring-indigo-500%20focus%3Aborder-indigo-500%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
+            ] }),
+            activeChallenge.type === "static" && activeChallenge.type === "triangle-type" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1325:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1325", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center gap-4 sm:gap-6 p-4 sm:p-6 bg-gray-50 rounded-xl mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1326:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1326", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-4%20sm%3Agap-6%20p-4%20sm%3Ap-6%20bg-gray-50%20rounded-xl%20mb-4%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1327:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1327", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-center%22%7D", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1328:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1328", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%20mb-1%22%7D", children: "Стороны треугольника:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-lg sm:text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1329:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1329", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-lg%20sm%3Atext-2xl%20font-bold%20text-gray-800%22%7D", children: [
+                  (_b2 = activeChallenge.sides) == null ? void 0 : _b2.join(", "),
+                  " см"
+                ] })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1334:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1334", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [{
+                value: "equilateral",
+                label: "Равносторонний"
+              }, {
+                value: "isosceles",
+                label: "Равнобедренный"
+              }, {
+                value: "scalene",
+                label: "Разносторонний"
+              }].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelectedTriangleType(option.value), className: `w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${selectedTriangleType === option.value ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1340:22", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1340", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: option.label }, option.value)) })
+            ] }),
+            activeChallenge.type === "static" && activeChallenge.type === "magic-square" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1357:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1357", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center p-4 sm:p-6 bg-gray-50 rounded-xl mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1358:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1358", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-center%20p-4%20sm%3Ap-6%20bg-gray-50%20rounded-xl%20mb-4%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1359:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1359", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22grid%20grid-cols-3%20gap-2%22%7D", children: (_c2 = activeChallenge.grid) == null ? void 0 : _c2.flat().map((num, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center border-2 border-gray-300 rounded-lg bg-white text-base sm:text-xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1361:24", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1361", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-12%20h-12%20sm%3Aw-16%20sm%3Ah-16%20flex%20items-center%20justify-center%20border-2%20border-gray-300%20rounded-lg%20bg-white%20text-base%20sm%3Atext-xl%20font-bold%20text-gray-800%22%7D", children: num !== null ? num : "?" }, idx)) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: userAnswer, onChange: (e2) => setUserAnswer(e2.target.value), placeholder: "Введите пропущенные числа через запятую...", className: "w-full sm:max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", onKeyDown: (e2) => e2.key === "Enter" && handleCheck(), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1370:18", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1370", "data-component-file": "ChallengeMode.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%92%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D0%BF%D1%80%D0%BE%D0%BF%D1%83%D1%89%D0%B5%D0%BD%D0%BD%D1%8B%D0%B5%20%D1%87%D0%B8%D1%81%D0%BB%D0%B0%20%D1%87%D0%B5%D1%80%D0%B5%D0%B7%20%D0%B7%D0%B0%D0%BF%D1%8F%D1%82%D1%83%D1%8E...%22%2C%22className%22%3A%22w-full%20sm%3Amax-w-xs%20px-4%20py-2%20border%20border-gray-300%20rounded-lg%20focus%3Aring-2%20focus%3Aring-indigo-500%20focus%3Aborder-indigo-500%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
+            ] }),
+            activeChallenge.type === "generated" && generatedData && !("num1" in generatedData && "num2" in generatedData) || activeChallenge.type === "static" && !["comparison", "sequence", "perimeter", "triangle-type", "magic-square"].includes(activeChallenge.type) ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1384:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1384", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20gap-3%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(MathInputField, { value: userAnswer, onChange: setUserAnswer, placeholder: "Введите число или выражение...", autoFocus: true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1385:18", "data-matrix-name": "MathInputField", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1385", "data-component-file": "ChallengeMode.tsx", "data-component-name": "MathInputField", "data-component-content": "%7B%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BIdentifier%5D%22%2C%22placeholder%22%3A%22%D0%92%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D1%87%D0%B8%D1%81%D0%BB%D0%BE%20%D0%B8%D0%BB%D0%B8%20%D0%B2%D1%8B%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5...%22%2C%22autoFocus%22%3Atrue%7D" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, className: "px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1391:18", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1391", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22px-6%20py-2%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20gap-2%22%7D", children: [
+                "Проверить",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1396:20", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1396", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
+              ] })
+            ] }) : null,
+            (activeChallenge.type === "generated" && generatedData && "num1" in generatedData && "num2" in generatedData || activeChallenge.type === "static" && ["comparison", "triangle-type"].includes(activeChallenge.type)) && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, className: "w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1404:18", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1404", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20mt-4%20px-6%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20justify-center%20gap-2%22%7D", children: [
+              "Проверить",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1409:20", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1409", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
+            ] }),
+            activeChallenge.type === "static" && ["sequence", "perimeter", "magic-square"].includes(activeChallenge.type) && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, className: "w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1415:16", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1415", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20mt-4%20px-6%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20justify-center%20gap-2%22%7D", children: [
+              "Проверить",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1420:18", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1420", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
+            ] })
+          ] }),
+          result && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-6 p-4 rounded-xl flex items-center gap-3 ${result === "correct" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1427:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1427", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: result === "correct" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 24, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1430:20", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1430", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A24%7D" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1431:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1431", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1432:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1432", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%22%7D", children: "Правильно! 🎉" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1433:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1433", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: "Вы успешно решили задачу." })
+            ] })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CircleX, { size: 24, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1438:20", "data-matrix-name": "XCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1438", "data-component-file": "ChallengeMode.tsx", "data-component-name": "XCircle", "data-component-content": "%7B%22size%22%3A24%7D" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1439:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1439", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1440:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1440", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%22%7D", children: "Неправильно 😔" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1441:22", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1441", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: "Попробуйте ещё раз или посмотрите подсказку." })
             ] })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: userAnswer, onChange: (e2) => setUserAnswer(e2.target.value), placeholder: "Введите периметр в см...", className: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", onKeyDown: (e2) => e2.key === "Enter" && handleCheck(), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1262:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1262", "data-component-file": "ChallengeMode.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%92%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D0%BF%D0%B5%D1%80%D0%B8%D0%BC%D0%B5%D1%82%D1%80%20%D0%B2%20%D1%81%D0%BC...%22%2C%22className%22%3A%22w-full%20px-4%20py-2%20border%20border-gray-300%20rounded-lg%20focus%3Aring-2%20focus%3Aring-indigo-500%20focus%3Aborder-indigo-500%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
-        ] }),
-        activeChallenge.type === "static" && activeChallenge.type === "triangle-type" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1275:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1275", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center gap-6 p-6 bg-gray-50 rounded-xl mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1276:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1276", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20gap-6%20p-6%20bg-gray-50%20rounded-xl%20mb-4%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1277:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1277", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-center%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1278:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1278", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%20mb-1%22%7D", children: "Стороны треугольника:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1279:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1279", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: [
-              (_b2 = activeChallenge.sides) == null ? void 0 : _b2.join(", "),
-              " см"
-            ] })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1284:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1284", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [{
-            value: "equilateral",
-            label: "Равносторонний"
-          }, {
-            value: "isosceles",
-            label: "Равнобедренный"
-          }, {
-            value: "scalene",
-            label: "Разносторонний"
-          }].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelectedTriangleType(option.value), className: `w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${selectedTriangleType === option.value ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1290:18", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1290", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: option.label }, option.value)) })
-        ] }),
-        activeChallenge.type === "static" && activeChallenge.type === "magic-square" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1307:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1307", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center p-6 bg-gray-50 rounded-xl mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1308:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1308", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-center%20p-6%20bg-gray-50%20rounded-xl%20mb-4%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1309:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1309", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22grid%20grid-cols-3%20gap-2%22%7D", children: (_c2 = activeChallenge.grid) == null ? void 0 : _c2.flat().map((num, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 flex items-center justify-center border-2 border-gray-300 rounded-lg bg-white text-xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1311:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1311", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-16%20h-16%20flex%20items-center%20justify-center%20border-2%20border-gray-300%20rounded-lg%20bg-white%20text-xl%20font-bold%20text-gray-800%22%7D", children: num !== null ? num : "?" }, idx)) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: userAnswer, onChange: (e2) => setUserAnswer(e2.target.value), placeholder: "Введите пропущенные числа через запятую...", className: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", onKeyDown: (e2) => e2.key === "Enter" && handleCheck(), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1320:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1320", "data-component-file": "ChallengeMode.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%92%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D0%BF%D1%80%D0%BE%D0%BF%D1%83%D1%89%D0%B5%D0%BD%D0%BD%D1%8B%D0%B5%20%D1%87%D0%B8%D1%81%D0%BB%D0%B0%20%D1%87%D0%B5%D1%80%D0%B5%D0%B7%20%D0%B7%D0%B0%D0%BF%D1%8F%D1%82%D1%83%D1%8E...%22%2C%22className%22%3A%22w-full%20px-4%20py-2%20border%20border-gray-300%20rounded-lg%20focus%3Aring-2%20focus%3Aring-indigo-500%20focus%3Aborder-indigo-500%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
-        ] }),
-        activeChallenge.type === "generated" && generatedData && !("num1" in generatedData && "num2" in generatedData) || activeChallenge.type === "static" && !["comparison", "sequence", "perimeter", "triangle-type", "magic-square"].includes(activeChallenge.type) ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1334:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1334", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-3%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: userAnswer, onChange: (e2) => setUserAnswer(e2.target.value), placeholder: "Введите число...", className: "flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", onKeyDown: (e2) => e2.key === "Enter" && handleCheck(), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1335:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1335", "data-component-file": "ChallengeMode.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%92%D0%B2%D0%B5%D0%B4%D0%B8%D1%82%D0%B5%20%D1%87%D0%B8%D1%81%D0%BB%D0%BE...%22%2C%22className%22%3A%22flex-1%20px-4%20py-2%20border%20border-gray-300%20rounded-lg%20focus%3Aring-2%20focus%3Aring-indigo-500%20focus%3Aborder-indigo-500%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, className: "px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1343:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1343", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22px-6%20py-2%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20gap-2%22%7D", children: [
-            "Проверить",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1348:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1348", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
-          ] })
-        ] }) : null,
-        (activeChallenge.type === "generated" && generatedData && "num1" in generatedData && "num2" in generatedData || activeChallenge.type === "static" && ["comparison", "triangle-type"].includes(activeChallenge.type)) && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, className: "w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1356:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1356", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20mt-4%20px-6%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20justify-center%20gap-2%22%7D", children: [
-          "Проверить",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1361:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1361", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
-        ] }),
-        activeChallenge.type === "static" && ["sequence", "perimeter", "magic-square"].includes(activeChallenge.type) && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleCheck, className: "w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1367:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1367", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20mt-4%20px-6%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%20flex%20items-center%20justify-center%20gap-2%22%7D", children: [
-          "Проверить",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1372:14", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1372", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A18%7D" })
+          result === "correct" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleNextChallenge, className: "mt-6 w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1450:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1450", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mt-6%20w-full%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%22%7D", children: "Следующая задача →" })
         ] })
-      ] }),
-      result && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-4 rounded-xl flex items-center gap-3 ${result === "correct" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1379:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1379", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: result === "correct" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 24, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1382:16", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1382", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A24%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1383:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1383", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1384:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1384", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%22%7D", children: "Правильно! 🎉" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1385:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1385", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: "Вы успешно решили задачу." })
-        ] })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CircleX, { size: 24, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1390:16", "data-matrix-name": "XCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1390", "data-component-file": "ChallengeMode.tsx", "data-component-name": "XCircle", "data-component-content": "%7B%22size%22%3A24%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1391:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1391", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1392:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1392", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%22%7D", children: "Неправильно 😔" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1393:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1393", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: "Попробуйте ещё раз или посмотрите подсказку." })
-        ] })
-      ] }) }),
-      result === "correct" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleNextChallenge, className: "mt-4 w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1402:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1402", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mt-4%20w-full%20py-3%20bg-indigo-600%20text-white%20rounded-lg%20hover%3Abg-indigo-700%22%7D", children: "Следующая задача →" })
+      ] })
     ] });
   }
   if (selectedTopic && selectedCategory) {
@@ -117214,51 +118125,54 @@ const ChallengeMode = ({
     const topic = subject.topics[topicKey];
     const totalItems = topic.challenges.length + topic.templates.length;
     const completedCount = topic.challenges.filter((c) => completedChallenges.includes(c.id)).length + topic.templates.filter((t) => completedChallenges.includes(t.id)).length;
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1426:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1426", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleBack, className: "mb-4 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1428:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1428", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mb-4%20text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-1%22%7D", children: "← Назад к темам" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1436:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1436", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1437:10", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1437", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: topic.name }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-500 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1438:10", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1438", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-500%20mt-1%22%7D", children: [
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1476:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1476", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleBack, className: "mb-4 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1478:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1478", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mb-4%20text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-1%22%7D", children: "← Назад к темам" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1486:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1486", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1487:10", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1487", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: topic.name }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-500 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1488:10", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1488", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-500%20mt-1%22%7D", children: [
           completedCount,
           " / ",
           totalItems,
           " задач выполнено"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1444:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1444", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: [
-        topic.challenges.map((challenge) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveChallenge(challenge), className: "w-full p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1447:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1447", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20p-4%20border%20border-gray-200%20rounded-xl%20hover%3Aborder-indigo-500%20hover%3Abg-indigo-50%20transition-all%20text-left%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1452:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1452", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-start%20justify-between%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1453:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1453", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1454:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1454", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-medium%20text-gray-800%22%7D", children: challenge.title }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1455:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1455", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20mt-2%22%7D", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 rounded text-xs font-medium ${challenge.difficulty === 1 ? "bg-green-100 text-green-700" : challenge.difficulty === 2 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1456:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1456", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: challenge.difficulty === 1 ? "Легко" : challenge.difficulty === 2 ? "Средне" : "Сложно" }),
-              completedChallenges.includes(challenge.id) && /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 16, className: "text-green-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1460:22", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1460", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A16%2C%22className%22%3A%22text-green-500%22%7D" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1494:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1494", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: [
+        topic.challenges.map((challenge) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveChallenge(challenge), className: "w-full p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1497:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1497", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20p-4%20border%20border-gray-200%20rounded-xl%20hover%3Aborder-indigo-500%20hover%3Abg-indigo-50%20transition-all%20text-left%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1502:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1502", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-start%20justify-between%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1503:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1503", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1504:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1504", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-medium%20text-gray-800%22%7D", children: challenge.title }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1505:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1505", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20mt-2%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 rounded text-xs font-medium ${challenge.difficulty === 1 ? "bg-green-100 text-green-700" : challenge.difficulty === 2 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1506:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1506", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: challenge.difficulty === 1 ? "Легко" : challenge.difficulty === 2 ? "Средне" : "Сложно" }),
+              completedChallenges.includes(challenge.id) && /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 16, className: "text-green-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1510:22", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1510", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A16%2C%22className%22%3A%22text-green-500%22%7D" })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 20, className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1464:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1464", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22text-gray-400%22%7D" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 20, className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1514:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1514", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22text-gray-400%22%7D" })
         ] }) }, challenge.id)),
         topic.templates.map((template) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
           setActiveTemplate(template);
           setAdaptiveState(createAdaptiveState(1));
-        }, className: "w-full p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1471:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1471", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20p-4%20border%20border-gray-200%20rounded-xl%20hover%3Aborder-indigo-500%20hover%3Abg-indigo-50%20transition-all%20text-left%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1479:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1479", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-start%20justify-between%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1480:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1480", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1481:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1481", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-medium%20text-gray-800%22%7D", children: template.section }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1482:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1482", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20mt-2%22%7D", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 rounded text-xs font-medium ${Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? "bg-green-100 text-green-700" : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? "bg-yellow-100 text-yellow-700" : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1483:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1483", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? "Легко" : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? "Средне" : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? "Сложно" : "Олимпиадное" }),
-              completedChallenges.includes(template.id) && /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 16, className: "text-green-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1487:22", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1487", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A16%2C%22className%22%3A%22text-green-500%22%7D" })
+          setFractionNumerator("");
+          setFractionDenominator("");
+          setUserAnswer("");
+        }, className: "w-full p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1521:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1521", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20p-4%20border%20border-gray-200%20rounded-xl%20hover%3Aborder-indigo-500%20hover%3Abg-indigo-50%20transition-all%20text-left%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1532:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1532", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-start%20justify-between%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1533:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1533", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1534:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1534", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-medium%20text-gray-800%22%7D", children: template.section }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1535:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1535", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20mt-2%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 rounded text-xs font-medium ${Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? "bg-green-100 text-green-700" : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? "bg-yellow-100 text-yellow-700" : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1536:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1536", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? "Легко" : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? "Средне" : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? "Сложно" : "Олимпиадное" }),
+              completedChallenges.includes(template.id) && /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { size: 16, className: "text-green-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1540:22", "data-matrix-name": "CheckCircle", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1540", "data-component-file": "ChallengeMode.tsx", "data-component-name": "CheckCircle", "data-component-content": "%7B%22size%22%3A16%2C%22className%22%3A%22text-green-500%22%7D" })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 20, className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1491:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1491", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22text-gray-400%22%7D" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 20, className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1544:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1544", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22text-gray-400%22%7D" })
         ] }) }, template.id))
       ] })
     ] });
   }
   if (selectedCategory) {
     const category = categoryStructure[selectedCategory];
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1505:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1505", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleBack, className: "mb-4 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1507:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1507", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mb-4%20text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-1%22%7D", children: "← Назад к категориям" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1515:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1515", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1516:10", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1516", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: category.name }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1517:10", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1517", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-500%20mt-1%22%7D", children: "Выберите предмет и тему для изучения" })
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1558:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1558", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleBack, className: "mb-4 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1560:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1560", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mb-4%20text-sm%20text-indigo-600%20hover%3Atext-indigo-800%20flex%20items-center%20gap-1%22%7D", children: "← Назад к категориям" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1568:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1568", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1569:10", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1569", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: category.name }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1570:10", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1570", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-500%20mt-1%22%7D", children: "Выберите предмет и тему для изучения" })
       ] }),
       (() => {
         var _a3;
@@ -117314,43 +118228,43 @@ const ChallengeMode = ({
             }
           }
         };
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(SkillTree, { topics: skillTopics, progress: skillProgress, onTopicClick: handleSkillTopicClick, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1604:12", "data-matrix-name": "SkillTree", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1604", "data-component-file": "ChallengeMode.tsx", "data-component-name": "SkillTree", "data-component-content": "%7B%22topics%22%3A%22%5BIdentifier%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22onTopicClick%22%3A%22%5BIdentifier%5D%22%7D" });
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(SkillTree, { topics: skillTopics, progress: skillProgress, onTopicClick: handleSkillTopicClick, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1657:12", "data-matrix-name": "SkillTree", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1657", "data-component-file": "ChallengeMode.tsx", "data-component-name": "SkillTree", "data-component-content": "%7B%22topics%22%3A%22%5BIdentifier%5D%22%2C%22progress%22%3A%22%5BIdentifier%5D%22%2C%22onTopicClick%22%3A%22%5BIdentifier%5D%22%7D" });
       })()
     ] });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1617:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1617", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1619:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1619", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1620:8", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1620", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: "Задачи и упражнения" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1621:8", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1621", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-500%20mt-1%22%7D", children: "Решайте математические задачи и проверяйте свои знания" })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-white p-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1670:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1670", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-full%20overflow-auto%20bg-white%20p-6%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1672:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1672", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1673:8", "data-matrix-name": "h2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1673", "data-component-file": "ChallengeMode.tsx", "data-component-name": "h2", "data-component-content": "%7B%22className%22%3A%22text-2xl%20font-bold%20text-gray-800%22%7D", children: "Задачи и упражнения" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1674:8", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1674", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-gray-500%20mt-1%22%7D", children: "Решайте математические задачи и проверяйте свои знания" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 p-4 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1627:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1627", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%20p-4%20bg-gray-50%20rounded-xl%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1628:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1628", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-between%20items-center%20mb-2%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1629:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1629", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%20font-medium%20text-gray-700%22%7D", children: "Общий прогресс" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1630:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1630", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 p-4 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1680:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1680", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-6%20p-4%20bg-gray-50%20rounded-xl%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1681:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1681", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-between%20items-center%20mb-2%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1682:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1682", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%20font-medium%20text-gray-700%22%7D", children: "Общий прогресс" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1683:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1683", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%22%7D", children: [
           completedChallenges.length,
           " / ",
           allChallenges.length + problemTemplates.length,
           " задач"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-200 rounded-full h-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1634:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1634", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-full%20bg-gray-200%20rounded-full%20h-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-indigo-600 h-2 rounded-full transition-all", style: {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-200 rounded-full h-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1687:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1687", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-full%20bg-gray-200%20rounded-full%20h-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-indigo-600 h-2 rounded-full transition-all", style: {
         width: `${completedChallenges.length / (allChallenges.length + problemTemplates.length) * 100}%`
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1635:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1635", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-indigo-600%20h-2%20rounded-full%20transition-all%22%2C%22style%22%3A%7B%22width%22%3A%22%5BTemplateLiteral%5D%22%7D%7D" }) })
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1688:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1688", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-indigo-600%20h-2%20rounded-full%20transition-all%22%2C%22style%22%3A%7B%22width%22%3A%22%5BTemplateLiteral%5D%22%7D%7D" }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1643:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1643", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: Object.entries(categoryStructure).map(([categoryKey, category]) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1696:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1696", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: Object.entries(categoryStructure).map(([categoryKey, category]) => {
       const allChallenges2 = Object.values(category.subjects).flatMap((s) => Object.values(s.topics).flatMap((t) => t.challenges));
       const allTemplates = Object.values(category.subjects).flatMap((s) => Object.values(s.topics).flatMap((t) => t.templates));
       const completed = allChallenges2.filter((c) => completedChallenges.includes(c.id)).length + allTemplates.filter((t) => completedChallenges.includes(t.id)).length;
       const total = allChallenges2.length + allTemplates.length;
       const progress = total > 0 ? completed / total * 100 : 0;
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => setSelectedCategory(categoryKey), className: "w-full p-5 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1653:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1653", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20p-5%20border%20border-gray-200%20rounded-xl%20hover%3Aborder-indigo-500%20hover%3Abg-indigo-50%20transition-all%20text-left%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1658:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1658", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-start%20justify-between%20mb-3%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1659:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1659", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1660:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1660", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20mb-1%22%7D", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-3 h-3 bg-${category.color}-500 rounded-full`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1661:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1661", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-lg text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1662:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1662", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-lg%20text-gray-800%22%7D", children: category.name })
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => setSelectedCategory(categoryKey), className: "w-full p-5 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1706:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1706", "data-component-file": "ChallengeMode.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20p-5%20border%20border-gray-200%20rounded-xl%20hover%3Aborder-indigo-500%20hover%3Abg-indigo-50%20transition-all%20text-left%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1711:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1711", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-start%20justify-between%20mb-3%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1712:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1712", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1713:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1713", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20mb-1%22%7D", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-3 h-3 bg-${category.color}-500 rounded-full`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1714:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1714", "data-component-file": "ChallengeMode.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-lg text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1715:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1715", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22font-semibold%20text-lg%20text-gray-800%22%7D", children: category.name })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1664:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1664", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%22%7D", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1717:18", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1717", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%22%7D", children: [
               Object.values(category.subjects).reduce((sum2, s) => sum2 + Object.keys(s.topics).length, 0),
               " тем • ",
               completed,
@@ -117359,14 +118273,14 @@ const ChallengeMode = ({
               " задач выполнено"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 24, className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1668:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1668", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A24%2C%22className%22%3A%22text-gray-400%22%7D" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowRight, { size: 24, className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1721:16", "data-matrix-name": "ArrowRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1721", "data-component-file": "ChallengeMode.tsx", "data-component-name": "ArrowRight", "data-component-content": "%7B%22size%22%3A24%2C%22className%22%3A%22text-gray-400%22%7D" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-200 rounded-full h-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1671:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1671", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-full%20bg-gray-200%20rounded-full%20h-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `bg-${category.color}-600 h-2 rounded-full transition-all`, style: {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-200 rounded-full h-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1724:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1724", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-full%20bg-gray-200%20rounded-full%20h-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `bg-${category.color}-600 h-2 rounded-full transition-all`, style: {
           width: `${progress}%`
-        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1672:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1672", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22style%22%3A%7B%22width%22%3A%22%5BTemplateLiteral%5D%22%7D%7D" }) })
+        }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1725:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1725", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22style%22%3A%7B%22width%22%3A%22%5BTemplateLiteral%5D%22%7D%7D" }) })
       ] }, categoryKey);
     }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-8 p-4 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1683:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1683", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-8%20p-4%20bg-gray-50%20rounded-xl%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500 text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1684:8", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1684", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%20text-center%22%7D", children: "📝 В разработке: больше задач по тригонометрии, графикам функций и стереометрии" }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-8 p-4 bg-gray-50 rounded-xl", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1736:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1736", "data-component-file": "ChallengeMode.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-8%20p-4%20bg-gray-50%20rounded-xl%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500 text-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx:1737:8", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/challenge/ChallengeMode.tsx", "data-component-line": "1737", "data-component-file": "ChallengeMode.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-500%20text-center%22%7D", children: "📝 В разработке: больше задач по тригонометрии, графикам функций и стереометрии" }) })
   ] });
 };
 const features = [{
@@ -122229,37 +123143,37 @@ function AppContent() {
     };
   }, [handleNew, handleSave, state, loadProject, setProjectPath, markAsSaved, undo, redo]);
   const renderMainContent = () => {
-    if (state.mode === "interactive") return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:204:45", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "204", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveLibrary, { initialModule: interactiveModuleId ?? void 0, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:204:97", "data-matrix-name": "InteractiveLibrary", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "204", "data-component-file": "App.tsx", "data-component-name": "InteractiveLibrary", "data-component-content": "%7B%22initialModule%22%3A%22%5BLogicalExpression%5D%22%7D" }) });
-    if (state.mode === "challenge") return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:205:43", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "205", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChallengeMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:205:95", "data-matrix-name": "ChallengeMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "205", "data-component-file": "App.tsx", "data-component-name": "ChallengeMode" }) });
-    if (state.mode === "projects") return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:206:42", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "206", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ProjectsPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:206:94", "data-matrix-name": "ProjectsPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "206", "data-component-file": "App.tsx", "data-component-name": "ProjectsPanel" }) });
-    if (state.mode === "library") return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:207:41", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "207", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
+    if (state.mode === "interactive") return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:205:45", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "205", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveLibrary, { initialModule: interactiveModuleId ?? void 0, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:205:97", "data-matrix-name": "InteractiveLibrary", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "205", "data-component-file": "App.tsx", "data-component-name": "InteractiveLibrary", "data-component-content": "%7B%22initialModule%22%3A%22%5BLogicalExpression%5D%22%7D" }) });
+    if (state.mode === "challenge") return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:206:43", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "206", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChallengeMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:206:95", "data-matrix-name": "ChallengeMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "206", "data-component-file": "App.tsx", "data-component-name": "ChallengeMode" }) });
+    if (state.mode === "projects") return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-100 overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:207:42", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "207", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ProjectsPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:207:94", "data-matrix-name": "ProjectsPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "207", "data-component-file": "App.tsx", "data-component-name": "ProjectsPanel" }) });
+    if (state.mode === "library") return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:208:41", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "208", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Canvas, {}),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(TemplateLibrary, { onSelectTemplate: handleSelectTemplate, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:207:96", "data-matrix-name": "TemplateLibrary", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "207", "data-component-file": "App.tsx", "data-component-name": "TemplateLibrary", "data-component-content": "%7B%22onSelectTemplate%22%3A%22%5BIdentifier%5D%22%7D" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(TemplateLibrary, { onSelectTemplate: handleSelectTemplate, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:208:96", "data-matrix-name": "TemplateLibrary", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "208", "data-component-file": "App.tsx", "data-component-name": "TemplateLibrary", "data-component-content": "%7B%22onSelectTemplate%22%3A%22%5BIdentifier%5D%22%7D" })
     ] });
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:208:11", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "208", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Canvas, {}) });
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:209:11", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "209", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Canvas, {}) });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `h-screen flex flex-col bg-gray-50 overflow-hidden ${!["interactive", "challenge", "projects"].includes(state.mode) ? "canvas-mode" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:212:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "212", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:213:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "213", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `transition-all duration-200 ${zenMode ? "hidden" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:214:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "214", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ToolSidebar, { onNew: handleNew, onOpen: handleOpen, onSave: handleSave, onExport: () => setShowExportModal(true), disabled: !canEdit && roomState.isConnected, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:215:10", "data-matrix-name": "ToolSidebar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "215", "data-component-file": "App.tsx", "data-component-name": "ToolSidebar", "data-component-content": "%7B%22onNew%22%3A%22%5BIdentifier%5D%22%2C%22onOpen%22%3A%22%5BIdentifier%5D%22%2C%22onSave%22%3A%22%5BIdentifier%5D%22%2C%22onExport%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BLogicalExpression%5D%22%7D" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:217:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "217", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20flex-col%20overflow-hidden%22%7D", children: [
-        roomState.isConnected && roomState.role === "teacher" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:219:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "219", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-shrink-0%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TeacherControlPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:220:14", "data-matrix-name": "TeacherControlPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "220", "data-component-file": "App.tsx", "data-component-name": "TeacherControlPanel" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TopBar, { zenMode, onToggleZenMode: toggleZenMode, onAuthClick: () => setShowAuthModal(true), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:223:10", "data-matrix-name": "TopBar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "223", "data-component-file": "App.tsx", "data-component-name": "TopBar", "data-component-content": "%7B%22zenMode%22%3A%22%5BIdentifier%5D%22%2C%22onToggleZenMode%22%3A%22%5BIdentifier%5D%22%2C%22onAuthClick%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `h-screen flex flex-col bg-gray-50 overflow-hidden ${!["interactive", "challenge", "projects"].includes(state.mode) ? "canvas-mode" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:213:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "213", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:214:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "214", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20overflow-hidden%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `transition-all duration-200 ${zenMode ? "hidden" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:215:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "215", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ToolSidebar, { onNew: handleNew, onOpen: handleOpen, onSave: handleSave, onExport: () => setShowExportModal(true), disabled: !canEdit && roomState.isConnected, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:216:10", "data-matrix-name": "ToolSidebar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "216", "data-component-file": "App.tsx", "data-component-name": "ToolSidebar", "data-component-content": "%7B%22onNew%22%3A%22%5BIdentifier%5D%22%2C%22onOpen%22%3A%22%5BIdentifier%5D%22%2C%22onSave%22%3A%22%5BIdentifier%5D%22%2C%22onExport%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BLogicalExpression%5D%22%7D" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:218:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "218", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20flex%20flex-col%20overflow-hidden%22%7D", children: [
+        roomState.isConnected && roomState.role === "teacher" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:220:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "220", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-shrink-0%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TeacherControlPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:221:14", "data-matrix-name": "TeacherControlPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "221", "data-component-file": "App.tsx", "data-component-name": "TeacherControlPanel" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TopBar, { zenMode, onToggleZenMode: toggleZenMode, onAuthClick: () => setShowAuthModal(true), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:224:10", "data-matrix-name": "TopBar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "224", "data-component-file": "App.tsx", "data-component-name": "TopBar", "data-component-content": "%7B%22zenMode%22%3A%22%5BIdentifier%5D%22%2C%22onToggleZenMode%22%3A%22%5BIdentifier%5D%22%2C%22onAuthClick%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
         renderMainContent(),
-        !["interactive", "challenge", "projects"].includes(state.mode) && /* @__PURE__ */ jsxRuntimeExports.jsx(PageSwitcher, { pages: state.pages, activePageId: state.activePageId, onSwitch: switchPage, onAdd: addPage, onRemove: removePage, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:225:79", "data-matrix-name": "PageSwitcher", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "225", "data-component-file": "App.tsx", "data-component-name": "PageSwitcher", "data-component-content": "%7B%22pages%22%3A%22%5BMemberExpression%5D%22%2C%22activePageId%22%3A%22%5BMemberExpression%5D%22%2C%22onSwitch%22%3A%22%5BIdentifier%5D%22%2C%22onAdd%22%3A%22%5BIdentifier%5D%22%2C%22onRemove%22%3A%22%5BIdentifier%5D%22%7D" })
+        !["interactive", "challenge", "projects"].includes(state.mode) && /* @__PURE__ */ jsxRuntimeExports.jsx(PageSwitcher, { pages: state.pages, activePageId: state.activePageId, onSwitch: switchPage, onAdd: addPage, onRemove: removePage, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:226:78", "data-matrix-name": "PageSwitcher", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "226", "data-component-file": "App.tsx", "data-component-name": "PageSwitcher", "data-component-content": "%7B%22pages%22%3A%22%5BMemberExpression%5D%22%2C%22activePageId%22%3A%22%5BMemberExpression%5D%22%2C%22onSwitch%22%3A%22%5BIdentifier%5D%22%2C%22onAdd%22%3A%22%5BIdentifier%5D%22%2C%22onRemove%22%3A%22%5BIdentifier%5D%22%7D" })
       ] }),
-      !zenMode && !["interactive", "challenge", "library", "projects"].includes(state.mode) && (selectedObjects.length > 0 || ["freehand", "shape", "text"].includes(state.mode)) && /* @__PURE__ */ jsxRuntimeExports.jsx(PropertiesPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:227:186", "data-matrix-name": "PropertiesPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "227", "data-component-file": "App.tsx", "data-component-name": "PropertiesPanel" })
+      !zenMode && !["interactive", "challenge", "library", "projects"].includes(state.mode) && (selectedObjects.length > 0 || ["freehand", "shape", "text"].includes(state.mode)) && /* @__PURE__ */ jsxRuntimeExports.jsx(PropertiesPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:228:185", "data-matrix-name": "PropertiesPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "228", "data-component-file": "App.tsx", "data-component-name": "PropertiesPanel" })
     ] }),
-    showWelcome && /* @__PURE__ */ jsxRuntimeExports.jsx(WelcomeScreen, { onClose: () => setShowWelcome(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:229:22", "data-matrix-name": "WelcomeScreen", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "229", "data-component-file": "App.tsx", "data-component-name": "WelcomeScreen", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    showExportModal && /* @__PURE__ */ jsxRuntimeExports.jsx(ExportModal, { onClose: () => setShowExportModal(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:230:26", "data-matrix-name": "ExportModal", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "230", "data-component-file": "App.tsx", "data-component-name": "ExportModal", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    showAuthModal && /* @__PURE__ */ jsxRuntimeExports.jsx(AuthModal, { onClose: () => setShowAuthModal(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:231:24", "data-matrix-name": "AuthModal", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "231", "data-component-file": "App.tsx", "data-component-name": "AuthModal", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    uploadError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:233:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "233", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22fixed%20bottom-4%20right-4%20bg-red-100%20border%20border-red-400%20text-red-700%20px-4%20py-3%20rounded-lg%20shadow-lg%20z-50%20max-w-sm%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:234:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "234", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:235:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "235", "data-component-file": "App.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: uploadError }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setUploadError(null), className: "text-red-500 hover:text-red-700 font-bold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:236:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "236", "data-component-file": "App.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22text-red-500%20hover%3Atext-red-700%20font-bold%22%7D", children: "×" })
+    showWelcome && /* @__PURE__ */ jsxRuntimeExports.jsx(WelcomeScreen, { onClose: () => setShowWelcome(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:230:22", "data-matrix-name": "WelcomeScreen", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "230", "data-component-file": "App.tsx", "data-component-name": "WelcomeScreen", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
+    showExportModal && /* @__PURE__ */ jsxRuntimeExports.jsx(ExportModal, { onClose: () => setShowExportModal(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:231:26", "data-matrix-name": "ExportModal", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "231", "data-component-file": "App.tsx", "data-component-name": "ExportModal", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
+    showAuthModal && /* @__PURE__ */ jsxRuntimeExports.jsx(AuthModal, { onClose: () => setShowAuthModal(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:232:24", "data-matrix-name": "AuthModal", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "232", "data-component-file": "App.tsx", "data-component-name": "AuthModal", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
+    uploadError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:234:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "234", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22fixed%20bottom-4%20right-4%20bg-red-100%20border%20border-red-400%20text-red-700%20px-4%20py-3%20rounded-lg%20shadow-lg%20z-50%20max-w-sm%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:235:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "235", "data-component-file": "App.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:236:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "236", "data-component-file": "App.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-sm%22%7D", children: uploadError }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setUploadError(null), className: "text-red-500 hover:text-red-700 font-bold", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:237:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "237", "data-component-file": "App.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22text-red-500%20hover%3Atext-red-700%20font-bold%22%7D", children: "×" })
     ] }) })
   ] });
 }
 function App() {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(EditorProvider, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:246:4", "data-matrix-name": "EditorProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "246", "data-component-file": "App.tsx", "data-component-name": "EditorProvider", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CollaborationProvider, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:247:6", "data-matrix-name": "CollaborationProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "247", "data-component-file": "App.tsx", "data-component-name": "CollaborationProvider", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppContent, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:248:8", "data-matrix-name": "AppContent", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "248", "data-component-file": "App.tsx", "data-component-name": "AppContent" }) }) });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(EditorProvider, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:252:4", "data-matrix-name": "EditorProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "252", "data-component-file": "App.tsx", "data-component-name": "EditorProvider", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CollaborationProvider, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:253:6", "data-matrix-name": "CollaborationProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "253", "data-component-file": "App.tsx", "data-component-name": "CollaborationProvider", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppContent, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:254:8", "data-matrix-name": "AppContent", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "254", "data-component-file": "App.tsx", "data-component-name": "AppContent" }) }) });
 }
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -122271,4 +123185,4 @@ const queryClient = new QueryClient({
   }
 });
 clientExports.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.StrictMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:18:2", "data-matrix-name": "StrictMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "18", "data-component-file": "main.tsx", "data-component-name": "StrictMode", children: /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:19:4", "data-matrix-name": "QueryClientProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "19", "data-component-file": "main.tsx", "data-component-name": "QueryClientProvider", "data-component-content": "%7B%22client%22%3A%22%5BIdentifier%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorBoundary, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:21:8", "data-matrix-name": "App", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "21", "data-component-file": "main.tsx", "data-component-name": "App" }) }) }) }));
-//# sourceMappingURL=index-B6BFh75K.js.map
+//# sourceMappingURL=index-WFyyvO5i.js.map
