@@ -744,11 +744,11 @@ Problem Engine покрыт юнит-тестами (Vitest). Запуск: `pnp
 |------|--------|--------|
 | `adaptiveEngine.regression.test.ts` | `adaptiveEngine` — streak, accuracy, bounds, sliding window | 20 |
 | `answerValidator.edge.test.ts` | `answerValidator` — number, fraction, coordinate, interval, expression | 69 |
-| `expressionParser.test.ts` | `expressionParser` — арифметика, функции, переменные, edge cases | 37 |
+| `expressionParser.test.ts` | `expressionParser` — арифметика, функции, переменные, Cyrillic ternaries, String() | 45 |
 | `variantGenerator.test.ts` | `variantGenerator` — детерминизм, структура, constraints, expression params | 22 |
 | `variantGenerator.property.test.ts` | `variantGenerator` — property-based (fast-check): NaN/Infinity, детерминизм, constraint exhaustion | 455 |
 
-Итого: **603 теста**, все проходят. Часть тестов намеренно документирует известные баги (помечены комментарием `documents current behaviour`) — они фиксируют текущее поведение, не ожидаемое.
+Итого: **948 тестов** (включая все тест-файлы проекта), все проходят. Часть тестов намеренно документирует известные баги (помечены комментарием `documents current behaviour`) — они фиксируют текущее поведение, не ожидаемое.
 
 ### Стресс-тестирование (Property-based tests)
 
@@ -763,9 +763,9 @@ Problem Engine покрыт юнит-тестами (Vitest). Запуск: `pnp
 
 Запуск только PBT: `npx vitest run src/lib/__tests__/variantGenerator.property.test.ts`
 
-**Баги, обнаруженные PBT (не блокирующие, задокументированы):**
-- `expressionParser` не поддерживает `String()` — используется в `answer_formula` некоторых шаблонов с `answer_type: 'text'`; числовые шаблоны не затронуты
-- Глубоко вложенные ternary с кириллическими строками (`i===0?"рабочих":...`) вызывают `Expected :` в парсере; затрагивает только `expression`-параметры типа `choice` со строковыми значениями
+**Баги, обнаруженные PBT — исправлены в v3.2.1:**
+- ~~`expressionParser` не поддерживает `String()`~~ — исправлено: `String(x)` и `Number(x)` теперь поддерживаются в `parsePrimary()`
+- ~~Глубоко вложенные ternary с кириллическими строками вызывают `Expected :`~~ — исправлено: неполный ternary без `else`-ветки возвращает `0` вместо исключения
 
 ### Валидация ответов — гарантии
 
@@ -780,7 +780,7 @@ Problem Engine покрыт юнит-тестами (Vitest). Запуск: `pnp
 
 | Ограничение | Описание |
 |-------------|---------|
-| **Expression parser** | Работает только с числовыми выражениями. Строковые `choice`-параметры нельзя использовать в `answer_formula`. |
+| **Expression parser** | ~~Работает только с числовыми выражениями~~ — исправлено в v3.2.1. `String()`, `Number()` и кириллические ternary-цепочки теперь поддерживаются. |
 | **Numeric answer_formula** | Все шаблоны с `problemType: 'numeric'` должны возвращать числовое значение, не строку. |
 | **canvas_action** | Экспериментальный тип — требует интеграции с интерактивными модулями |
 | **Sync при разрыве соединения** | Если peer отключился во время bootstrap sync, canvas может быть неполным. В консоли появится предупреждение `[provider] sync timeout: peer was detected but did not respond`. |
@@ -861,7 +861,7 @@ Kaspersky и некоторые другие антивирусы перехва
 
 - [ ] Шаблоны задач 7 класса (алгебра + геометрия)
 - [ ] Расширение шаблонов 8 класса (новые темы)
-- [x] **Property-based тестирование шаблонов** — fast-check + variantGenerator; 455 PBT-тестов; обнаружены 2 бага в expressionParser (String() и глубокие кириллические ternary)
+- [x] **Property-based тестирование шаблонов** — fast-check + variantGenerator; 455 PBT-тестов; 2 бага в expressionParser обнаружены и исправлены (String() и кириллические ternary)
 - [x] **Debug-страница `/debug/templates`** — `TemplateDebug` компонент, доступен в dev-режиме по `/debug/templates`; группировка по классу, генерация 3–5 вариантов, NaN/Infinity badge
 - [ ] Дополнительные интерактивные модули (интегралы, 3D сечения)
 - [ ] Удаление debug-логов из SupabaseProvider перед релизом

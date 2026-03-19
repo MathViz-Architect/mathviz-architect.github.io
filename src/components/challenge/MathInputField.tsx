@@ -7,6 +7,7 @@ import { unifiedInputPipeline, getCursorState, processPhysicalKey, hasDecimalInN
 export interface MathInputFieldProps {
   value: string;
   onChange: (value: string) => void;
+  onSubmit?: () => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -16,6 +17,7 @@ export interface MathInputFieldProps {
 export const MathInputField: React.FC<MathInputFieldProps> = ({
   value,
   onChange,
+  onSubmit,
   placeholder = 'Введите ответ...',
   disabled = false,
   className = '',
@@ -87,7 +89,7 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
 
     if (newValue.length > oldValue.length) {
       const addedChar = newValue[oldValue.length];
-      
+
       if (addedChar === '.') {
         if (hasDecimalInNumber(newValue, oldValue.length + 1)) {
           input.value = oldValue;
@@ -108,12 +110,21 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
-    
+
     const input = inputRef.current;
     if (!input) return;
 
     const key = e.key;
     const currentValue = input.value;
+
+    // Enter submits the answer
+    if (key === 'Enter') {
+      if (onSubmit && value.trim()) {
+        e.preventDefault();
+        onSubmit();
+      }
+      return;
+    }
 
     if (key === 'Delete') {
       e.preventDefault();
@@ -165,7 +176,7 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
       action.value,
       action.direction
     );
-  }, [disabled, applyInput, onChange]);
+  }, [disabled, applyInput, onChange, onSubmit, value]);
 
   return (
     <div className={`relative ${className}`}>
@@ -182,8 +193,8 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
             disabled={disabled}
             autoFocus={autoFocus}
             className={`w-full px-4 py-3 pr-12 text-lg font-mono border-2 rounded-xl transition-all outline-none
-              ${disabled 
-                ? 'bg-slate-50 border-slate-300 text-slate-500 cursor-not-allowed' 
+              ${disabled
+                ? 'bg-slate-50 border-slate-300 text-slate-500 cursor-not-allowed'
                 : 'bg-white border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200'
               }`}
             onFocus={() => setIsKeyboardVisible(true)}
@@ -193,8 +204,8 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
             onClick={() => setIsKeyboardVisible(!isKeyboardVisible)}
             onMouseDown={(e) => e.preventDefault()}
             className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors
-              ${isKeyboardVisible 
-                ? 'bg-indigo-100 text-indigo-600' 
+              ${isKeyboardVisible
+                ? 'bg-indigo-100 text-indigo-600'
                 : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
               }`}
             tabIndex={-1}

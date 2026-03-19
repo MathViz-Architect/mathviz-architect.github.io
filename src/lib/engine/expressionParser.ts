@@ -66,7 +66,10 @@ function safeEval(expr: string, params: Record<string, number | string>): number
         if (peek().value === '?') {
             consume(); // ?
             const then = parseTernary();
-            if (peek().value !== ':') throw new Error('Expected :');
+            if (peek().value !== ':') {
+                // Incomplete ternary (no else branch) — treat as: cond ? then : 0
+                return cond ? then : 0;
+            }
             consume(); // :
             const else_ = parseTernary();
             return cond ? then : else_;
@@ -189,6 +192,8 @@ function safeEval(expr: string, params: Record<string, number | string>): number
                 if (name === 'Math.pow' || name === 'pow') return Math.pow(Number(args[0]), Number(args[1]));
                 if (name === 'Math.max' || name === 'max') return Math.max(...args.map(Number));
                 if (name === 'Math.min' || name === 'min') return Math.min(...args.map(Number));
+                if (name === 'String' || name === 'string') return String(args[0] ?? '');
+                if (name === 'Number' || name === 'number') return Number(args[0]);
                 throw new Error(`Unknown function: ${name}`);
             }
             // Variable

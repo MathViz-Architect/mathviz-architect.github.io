@@ -206,3 +206,48 @@ describe('evaluateFormula — string parameters', () => {
         expect(evaluateFormula('label', { label: 'x' })).toBe('x');
     });
 });
+
+// ─── Bug fixes: Cyrillic ternaries and String() ──────────────────────────────
+
+describe('evaluateFormula — Cyrillic string ternaries (bug fix)', () => {
+    it('simple Cyrillic ternary: true branch', () => {
+        expect(evaluateFormula('i === 0 ? "яблок" : "груш"', { i: 0 })).toBe('яблок');
+    });
+
+    it('simple Cyrillic ternary: false branch', () => {
+        expect(evaluateFormula('i === 0 ? "яблок" : "груш"', { i: 1 })).toBe('груш');
+    });
+
+    it('chained Cyrillic ternary (6 branches, no final else) — picks correct branch', () => {
+        const formula =
+            'i===0?"рабочих на стройке":i===1?"скорость машины":i===2?"кранов работает":i===3?"насосов откачивают":i===4?"бригад работает":i===5?"тракторов пашет"';
+        expect(evaluateFormula(formula, { i: 0 })).toBe('рабочих на стройке');
+        expect(evaluateFormula(formula, { i: 2 })).toBe('кранов работает');
+        expect(evaluateFormula(formula, { i: 5 })).toBe('тракторов пашет');
+    });
+
+    it('chained Cyrillic ternary — no match returns 0 (graceful fallback)', () => {
+        const formula = 'i===0?"первый":i===1?"второй"';
+        // i=2 hits the incomplete ternary — should return 0, not throw
+        expect(evaluateFormula(formula, { i: 2 })).toBe(0);
+    });
+});
+
+describe('evaluateFormula — String() function (bug fix)', () => {
+    it('String(number) returns string representation', () => {
+        expect(evaluateFormula('String(42)', {})).toBe('42');
+    });
+
+    it('String(variable) converts numeric param to string', () => {
+        expect(evaluateFormula('String(n)', { n: 7 })).toBe('7');
+    });
+
+    it('String() in ternary: r1 === r2 ? String(r1) : "different"', () => {
+        expect(evaluateFormula('r1 === r2 ? String(r1) : "different"', { r1: 3, r2: 3 })).toBe('3');
+        expect(evaluateFormula('r1 === r2 ? String(r1) : "different"', { r1: 3, r2: 5 })).toBe('different');
+    });
+
+    it('Number() converts string param to number', () => {
+        expect(evaluateFormula('Number(s) + 1', { s: '4' })).toBe(5);
+    });
+});
