@@ -40,6 +40,57 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    setupFiles: ['./src/test/setup.ts'],
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      'src/**/*.spec.{ts,tsx}'
+    ],
+    exclude: [
+      'node_modules',
+      'dist',
+      '.git',
+      '.idea',
+      '.cache',
+      '.output',
+      '.bun',
+      'coverage',
+      'electron',
+      '**/node_modules/**',
+      '**/.bun/**'
+    ],
+    css: true,
+    mockReset: true,
+    clearMocks: true,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: false
+      }
+    },
+    coverage: {
+      provider: "v8",
+      reporter: ["text"],
+
+      include: [
+        "src/math-core/**/*.ts",
+        "src/components/math-input/**/*.ts",
+        "src/lib/engine/**/*.ts",
+        "src/lib/math/**/*.ts"
+      ],
+
+      exclude: [
+        "node_modules/",
+        "dist/",
+        "coverage/",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.d.ts",
+
+        // large or non-critical code
+        "src/lib/templates/**",
+        "src/lib/db/**",
+        "src/components/**/ui/**"
+      ]
+    }
   },
 })

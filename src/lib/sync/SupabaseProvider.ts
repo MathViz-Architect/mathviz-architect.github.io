@@ -68,20 +68,44 @@ function isAwarenessMessage(msg: unknown): msg is AwarenessMessage {
 
 type AwarenessChangeListener = (states: Map<string, AwarenessState>) => void;
 
+// Internal state with timestamp for TTL-based stale cursor cleanup
+interface AwarenessStateWithTs extends AwarenessState {
+  _ts: number;
+}
+
+// How long (ms) a remote cursor is kept alive without a refresh.
+// If a peer closes the tab without a graceful disconnect, their cursor
+// disappears after this timeout instead of lingering forever.
+const AWARENESS_TTL_MS = 10_000;
+
 class SimpleAwareness {
   readonly clientId: string;
-  private states = new Map<string, AwarenessState>();
+  private states = new Map<string, AwarenessStateWithTs>();
   private listeners = new Set<AwarenessChangeListener>();
   private localState: AwarenessState | null = null;
+  private ttlInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.clientId = `client_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    // Periodically remove cursors that haven't been refreshed within TTL.
+    this.ttlInterval = setInterval(() => {
+      const now = Date.now();
+      let changed = false;
+      this.states.forEach((state, id) => {
+        if (id !== this.clientId && now - state._ts > AWARENESS_TTL_MS) {
+          this.states.delete(id);
+          changed = true;
+        }
+      });
+      if (changed) this.emit();
+    }, 5_000);
   }
 
   setLocalState(state: AwarenessState | null) {
     this.localState = state;
     if (state === null) this.states.delete(this.clientId);
-    else this.states.set(this.clientId, state);
+    else this.states.set(this.clientId, { ...state, _ts: Date.now() });
     this.emit();
   }
 
@@ -90,23 +114,43 @@ class SimpleAwareness {
     this.setLocalState({ ...current, [field]: value });
   }
 
-  getStates(): Map<string, AwarenessState> { return this.states; }
+  getStates(): Map<string, AwarenessState> {
+    // Return without internal _ts field so callers get clean AwarenessState
+    const clean = new Map<string, AwarenessState>();
+    this.states.forEach((state, id) => {
+      const { _ts, ...rest } = state;
+      clean.set(id, rest);
+    });
+    return clean;
+  }
   getLocalState(): AwarenessState | null { return this.localState; }
 
   applyRemoteState(clientId: string, state: AwarenessState | null) {
     if (state === null) this.states.delete(clientId);
-    else this.states.set(clientId, state);
+    else this.states.set(clientId, { ...state, _ts: Date.now() });
     this.emit();
   }
 
   on(_event: 'change', listener: AwarenessChangeListener) { this.listeners.add(listener); }
   off(_event: 'change', listener: AwarenessChangeListener) { this.listeners.delete(listener); }
 
-  private emit() { this.listeners.forEach(fn => fn(new Map(this.states))); }
-  destroy() { this.listeners.clear(); this.states.clear(); }
+  private emit() { this.listeners.forEach(fn => fn(this.getStates())); }
+  destroy() {
+    if (this.ttlInterval) clearInterval(this.ttlInterval);
+    this.listeners.clear();
+    this.states.clear();
+  }
 }
 
 // ─── SupabaseProvider ─────────────────────────────────────────────────────────
+
+/**
+ * Tracks bootstrap sync progress:
+ * - 'idle'             — sent sync-request, waiting to see if any peer exists
+ * - 'waiting_response' — received a sync-request from a peer (peer exists), waiting for sync-response
+ * - 'synced'           — sync-response received and applied, or timeout fired as first-in-room
+ */
+type SyncPhase = 'idle' | 'waiting_response' | 'synced';
 
 export class SupabaseProvider {
   doc: Y.Doc;
@@ -115,6 +159,7 @@ export class SupabaseProvider {
   private onSyncedCallback: (() => void) | null;
   private syncedFired = false;
   private syncTimeout: ReturnType<typeof setTimeout> | null = null;
+  private syncPhase: SyncPhase = 'idle';
 
   /**
    * @param onSynced — вызывается один раз после применения sync-response от peer.
@@ -138,8 +183,17 @@ export class SupabaseProvider {
 
     this.doc.on('update', this.onLocalUpdate);
 
-    // Fallback: если peers не ответили — мы первые в комнате.
-    this.syncTimeout = setTimeout(() => this.fireSynced(), 2000);
+    // Fallback timeout: fires if no sync-response arrives within 2s.
+    // Distinguishes between "first in room" (idle) and "peer dropped mid-sync" (waiting_response).
+    this.syncTimeout = setTimeout(() => {
+      if (this.syncPhase === 'waiting_response') {
+        // A peer sent a sync-request (so they exist) but never sent a sync-response.
+        // This can happen if the peer disconnected between our sync-request and their response.
+        // We still unblock the editor — the canvas may be incomplete, but blocking is worse.
+        console.warn('[provider] sync timeout: peer was detected but did not respond — canvas may be incomplete');
+      }
+      this.fireSynced();
+    }, 2000);
 
     this.channel
       .on('broadcast', { event: 'update' }, (msg) => {
@@ -164,7 +218,13 @@ export class SupabaseProvider {
           console.warn('[provider] malformed sync-response message', msg);
           return;
         }
-        Y.applyUpdate(this.doc, new Uint8Array(msg.payload.update), this);
+        try {
+          Y.applyUpdate(this.doc, new Uint8Array(msg.payload.update), this);
+        } catch (err) {
+          console.error('[provider] failed to apply sync-response — payload may be corrupt', err);
+          // Still unblock the editor; canvas may be empty but a crash is worse.
+        }
+        this.syncPhase = 'synced';
         if (this.syncTimeout) { clearTimeout(this.syncTimeout); this.syncTimeout = null; }
         this.fireSynced();
       })
@@ -223,6 +283,10 @@ export class SupabaseProvider {
   }
 
   private onSyncRequest(msg: SyncRequestMessage) {
+    // A peer exists and is requesting our state — mark that we're now waiting for their response.
+    if (this.syncPhase === 'idle') {
+      this.syncPhase = 'waiting_response';
+    }
     const sv = new Uint8Array(msg.payload.stateVector);
     const update = Y.encodeStateAsUpdate(this.doc, sv);
     console.log('[provider] responding to sync-request with', update.length, 'bytes');

@@ -13,12 +13,14 @@ import { findNearbyPoint, SNAP_RADIUS } from '@/lib/geometry';
 import { ResizeHandle, calculateResize, getHandleCursor } from '@/lib/canvas/resizeImage';
 import { useAppState } from '@/hooks/useAppState';
 import { ResizeObjectCommand } from '@/lib/commands';
+import { useFreehandTool } from './canvas/tools/useFreehandTool';
+import { useViewportCulling } from './canvas/useViewportCulling';
 
 export const Canvas: React.FC = () => {
   const CANVAS_WIDTH = 2000;
   const CANVAS_HEIGHT = 2000;
   const CANVAS_PADDING = 100;
-  
+
   const {
     state, zoom, setZoom, showGrid, gridWeight, selectObject: onSelectObject, selectMultiple: onSelectMultiple,
     updateObject: onUpdateObject, updateObjectDirect, executeCommand, setObjectsFn, handleAddObject: onAddObject, handleDeleteObject: onDeleteObject,
@@ -35,6 +37,10 @@ export const Canvas: React.FC = () => {
   const publishState = useCallback(() => {
     publishLocalChange(getCanvasSnapshot());
   }, [publishLocalChange, getCanvasSnapshot]);
+
+  // ─── Tool hooks ─────────────────────────────────────────────────────────────
+  const freehand = useFreehandTool({ penSettings, onAddObject, publishState });
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -43,6 +49,7 @@ export const Canvas: React.FC = () => {
   const [dragDelta, setDragDelta] = useState<{ dx: number; dy: number } | null>(null);
   const dragStartObjectsRef = useRef<AnyCanvasObject[]>([]);
   const [canvasSize, setCanvasSize] = useState({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -69,10 +76,12 @@ export const Canvas: React.FC = () => {
   const [anglePointBId, setAnglePointBId] = useState<string | null>(null);
   const [anglePreview, setAnglePreview] = useState<Point | null>(null);
   const [snapTarget, setSnapTarget] = useState<{ x: number; y: number; snapped: boolean } | null>(null);
-  const [isDrawingFreehand, setIsDrawingFreehand] = useState(false);
-  const [freehandPoints, setFreehandPoints] = useState<{ x: number; y: number }[]>([]);
-  const freehandLastPointRef = useRef<{ x: number; y: number } | null>(null);
   const [panOffset, setPanOffset] = useState<Point>({ x: 0, y: 0 });
+
+  // ─── Viewport culling ────────────────────────────────────────────────────────
+  // Only render objects visible in the current viewport. Improves performance
+  // significantly when the canvas has 500+ objects.
+  const visibleObjects = useViewportCulling(objects, zoom, panOffset, viewportSize.width, viewportSize.height);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<Point | null>(null);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
@@ -155,11 +164,12 @@ export const Canvas: React.FC = () => {
   };
 
   useEffect(() => {
-    const updateSize = () => { 
-      if (canvasRef.current) { 
-        const rect = canvasRef.current.getBoundingClientRect(); 
-        setCanvasSize({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }); 
-      } 
+    const updateSize = () => {
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        setCanvasSize({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
+        setViewportSize({ width: rect.width, height: rect.height });
+      }
     };
     updateSize();
     window.addEventListener('resize', updateSize);
@@ -223,7 +233,7 @@ export const Canvas: React.FC = () => {
   useEffect(() => {
     const canvasEl = canvasRef.current;
     if (!canvasEl) return;
-    
+
     canvasEl.addEventListener('wheel', handleWheelNative, { passive: false });
     return () => canvasEl.removeEventListener('wheel', handleWheelNative);
   }, [handleWheelNative]);
@@ -255,22 +265,22 @@ export const Canvas: React.FC = () => {
   // Resize handlers for images
   const handleImageResizeStart = useCallback((handle: ResizeHandle, e: React.MouseEvent) => {
     if (!canEdit || mode === 'line' || mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser' || mode === 'freehand') return;
-    
+
     const objectId = selectedObjectIds.find(id => {
       const obj = objects.find(o => o.id === id);
       return obj?.type === 'image';
     });
-    
+
     if (!objectId) return;
-    
+
     const obj = objects.find(o => o.id === objectId);
     if (!obj || obj.locked) return;
-    
+
     const svgRect = canvasRef.current?.getBoundingClientRect();
     if (!svgRect) return;
-    
+
     const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height, zoom, panOffset.x, panOffset.y);
-    
+
     setIsResizing(true);
     setResizeHandle(handle);
     setResizeStartPos({ x, y });
@@ -281,11 +291,11 @@ export const Canvas: React.FC = () => {
 
   const handleImageResizeMove = useCallback((x: number, y: number, shiftKey: boolean = false) => {
     if (!isResizing || !resizeHandle || !resizeStartPos || !resizeObjectId || !resizeObjectRef.current) return;
-    
+
     const deltaX = x - resizeStartPos.x;
     const deltaY = y - resizeStartPos.y;
     const preserveAspectRatio = shiftKey;
-    
+
     const newBounds = calculateResize(
       resizeObjectRef.current,
       resizeHandle,
@@ -293,7 +303,7 @@ export const Canvas: React.FC = () => {
       deltaY,
       preserveAspectRatio
     );
-    
+
     // Update the object locally without command history during drag
     updateObjectDirect(resizeObjectId, newBounds);
   }, [isResizing, resizeHandle, resizeStartPos, resizeObjectId, updateObjectDirect]);
@@ -308,7 +318,7 @@ export const Canvas: React.FC = () => {
       resizeOriginalRef.current = null;
       return;
     }
-    
+
     // Create a ResizeObjectCommand with original and current (final) bounds
     // The object is already at final state via updateObjectDirect
     // execute(): apply final bounds (no-op since already done)
@@ -328,14 +338,14 @@ export const Canvas: React.FC = () => {
       });
       executeCommand(command);
     }
-    
+
     setIsResizing(false);
     setResizeHandle(null);
     setResizeStartPos(null);
     setResizeObjectId(null);
     resizeObjectRef.current = null;
     resizeOriginalRef.current = null;
-    
+
     // Publish to collaboration
     publishState();
   }, [isResizing, resizeHandle, resizeStartPos, resizeObjectId, objects, setObjectsFn, executeCommand, publishState]);
@@ -421,13 +431,13 @@ export const Canvas: React.FC = () => {
     }
     if (mode === 'geosegment') { handleSegmentClick(x, y); e.stopPropagation(); }
     if (mode === 'geoangle') { handleAngleClick(x, y); e.stopPropagation(); }
-    if (mode === 'freehand') { setIsDrawingFreehand(true); const firstPoint = { x, y }; setFreehandPoints([firstPoint]); freehandLastPointRef.current = firstPoint; e.stopPropagation(); }
+    if (mode === 'freehand') { freehand.onMouseDown(x, y); e.stopPropagation(); }
     if (mode === 'shape') { setIsDrawingShape(true); setShapeDrawStart({ x, y }); setShapeDrawEnd({ x, y }); e.stopPropagation(); }
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (isPanning && panStart) { 
-      const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y; 
+    if (isPanning && panStart) {
+      const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y;
       const viewportRect = canvasRef.current?.getBoundingClientRect();
       const viewportWidth = viewportRect?.width ?? 800;
       const viewportHeight = viewportRect?.height ?? 600;
@@ -438,9 +448,9 @@ export const Canvas: React.FC = () => {
       const minPanY = Math.min(0, viewportHeight - scaledHeight) - CANVAS_PADDING;
       const maxPanY = Math.max(0, viewportHeight - scaledHeight) + CANVAS_PADDING;
       const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-      setPanOffset(prev => ({ x: clamp(prev.x + dx, minPanX, maxPanX), y: clamp(prev.y + dy, minPanY, maxPanY) })); 
-      setPanStart({ x: e.clientX, y: e.clientY }); 
-      return; 
+      setPanOffset(prev => ({ x: clamp(prev.x + dx, minPanX, maxPanX), y: clamp(prev.y + dy, minPanY, maxPanY) }));
+      setPanStart({ x: e.clientX, y: e.clientY });
+      return;
     }
     const svgRect = canvasRef.current?.getBoundingClientRect();
     if (!svgRect) return;
@@ -473,10 +483,7 @@ export const Canvas: React.FC = () => {
       if (near) { const nx = near.x + near.width / 2, ny = near.y + near.height / 2; setSnapTarget({ x: nx, y: ny, snapped: true }); } else setSnapTarget(null);
     }
     if (mode === 'shape' && isDrawingShape) { setShapeDrawEnd({ x, y }); return; }
-    if (mode === 'freehand' && isDrawingFreehand) {
-      const last = freehandLastPointRef.current;
-      if (!last || Math.hypot(x - last.x, y - last.y) > 2) { const pt = { x, y }; setFreehandPoints(prev => [...prev, pt]); freehandLastPointRef.current = pt; }
-    }
+    if (mode === 'freehand' && freehand.isDrawing) { freehand.onMouseMove(x, y); }
   };
 
   const handleCanvasMouseUp = (e: React.MouseEvent) => {
@@ -533,15 +540,9 @@ export const Canvas: React.FC = () => {
       }
       publishState(); return;
     }
-    if (isDrawingFreehand) {
-      setIsDrawingFreehand(false); freehandLastPointRef.current = null;
-      if (freehandPoints.length >= 2) {
-        const xs = freehandPoints.map(p => p.x), ys = freehandPoints.map(p => p.y);
-        const minX = Math.min(...xs), minY = Math.min(...ys), maxX = Math.max(...xs), maxY = Math.max(...ys);
-        const newPath: AnyCanvasObject = { id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, type: 'freehand', x: minX, y: minY, width: Math.max(maxX - minX, 1), height: Math.max(maxY - minY, 1), rotation: 0, opacity: 1, visible: true, locked: false, data: { points: freehandPoints, color: penSettings.color, width: penSettings.width } };
-        onAddObject(newPath);
-      }
-      setFreehandPoints([]); publishState(); return;
+    if (freehand.isDrawing) {
+      freehand.onMouseUp();
+      return;
     }
     if (isDragging) {
       if (dragDelta && dragStartObjectsRef.current.length > 0) {
@@ -599,19 +600,19 @@ export const Canvas: React.FC = () => {
         </div>
       )}
 
-        <div className="absolute top-3 right-3 z-10">
-          {roomState.isConnected && roomState.roomId && <span className="text-xs bg-green-100 text-green-700 border border-green-300 rounded-full px-2 py-0.5 select-none">Комната активна</span>}
-        </div>
+      <div className="absolute top-3 right-3 z-10">
+        {roomState.isConnected && roomState.roomId && <span className="text-xs bg-green-100 text-green-700 border border-green-300 rounded-full px-2 py-0.5 select-none">Комната активна</span>}
+      </div>
 
       <div ref={canvasRef} className={`canvas-viewport w-full h-full overflow-hidden select-none ${!canEdit ? 'pointer-events-none' : ''}`}
         onClick={handleCanvasClick} onDoubleClick={handleCanvasDoubleClick} onMouseDown={handleCanvasMouseDown} onMouseMove={handleCanvasMouseMove} onMouseUp={handleCanvasMouseUp}
         onWheel={handleWheel}
-        onMouseLeave={() => { updateCursor(null); setSnapTarget(null); if (isPanning) { setIsPanning(false); setPanStart(null); } else if (isResizing) { handleImageResizeEnd(); } else if (isDrawingArrow) { setIsDrawingArrow(false); setArrowStart(null); setArrowEnd(null); } else if (isDrawingLine) { setIsDrawingLine(false); setLineStart(null); setLineEnd(null); } else if (isErasing) { setIsErasing(false); } else if (isDrawingFreehand) { setIsDrawingFreehand(false); setFreehandPoints([]); freehandLastPointRef.current = null; } else if (isMarqueeSelecting) { setIsMarqueeSelecting(false); setMarqueeStart(null); setMarqueeEnd(null); } else handleMouseUp(); }}
+        onMouseLeave={() => { updateCursor(null); setSnapTarget(null); if (isPanning) { setIsPanning(false); setPanStart(null); } else if (isResizing) { handleImageResizeEnd(); } else if (isDrawingArrow) { setIsDrawingArrow(false); setArrowStart(null); setArrowEnd(null); } else if (isDrawingLine) { setIsDrawingLine(false); setLineStart(null); setLineEnd(null); } else if (isErasing) { setIsErasing(false); } else if (freehand.isDrawing) { freehand.onMouseUp(); } else if (isMarqueeSelecting) { setIsMarqueeSelecting(false); setMarqueeStart(null); setMarqueeEnd(null); } else handleMouseUp(); }}
         style={{ cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : isResizing && resizeHandle ? getHandleCursor(resizeHandle) : ['arrow', 'line', 'eraser', 'draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle', 'freehand', 'shape'].includes(mode) ? 'crosshair' : 'default' }}>
-        
-        <div 
+
+        <div
           className="canvas-world"
-          style={{ 
+          style={{
             transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
             transformOrigin: '0 0'
           }}
@@ -623,7 +624,7 @@ export const Canvas: React.FC = () => {
               if (mode === 'select' && e.target === e.currentTarget) { const viewportRect = canvasRef.current?.getBoundingClientRect(); if (!viewportRect) return; const { x, y } = screenToCanvas(e.clientX, e.clientY, viewportRect, canvasSize.width, canvasSize.height, zoom, panOffset.x, panOffset.y); setIsMarqueeSelecting(true); setMarqueeStart({ x, y }); setMarqueeEnd({ x, y }); e.stopPropagation(); }
             }}>
             {renderGrid()}
-            {objects.filter((o) => o.visible).map((obj) => (<ObjectRenderer key={obj.id} obj={obj} isSelected={selectedObjectIds.includes(obj.id)} dragDelta={isDragging ? dragDelta : null} objects={objects} editingTextId={editingTextId} editingText={editingText} editingTextSize={editingTextSize} canvasWidth={canvasSize.width} textareaRef={textareaRef} onMouseDown={handleObjectMouseDown} onTextDoubleClick={handleTextDoubleClick} onEditingTextChange={setEditingText} onTextEditComplete={handleTextEditComplete} onTextEditCancel={() => { setEditingTextId(null); setEditingText(''); setEditingTextSize(null); }} onAutoResize={autoResizeTextarea} zoom={zoom} onImageResizeStart={handleImageResizeStart} />))}
+            {visibleObjects.filter((o) => o.visible).map((obj) => (<ObjectRenderer key={obj.id} obj={obj} isSelected={selectedObjectIds.includes(obj.id)} dragDelta={isDragging ? dragDelta : null} objects={objects} editingTextId={editingTextId} editingText={editingText} editingTextSize={editingTextSize} canvasWidth={canvasSize.width} textareaRef={textareaRef} onMouseDown={handleObjectMouseDown} onTextDoubleClick={handleTextDoubleClick} onEditingTextChange={setEditingText} onTextEditComplete={handleTextEditComplete} onTextEditCancel={() => { setEditingTextId(null); setEditingText(''); setEditingTextSize(null); }} onAutoResize={autoResizeTextarea} zoom={zoom} onImageResizeStart={handleImageResizeStart} />))}
             {canEdit && isDrawingArrow && arrowStart && arrowEnd && (calculateDistance(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y) > 5) && (() => { const angle = calculateArrowAngle(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y); const head = calculateArrowHeadPoints(arrowEnd.x, arrowEnd.y, angle, 15, 'forward'); return <g opacity={0.5}><line x1={arrowStart.x} y1={arrowStart.y} x2={arrowEnd.x} y2={arrowEnd.y} stroke="#374151" strokeWidth={2} strokeDasharray="5,5" /><polygon points={`${arrowEnd.x},${arrowEnd.y} ${head.point1X},${head.point1Y} ${head.point2X},${head.point2Y}`} fill="#374151" /></g>; })()}
             {canEdit && isDrawingLine && lineStart && lineEnd && (calculateDistance(lineStart.x, lineStart.y, lineEnd.x, lineEnd.y) > 5) && <line x1={lineStart.x} y1={lineStart.y} x2={lineEnd.x} y2={lineEnd.y} stroke="#374151" strokeWidth={2} strokeDasharray="5,5" strokeLinecap="round" opacity={0.6} />}
             {canEdit && isMarqueeSelecting && marqueeStart && marqueeEnd && <rect x={Math.min(marqueeStart.x, marqueeEnd.x)} y={Math.min(marqueeStart.y, marqueeEnd.y)} width={Math.abs(marqueeEnd.x - marqueeStart.x)} height={Math.abs(marqueeEnd.y - marqueeStart.y)} fill="rgba(59,130,246,0.1)" stroke="#3b82f6" strokeDasharray="4,4" strokeWidth={1} />}
@@ -631,7 +632,7 @@ export const Canvas: React.FC = () => {
             {canEdit && mode === 'geosegment' && segmentStep === 1 && segmentPointAId && segmentPreview && (() => { const ptA = objects.find(o => o.id === segmentPointAId); if (!ptA) return null; return <line x1={ptA.x + ptA.width / 2} y1={ptA.y + ptA.height / 2} x2={segmentPreview.x} y2={segmentPreview.y} stroke="#374151" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" opacity={0.5} />; })()}
             {canEdit && mode === 'geoangle' && anglePreview && (() => { if (angleStep === 1 && anglePointAId) { const ptA = objects.find(o => o.id === anglePointAId); if (!ptA) return null; return <line x1={ptA.x + ptA.width / 2} y1={ptA.y + ptA.height / 2} x2={anglePreview.x} y2={anglePreview.y} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" opacity={0.5} />; } if (angleStep === 2 && anglePointAId && anglePointBId) { const ptA = objects.find(o => o.id === anglePointAId), ptB = objects.find(o => o.id === anglePointBId); if (!ptA || !ptB) return null; return <g opacity={0.5}><line x1={ptA.x + ptA.width / 2} y1={ptA.y + ptA.height / 2} x2={ptB.x + ptB.width / 2} y2={ptB.y + ptB.height / 2} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" /><line x1={ptB.x + ptB.width / 2} y1={ptB.y + ptB.height / 2} x2={anglePreview.x} y2={anglePreview.y} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" /></g>; } return null; })()}
             {canEdit && snapTarget && ['geosegment', 'geoangle', 'geopoint'].includes(mode) && <circle cx={snapTarget.x} cy={snapTarget.y} r={snapTarget.snapped ? 9 : 5} fill="none" stroke={snapTarget.snapped ? '#10B981' : '#7C3AED'} strokeWidth={snapTarget.snapped ? 2.5 : 1.5} strokeDasharray={snapTarget.snapped ? undefined : '3,3'} opacity={0.8} style={{ pointerEvents: 'none' }} />}
-            {canEdit && isDrawingFreehand && freehandPoints.length >= 2 && <path d={buildSmoothPath(freehandPoints)} stroke={penSettings.color} strokeWidth={penSettings.width} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.7} style={{ pointerEvents: 'none' }} />}
+            {canEdit && freehand.overlay && freehand.overlay.points.length >= 2 && <path d={buildSmoothPath(freehand.overlay.points)} stroke={freehand.overlay.color} strokeWidth={freehand.overlay.width} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.7} style={{ pointerEvents: 'none' }} />}
           </svg>
         </div>
       </div>

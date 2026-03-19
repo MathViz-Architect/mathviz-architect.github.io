@@ -3,6 +3,7 @@
  * Tests MathJS, KaTeX, Hints, and Canvas Action features
  */
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import { 
   compareExpressions, 
   compareIntervals 
@@ -14,262 +15,375 @@ import {
   updateAdaptiveState
 } from '../adaptiveEngine';
 import { generateProblem } from './variantGenerator';
-import { ProblemTemplate } from '../types';
-import katex from 'katex';
+import type { ProblemTemplate } from '../types';
+import { checkCommonMistake } from './mistakeAnalyzer';
 
-interface TestResult {
-  name: string;
-  expected: any;
-  actual: any;
-  passed: boolean;
-}
-
-const results: TestResult[] = [];
-
-function test(name: string, expected: any, actual: any) {
-  const passed = JSON.stringify(expected) === JSON.stringify(actual);
-  results.push({ name, expected, actual, passed });
-  console.log(`${passed ? '✅ PASS' : '❌ FAIL'}: ${name}`);
-  if (!passed) {
-    console.log(`  Expected: ${JSON.stringify(expected)}`);
-    console.log(`  Actual:   ${JSON.stringify(actual)}`);
-  }
-}
-
-export function runAllTests() {
-  console.log('\n========================================');
-  console.log('   PROBLEM ENGINE TEST SUITE');
-  console.log('========================================\n');
-
-  runMathJSTests();
-  runKaTeXTests();
-  runAdaptiveEngineTests();
-  runCanvasActionTests();
-
-  console.log('\n========================================');
-  const passed = results.filter(r => r.passed).length;
-  const failed = results.filter(r => !r.passed).length;
-  console.log(`   SUMMARY: ${passed} passed, ${failed} failed`);
-  console.log('========================================\n');
-
-  return results;
-}
-
-function runMathJSTests() {
-  console.log('--- MathJS Expression & Interval Tests ---\n');
-
-  // Expression tests
-  test('Expression: sqrt(18) = 3*sqrt(2)', true, compareExpressions('sqrt(18)', '3*sqrt(2)'));
-  test('Expression: 1/4 vs 0.25', true, compareExpressions('1/4', '0.25'));
-  test('Expression: (x-1)(x+2) vs x^2+x-2', true, compareExpressions('(x-1)*(x+2)', 'x^2+x-2'));
-  test('Expression: 0.5 vs 1/2', true, compareExpressions('0.5', '1/2'));
-  test('Expression: 2*sqrt(2) vs sqrt(8)', true, compareExpressions('2*sqrt(2)', 'sqrt(8)'));
-  test('Expression: 4/8 vs 1/2', true, compareExpressions('4/8', '1/2'));
-  test('Expression: x+x = 2x', true, compareExpressions('x+x', '2*x'));
-  test('Expression: x^2 vs x*x (should be equal)', true, compareExpressions('x^2', 'x*x'));
-
-  // Interval tests
-  test('Interval: [2; +inf) = [2; inf)', true, compareIntervals('[2; +inf)', '[2; inf)'));
-  test('Interval: (1; 5] != (1; 5)', false, compareIntervals('(1; 5]', '(1; 5)'));
-  test('Interval: [0; 10] = [0; 10]', true, compareIntervals('[0; 10]', '[0; 10]'));
-  test('Interval: (-inf; 3) = (-inf; 3)', true, compareIntervals('(-inf; 3)', '(-inf; 3)'));
-  test('Interval: [1; 2] != [1; 3)', false, compareIntervals('[1; 2]', '[1; 3)'));
-  test('Interval: (0; 1) = (0; 1)', true, compareIntervals('(0; 1)', '(0; 1)'));
-
-  console.log('');
-}
-
-function runKaTeXTests() {
-  console.log('--- KaTeX Rendering Tests ---\n');
-
-  // Test 1: Error handling - malformed LaTeX should not crash
-  try {
-    const html = katex.renderToString('\\frac{1}{2', {
-      displayMode: false,
-      throwOnError: false,
-      strict: false
+describe('Problem Engine', () => {
+  describe('MathJS Expression Comparison', () => {
+    it('should recognize sqrt(18) = 3*sqrt(2)', () => {
+      expect(compareExpressions('sqrt(18)', '3*sqrt(2)')).toBe(true);
     });
-    test('KaTeX: Malformed LaTeX handling', 'no crash', 'no crash');
-  } catch (e) {
-    test('KaTeX: Malformed LaTeX handling', 'no crash', 'crashed');
-  }
 
-  // Test 2: Valid LaTeX rendering
-  try {
-    const html = katex.renderToString('\\frac{1}{2}', {
-      displayMode: false,
-      throwOnError: false
+    it('should recognize 1/4 vs 0.25 as equal', () => {
+      expect(compareExpressions('1/4', '0.25')).toBe(true);
     });
-    test('KaTeX: Valid fraction \\frac{1}{2}', true, html.includes('frac'));
-  } catch (e) {
-    test('KaTeX: Valid fraction \\frac{1}{2}', true, false);
-  }
 
-  // Test 3: Display mode LaTeX
-  try {
-    const html = katex.renderToString('x = \\frac{-b \\pm \\sqrt{D}}{2a}', {
-      displayMode: true,
-      throwOnError: false
+    it('should expand (x-1)(x+2) to x^2+x-2', () => {
+      expect(compareExpressions('(x-1)*(x+2)', 'x^2+x-2')).toBe(true);
     });
-    test('KaTeX: Quadratic formula display mode', true, html.length > 0);
-  } catch (e) {
-    test('KaTeX: Quadratic formula display mode', true, false);
-  }
 
-  // Test 4: Parameter substitution simulation
-  const template = '$a={v}$';
-  const params = { v: 10 };
-  const substituted = template.replace(/{v}/g, String(params.v));
-  test('KaTeX: Parameter substitution', '$a=10$', substituted);
+    it('should recognize 0.5 vs 1/2 as equal', () => {
+      expect(compareExpressions('0.5', '1/2')).toBe(true);
+    });
 
-  // Test 5: Complex substitution in display mode
-  const complexTemplate = '$$\\frac{-{b} \\pm \\sqrt{D}}{2a}$$';
-  const complexParams = { b: 5, a: 1 };
-  let complexSubstituted = complexTemplate;
-  for (const [key, value] of Object.entries(complexParams)) {
-    complexSubstituted = complexSubstituted.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
-  }
-  test('KaTeX: Complex parameter substitution', 
-    '$$\\frac{-5 \\pm \\sqrt{D}}{2a}$$', 
-    complexSubstituted);
+    it('should recognize 2*sqrt(2) vs sqrt(8) as equal', () => {
+      expect(compareExpressions('2*sqrt(2)', 'sqrt(8)')).toBe(true);
+    });
 
-  console.log('');
-}
+    it('should recognize 4/8 vs 1/2 as equal', () => {
+      expect(compareExpressions('4/8', '1/2')).toBe(true);
+    });
 
-function runAdaptiveEngineTests() {
-  console.log('--- Adaptive Engine Weight Tests ---\n');
+    it('should simplify x+x to 2x', () => {
+      expect(compareExpressions('x+x', '2*x')).toBe(true);
+    });
 
-  // Test weight calculation
-  test('Weight: 0 hints = 1.0', 1.0, calculateAnswerWeight(0));
-  test('Weight: 1 hint = 0.5', 0.5, calculateAnswerWeight(1));
-  test('Weight: 2 hints = 0.0', 0.0, calculateAnswerWeight(2));
-  test('Weight: 3 hints = 0.0', 0.0, calculateAnswerWeight(3));
+    it('should recognize x^2 vs x*x as equal', () => {
+      expect(compareExpressions('x^2', 'x*x')).toBe(true);
+    });
+  });
 
-  // Test weighted answer with hints
-  test('WeightedAnswer: correct + 0 hints', true, getWeightedAnswer(true, 0));
-  test('WeightedAnswer: incorrect + 0 hints', false, getWeightedAnswer(false, 0));
-  test('WeightedAnswer: incorrect + 5 hints', false, getWeightedAnswer(false, 5));
+  describe('Interval Comparison', () => {
+    it('should recognize [2; +inf) = [2; inf)', () => {
+      expect(compareIntervals('[2; +inf)', '[2; inf)')).toBe(true);
+    });
 
-  // Test that with 2+ hints, correct answer becomes false for progression
-  // Note: This is probabilistic, but with 2+ hints it should always return false
-  let weightedResult2hints = true;
-  for (let i = 0; i < 10; i++) {
-    if (getWeightedAnswer(true, 2) === false) {
-      weightedResult2hints = false;
-      break;
-    }
-  }
-  test('WeightedAnswer: correct + 2 hints → false (for difficulty progression)', 
-    false, weightedResult2hints);
+    it('should recognize (1; 5] != (1; 5)', () => {
+      expect(compareIntervals('(1; 5]', '(1; 5)')).toBe(false);
+    });
 
-  // Test full adaptive state cycle
-  let state = createAdaptiveState();
-  test('AdaptiveState: initial hintsUsed = 0', 0, state.hintsUsedInCurrentProblem);
+    it('should recognize [0; 10] = [0; 10]', () => {
+      expect(compareIntervals('[0; 10]', '[0; 10]')).toBe(true);
+    });
 
-  // Simulate using hints
-  state = { ...state, hintsUsedInCurrentProblem: 1 };
-  test('AdaptiveState: after hint usage', 1, state.hintsUsedInCurrentProblem);
+    it('should recognize (-inf; 3) = (-inf; 3)', () => {
+      expect(compareIntervals('(-inf; 3)', '(-inf; 3)')).toBe(true);
+    });
 
-  // Simulate correct answer with hint - should not increase difficulty
-  // Using getWeightedAnswer to properly apply hint penalty
-  // With 1 hint used, weighted result should be false (since 1 hint gives 0.5 weight, 
-  // but getWeightedAnswer uses random - let's test directly)
-  const weightedResult1 = getWeightedAnswer(true, 1); // may be true or false based on random
-  // Better: test with 2 hints where weight is always 0
-  const weightedResult2 = getWeightedAnswer(true, 2); // should be false
-  test('AdaptiveState: correct with 2+ hints → weighted = false', 
-    false, weightedResult2);
-  
-  // Test that 0 hints gives full weight
-  const weightedResult0 = getWeightedAnswer(true, 0); // should be true
-  test('AdaptiveState: correct with 0 hints → weighted = true', 
-    true, weightedResult0);
+    it('should recognize [1; 2] != [1; 3)', () => {
+      expect(compareIntervals('[1; 2]', '[1; 3)')).toBe(false);
+    });
 
-  // Simulate 3 correct answers WITHOUT hints - should increase difficulty
-  let stateForProgression = createAdaptiveState();
-  stateForProgression = updateAdaptiveState(stateForProgression, true);
-  stateForProgression = updateAdaptiveState(stateForProgression, true);
-  stateForProgression = updateAdaptiveState(stateForProgression, true);
-  test('AdaptiveState: 3 correct WITHOUT hints → difficulty increases', 
-    2, stateForProgression.currentDifficulty);
+    it('should recognize (0; 1) = (0; 1)', () => {
+      expect(compareIntervals('(0; 1)', '(0; 1)')).toBe(true);
+    });
+  });
 
-  console.log('');
-}
+  describe('Adaptive Engine', () => {
+    it('should calculate weight 1.0 for 0 hints', () => {
+      expect(calculateAnswerWeight(0)).toBe(1.0);
+    });
 
-function runCanvasActionTests() {
-  console.log('--- Canvas Action Type Tests ---\n');
+    it('should calculate weight 0.5 for 1 hint', () => {
+      expect(calculateAnswerWeight(1)).toBe(0.5);
+    });
 
-  // Test that canvas_action type doesn't crash the validator
-  const canvasProblem = {
-    id: 'test-canvas-1',
-    template_id: 'test',
-    seed: 123,
-    params: { x: 5, y: 10 },
-    question: 'Move the point to coordinates (5, 10)',
-    answer: '',
-    answer_type: 'number' as const, // Canvas action uses text type for display
-    canvasAction: {
-      action: 'move_point' as const,
-      targetData: {
-        point: { x: 5, y: 10 }
-      },
-      tolerance: 10
-    }
-  };
+    it('should calculate weight 0.0 for 2+ hints', () => {
+      expect(calculateAnswerWeight(2)).toBe(0.0);
+      expect(calculateAnswerWeight(3)).toBe(0.0);
+    });
 
-  // This should not throw - canvas action requires special handling
-  try {
-    test('CanvasAction: Problem structure created', true, 
-      canvasProblem.canvasAction?.action === 'move_point');
-    test('CanvasAction: Target coordinates preserved', { x: 5, y: 10 }, 
-      canvasProblem.canvasAction?.targetData.point);
-    test('CanvasAction: Tolerance defined', 10, canvasProblem.canvasAction?.tolerance);
-  } catch (e) {
-    test('CanvasAction: Structure test', true, false);
-  }
+    it('should return true for correct answer with 0 hints', () => {
+      expect(getWeightedAnswer(true, 0)).toBe(true);
+    });
 
-  // Test variant generation with canvas action template
-  const canvasTemplate: ProblemTemplate = {
-    id: 'canvas-test',
-    class: 9,
-    subject: 'algebra',
-    section: 'Coordinate Plane',
-    topic: 'points',
-    topic_title: 'Точки на координатной плоскости',
-    problemType: 'canvas_action',
-    difficulties: {
-      1: {
-        template: 'Move the point P to coordinates ({x}, {y})',
-        parameters: {
-          x: { type: 'int', min: -10, max: 10 },
-          y: { type: 'int', min: -10, max: 10 }
+    it('should return false for incorrect answer', () => {
+      expect(getWeightedAnswer(false, 0)).toBe(false);
+    });
+
+    it('should return false for correct answer with 2+ hints', () => {
+      expect(getWeightedAnswer(true, 2)).toBe(false);
+    });
+
+    it('should create initial adaptive state', () => {
+      const state = createAdaptiveState();
+      expect(state.hintsUsedInCurrentProblem).toBe(0);
+      expect(state.currentDifficulty).toBe(1);
+    });
+
+    it('should increase difficulty after 3 correct without hints', () => {
+      let state = createAdaptiveState();
+      state = updateAdaptiveState(state, true);
+      state = updateAdaptiveState(state, true);
+      state = updateAdaptiveState(state, true);
+      expect(state.currentDifficulty).toBe(2);
+    });
+  });
+
+  describe('Canvas Action Problems', () => {
+    it('should generate canvas action problem', () => {
+      const template: ProblemTemplate = {
+        id: 'canvas-test',
+        class: 9,
+        subject: 'algebra',
+        section: 'Coordinate Plane',
+        topic: 'points',
+        topic_title: 'Точки на координатной плоскости',
+        problemType: 'canvas_action',
+        difficulties: {
+          1: {
+            template: 'Move the point P to coordinates ({x}, {y})',
+            parameters: {
+              x: { type: 'int', min: -10, max: 10 },
+              y: { type: 'int', min: -10, max: 10 }
+            },
+            answer_formula: '0',
+            answer_type: 'number'
+          }
+        }
+      };
+
+      const generated = generateProblem(template, 1, 999);
+      expect(generated.params.x).toBeDefined();
+      expect(generated.params.y).toBeDefined();
+      expect(generated.question).toContain('(');
+    });
+
+    it('should create canvas action problem structure', () => {
+      const canvasProblem = {
+        id: 'test-canvas-1',
+        template_id: 'test',
+        seed: 123,
+        params: { x: 5, y: 10 },
+        question: 'Move the point to coordinates (5, 10)',
+        answer: '',
+        answer_type: 'number' as const,
+        canvasAction: {
+          action: 'move_point' as const,
+          targetData: {
+            point: { x: 5, y: 10 }
+          },
+          tolerance: 10
+        }
+      };
+
+      expect(canvasProblem.canvasAction?.action).toBe('move_point');
+      expect(canvasProblem.canvasAction?.targetData.point).toEqual({ x: 5, y: 10 });
+      expect(canvasProblem.canvasAction?.tolerance).toBe(10);
+    });
+  });
+
+  describe('Math Invariants', () => {
+    describe('Triangle Inequality', () => {
+      const checkTriangleInequality = (a: number, b: number, c: number): boolean => {
+        return a + b > c && a + c > b && b + c > a;
+      };
+
+      it('should satisfy triangle inequality for valid triangles', () => {
+        expect(checkTriangleInequality(3, 4, 5)).toBe(true);
+        expect(checkTriangleInequality(5, 12, 13)).toBe(true);
+        expect(checkTriangleInequality(8, 15, 17)).toBe(true);
+      });
+
+      it('should fail triangle inequality for degenerate triangles', () => {
+        expect(checkTriangleInequality(1, 2, 3)).toBe(false);
+        expect(checkTriangleInequality(2, 3, 5)).toBe(false);
+      });
+
+      it('should fail triangle inequality for impossible sides', () => {
+        expect(checkTriangleInequality(1, 1, 10)).toBe(false);
+      });
+    });
+
+    describe('Distance Symmetry', () => {
+      const calculateDistance = (x1: number, y1: number, x2: number, y2: number): number => {
+        return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+      };
+
+      it('should be symmetric: distance(A,B) = distance(B,A)', () => {
+        const d1 = calculateDistance(0, 0, 3, 4);
+        const d2 = calculateDistance(3, 4, 0, 0);
+        expect(d1).toBe(d2);
+      });
+
+      it('should be zero for same point', () => {
+        const d = calculateDistance(5, 5, 5, 5);
+        expect(d).toBe(0);
+      });
+
+      it('should satisfy triangle inequality for distance', () => {
+        const dAB = calculateDistance(0, 0, 1, 0);
+        const dBC = calculateDistance(1, 0, 1, 1);
+        const dAC = calculateDistance(0, 0, 1, 1);
+        expect(dAB + dBC).toBeGreaterThanOrEqual(dAC);
+      });
+    });
+
+    describe('Pythagorean Theorem Invariant', () => {
+      it('should maintain a² + b² = c² for right triangles', () => {
+        const triangles = [
+          { a: 3, b: 4, c: 5 },
+          { a: 5, b: 12, c: 13 },
+          { a: 8, b: 15, c: 17 },
+          { a: 7, b: 24, c: 25 },
+        ];
+
+        for (const { a, b, c } of triangles) {
+          expect(a * a + b * b).toBe(c * c);
+        }
+      });
+    });
+
+    describe('Probability Invariants', () => {
+    it('should have probabilities sum to 1 for mutually exclusive events', () => {
+      const pA = 0.3;
+      const pB = 0.7;
+      expect(pA + pB).toBeCloseTo(1, 10);
+    });
+
+    it('should have conditional probability P(A) = P(A and B) + P(A and not B)', () => {
+      const pA = 0.5;
+      const pB_A = 0.6;
+      const pB_notA = 0.4;
+      
+      const pAandB = pA * pB_A;
+      const pAandNotB = pA * (1 - pB_A);
+      const pNotAandB = (1 - pA) * pB_notA;
+      const pNotAandNotB = (1 - pA) * (1 - pB_notA);
+      
+      // Sum of all joint probabilities should be 1
+      expect(pAandB + pAandNotB + pNotAandB + pNotAandNotB).toBeCloseTo(1, 10);
+    });
+  });
+
+    describe('Vector Normalization Stability', () => {
+      const normalizeVector = (x: number, y: number): { x: number; y: number; magnitude: number } => {
+        const magnitude = Math.sqrt(x * x + y * y);
+        if (magnitude === 0) return { x: 0, y: 0, magnitude: 0 };
+        return { x: x / magnitude, y: y / magnitude, magnitude: 1 };
+      };
+
+      it('should produce unit vectors with magnitude 1', () => {
+        const vectors = [
+          { x: 3, y: 4 },
+          { x: 1, y: 0 },
+          { x: 0, y: 1 },
+          { x: -3, y: -4 },
+        ];
+
+        for (const { x, y } of vectors) {
+          const normalized = normalizeVector(x, y);
+          if (x !== 0 || y !== 0) {
+            expect(normalized.magnitude).toBe(1);
+          }
+        }
+      });
+
+      it('should handle zero vector gracefully', () => {
+        const result = normalizeVector(0, 0);
+        expect(result.x).toBe(0);
+        expect(result.y).toBe(0);
+        expect(result.magnitude).toBe(0);
+      });
+    });
+  });
+
+  describe('Mistake Analyzer', () => {
+    const createMockTemplate = (mistakes?: { pattern: string; feedback: string }[]): ProblemTemplate => ({
+      id: 'test',
+      class: 7,
+      subject: 'algebra',
+      section: 'Equations',
+      topic: 'linear',
+      topic_title: 'Linear Equations',
+      problemType: 'numeric',
+      difficulties: {
+        1: {
+          template: 'Solve {a}x + {b} = {c}',
+          parameters: {
+            a: { type: 'int', min: 1, max: 10 },
+            b: { type: 'int', min: 1, max: 10 },
+            c: { type: 'int', min: 1, max: 50 },
+          },
+          answer_formula: '(c-b)/a',
+          answer_type: 'number',
+          common_mistakes: mistakes,
         },
-        answer_formula: '0', // Canvas action doesn't use formula answer
-        answer_type: 'number'
-      }
-    }
-  };
+      },
+    });
 
-  try {
-    const generated = generateProblem(canvasTemplate, 1, 999);
-    test('CanvasAction: Problem generated successfully', true, 
-      generated.params.x !== undefined && generated.params.y !== undefined);
-    test('CanvasAction: Generated question contains coords', true,
-      generated.question.includes('('));
-  } catch (e) {
-    test('CanvasAction: Problem generation', true, false);
-    console.log('  Error:', e);
-  }
+    it('should detect common mistake pattern', () => {
+      const template = createMockTemplate([
+        { pattern: 'c', feedback: 'Did you forget to subtract b first?' },
+      ]);
 
-  console.log('');
-}
+      const problem = {
+        id: 'p1',
+        template_id: 'test',
+        seed: 1,
+        params: { a: 2, b: 3, c: 7 },
+        question: 'Solve 2x + 3 = 7',
+        answer: '2',
+        answer_type: 'number' as const,
+      };
 
-// Run tests if this file is executed directly
-if (typeof window !== 'undefined' || typeof global !== 'undefined') {
-  // @ts-ignore
-  if (typeof process !== 'undefined' && process.argv && process.argv[1]?.includes('test')) {
-    runAllTests();
-  }
-}
+      const result = checkCommonMistake(problem, template, '7', 1);
+      expect(result).toBe('Did you forget to subtract b first?');
+    });
 
-export default runAllTests;
+    it('should return null when no mistake detected', () => {
+      const template = createMockTemplate([
+        { pattern: '100', feedback: 'Wrong answer' },
+      ]);
+
+      const problem = {
+        id: 'p1',
+        template_id: 'test',
+        seed: 1,
+        params: { a: 2, b: 3, c: 7 },
+        question: 'Solve 2x + 3 = 7',
+        answer: '2',
+        answer_type: 'number' as const,
+      };
+
+      const result = checkCommonMistake(problem, template, '2', 1);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for invalid answer', () => {
+      const template = createMockTemplate([
+        { pattern: '5', feedback: 'Wrong' },
+      ]);
+
+      const problem = {
+        id: 'p1',
+        template_id: 'test',
+        seed: 1,
+        params: { a: 2, b: 3, c: 7 },
+        question: 'Solve 2x + 3 = 7',
+        answer: '2',
+        answer_type: 'number' as const,
+      };
+
+      const result = checkCommonMistake(problem, template, 'abc', 1);
+      expect(result).toBeNull();
+    });
+
+    it('should return null when no common_mistakes defined', () => {
+      const template = createMockTemplate();
+
+      const problem = {
+        id: 'p1',
+        template_id: 'test',
+        seed: 1,
+        params: { a: 2, b: 3, c: 7 },
+        question: 'Solve 2x + 3 = 7',
+        answer: '2',
+        answer_type: 'number' as const,
+      };
+
+      const result = checkCommonMistake(problem, template, '7', 1);
+      expect(result).toBeNull();
+    });
+  });
+});

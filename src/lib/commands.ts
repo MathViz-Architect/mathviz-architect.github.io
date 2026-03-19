@@ -41,7 +41,8 @@ export class DeleteObjectCommand implements Command {
     }
 
     undo() {
-        this.setObjects([...this.objects, this.deletedObject]);
+        // Restore the original state before the deletion
+        this.setObjects(this.objects);
     }
 }
 

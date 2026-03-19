@@ -146,6 +146,19 @@ export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3
     // Calculate answer
     const answer = evaluateFormula(config.answer_formula, params);
 
+    // Guard: answer_formula must not produce NaN or Infinity.
+    // If it does, the template has a logic error (e.g. division by zero in formula,
+    // or a param that evaluates to an unexpected value). Log a warning so template
+    // authors can catch it during development; the problem is still returned so the
+    // UI doesn't crash, but validateAnswer will correctly return false for any input.
+    if (typeof answer === 'number' && !isFinite(answer)) {
+        console.warn(
+            `[variantGenerator] Template "${template.id}" answer_formula "${config.answer_formula}" ` +
+            `produced ${answer} with params ${JSON.stringify(params)}. ` +
+            `Check for division by zero or invalid param combinations.`
+        );
+    }
+
     // Generate hint if config has one
     let hint: string | undefined;
     if (config.hint) {

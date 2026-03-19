@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { screenToCanvas, applyDelta } from './transforms';
+import { screenToCanvas, canvasToScreen, applyDelta } from './transforms';
 import type { AnyCanvasObject } from '@/lib/types';
 
 describe('transforms', () => {
@@ -173,6 +173,239 @@ describe('transforms', () => {
 
             expect(result.x).toBe(100);
             expect(result.y).toBe(100);
+        });
+    });
+
+    describe('canvasToScreen', () => {
+        it('should convert canvas coordinates to screen coordinates', () => {
+            const svgRect: DOMRect = {
+                left: 100,
+                top: 50,
+                width: 800,
+                height: 600,
+                right: 900,
+                bottom: 650,
+                x: 100,
+                y: 50,
+                toJSON: () => ({})
+            };
+
+            const result = canvasToScreen(800, 600, svgRect, 1600, 1200);
+
+            expect(result.x).toBe(500); // 800 * (800 / 1600) + 100
+            expect(result.y).toBe(350); // 600 * (600 / 1200) + 50
+        });
+
+        it('should handle origin point', () => {
+            const svgRect: DOMRect = {
+                left: 0,
+                top: 0,
+                width: 400,
+                height: 300,
+                right: 400,
+                bottom: 300,
+                x: 0,
+                y: 0,
+                toJSON: () => ({})
+            };
+
+            const result = canvasToScreen(0, 0, svgRect, 800, 600);
+
+            expect(result.x).toBe(0);
+            expect(result.y).toBe(0);
+        });
+
+        it('should handle scaling when canvas is larger than viewport', () => {
+            const svgRect: DOMRect = {
+                left: 0,
+                top: 0,
+                width: 200,
+                height: 150,
+                right: 200,
+                bottom: 150,
+                x: 0,
+                y: 0,
+                toJSON: () => ({})
+            };
+
+            const result = canvasToScreen(400, 300, svgRect, 800, 600);
+
+            expect(result.x).toBe(100); // 400 * (200 / 800)
+            expect(result.y).toBe(75); // 300 * (150 / 600)
+        });
+    });
+
+    describe('coordinate round-trip invariance', () => {
+        const createRect = (left: number, top: number, width: number, height: number): DOMRect => ({
+            left, top, width, height,
+            right: left + width,
+            bottom: top + height,
+            x: left, y: top,
+            toJSON: () => ({})
+        });
+
+        it('should maintain round-trip accuracy at identity transform', () => {
+            const rect = createRect(0, 0, 800, 600);
+            
+            for (let x = 0; x <= 800; x += 100) {
+                for (let y = 0; y <= 600; y += 100) {
+                    const screen = canvasToScreen(x, y, rect, 800, 600, 1, 0, 0);
+                    const back = screenToCanvas(screen.x, screen.y, rect, 800, 600, 1, 0, 0);
+                    
+                    expect(back.x).toBeCloseTo(x, 10);
+                    expect(back.y).toBeCloseTo(y, 10);
+                }
+            }
+        });
+
+        it('should maintain round-trip accuracy with zoom', () => {
+            const rect = createRect(0, 0, 800, 600);
+            const zoom = 2;
+            const panX = 100;
+            const panY = 50;
+            
+            for (let x = 100; x <= 700; x += 100) {
+                for (let y = 100; y <= 500; y += 100) {
+                    const screen = canvasToScreen(x, y, rect, 800, 600, zoom, panX, panY);
+                    const back = screenToCanvas(screen.x, screen.y, rect, 800, 600, zoom, panX, panY);
+                    
+                    expect(back.x).toBeCloseTo(x, 5);
+                    expect(back.y).toBeCloseTo(y, 5);
+                }
+            }
+        });
+
+        it('should maintain round-trip accuracy with various zoom levels', () => {
+            const rect = createRect(50, 50, 400, 300);
+            const zoomLevels = [0.1, 0.5, 1, 2, 5, 10];
+            
+            for (const zoom of zoomLevels) {
+                const x = 400;
+                const y = 300;
+                const panX = 200;
+                const panY = 150;
+                
+                const screen = canvasToScreen(x, y, rect, 800, 600, zoom, panX, panY);
+                const back = screenToCanvas(screen.x, screen.y, rect, 800, 600, zoom, panX, panY);
+                
+                expect(back.x).toBeCloseTo(x, 3);
+                expect(back.y).toBeCloseTo(y, 3);
+            }
+        });
+
+        it('should maintain round-trip accuracy with large pan values', () => {
+            const rect = createRect(0, 0, 800, 600);
+            const panValues = [-1000, -500, 500, 1000];
+            
+            for (const panX of panValues) {
+                for (const panY of panValues) {
+                    const x = 400;
+                    const y = 300;
+                    
+                    const screen = canvasToScreen(x, y, rect, 800, 600, 1, panX, panY);
+                    const back = screenToCanvas(screen.x, screen.y, rect, 800, 600, 1, panX, panY);
+                    
+                    expect(back.x).toBeCloseTo(x, 3);
+                    expect(back.y).toBeCloseTo(y, 3);
+                }
+            }
+        });
+
+        it('should handle extreme zoom values without precision explosion', () => {
+            const rect = createRect(0, 0, 800, 600);
+            
+            // Test zoom = 0.1
+            const screen1 = canvasToScreen(400, 300, rect, 800, 600, 0.1, 0, 0);
+            const back1 = screenToCanvas(screen1.x, screen1.y, rect, 800, 600, 0.1, 0, 0);
+            expect(back1.x).not.toBeNaN();
+            expect(back1.y).not.toBeNaN();
+            expect(back1.x).not.toBe(Infinity);
+            expect(back1.y).not.toBe(Infinity);
+            
+            // Test zoom = 10
+            const screen2 = canvasToScreen(400, 300, rect, 800, 600, 10, 0, 0);
+            const back2 = screenToCanvas(screen2.x, screen2.y, rect, 800, 600, 10, 0, 0);
+            expect(back2.x).not.toBeNaN();
+            expect(back2.y).not.toBeNaN();
+            expect(back2.x).not.toBe(Infinity);
+            expect(back2.y).not.toBe(Infinity);
+        });
+    });
+
+    describe('screenToCanvas with various transforms', () => {
+        const createRect = (left: number, top: number, width: number, height: number): DOMRect => ({
+            left, top, width, height,
+            right: left + width,
+            bottom: top + height,
+            x: left, y: top,
+            toJSON: () => ({})
+        });
+
+        it('should handle negative pan values', () => {
+            const rect = createRect(0, 0, 800, 600);
+            const result = screenToCanvas(100, 100, rect, 800, 600, 1, -100, -100);
+            expect(result.x).not.toBeNaN();
+            expect(result.y).not.toBeNaN();
+        });
+
+        it('should handle zero viewport dimensions gracefully', () => {
+            const rect = createRect(0, 0, 0, 0);
+            const result = screenToCanvas(0, 0, rect, 800, 600);
+            // Division by zero produces NaN - this is expected behavior
+            expect(result.x).toBeNaN();
+            expect(result.y).toBeNaN();
+        });
+
+        it('should handle fractional zoom values', () => {
+            const rect = createRect(0, 0, 800, 600);
+            const result = screenToCanvas(400, 300, rect, 800, 600, 0.25, 0, 0);
+            expect(result.x).not.toBeNaN();
+            expect(result.y).not.toBeNaN();
+        });
+
+        it('should handle very small positive coordinates', () => {
+            const rect = createRect(0, 0, 800, 600);
+            const result = screenToCanvas(0.001, 0.001, rect, 800, 600, 1, 0, 0);
+            expect(result.x).toBeCloseTo(0.001, 3);
+            expect(result.y).toBeCloseTo(0.001, 3);
+        });
+
+        it('should handle coordinates outside viewport', () => {
+            const rect = createRect(0, 0, 800, 600);
+            const result = screenToCanvas(-100, -100, rect, 800, 600, 1, 0, 0);
+            expect(result.x).toBeLessThan(0);
+            expect(result.y).toBeLessThan(0);
+        });
+    });
+
+    describe('canvasToScreen with various transforms', () => {
+        const createRect = (left: number, top: number, width: number, height: number): DOMRect => ({
+            left, top, width, height,
+            right: left + width,
+            bottom: top + height,
+            x: left, y: top,
+            toJSON: () => ({})
+        });
+
+        it('should handle negative pan values', () => {
+            const rect = createRect(0, 0, 800, 600);
+            const result = canvasToScreen(100, 100, rect, 800, 600, 1, -100, -100);
+            expect(result.x).not.toBeNaN();
+            expect(result.y).not.toBeNaN();
+        });
+
+        it('should handle fractional zoom values', () => {
+            const rect = createRect(0, 0, 800, 600);
+            const result = canvasToScreen(400, 300, rect, 800, 600, 0.25, 0, 0);
+            expect(result.x).toBeCloseTo(100, 1);
+            expect(result.y).toBeCloseTo(75, 1);
+        });
+
+        it('should handle coordinates outside canvas', () => {
+            const rect = createRect(0, 0, 800, 600);
+            const result = canvasToScreen(-100, -100, rect, 800, 600, 1, 0, 0);
+            expect(result.x).toBeLessThan(0);
+            expect(result.y).toBeLessThan(0);
         });
     });
 });

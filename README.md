@@ -4,7 +4,7 @@
 
 Интерактивные визуализации, адаптивные задачи и прогрессия тем в одном приложении — доступно в браузере и как desktop-приложение.
 
-[![Version](https://img.shields.io/badge/version-3.1.0-blue)](https://github.com)
+[![Version](https://img.shields.io/badge/version-3.2.0-blue)](https://github.com)
 [![React](https://img.shields.io/badge/React-18.3-61dafb)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6)](https://typescriptlang.org)
 [![Netlify](https://img.shields.io/badge/Netlify-deployed-00c7b7)](https://www.grafana-intenstest.ru)
@@ -28,6 +28,7 @@
 - [Режим задач](#-режим-задач)
 - [Интерактивные модули](#-интерактивные-модули-18-шт)
 - [Canvas-редактор](#️-canvas-редактор)
+- [MathInput Module](#-mathinput-module)
 - [Учебная программа](#-учебная-программа)
 - [Инфраструктура](#️-инфраструктура-supabase)
 - [Статус реализации](#-статус-реализации)
@@ -62,9 +63,10 @@
 | 📐 **Resize изображений** | Drag угловых handles для изменения размера с сохранением пропорций (Shift) |
 | 🔄 **Properties Panel** | Современная панель с Transform, Rotation, Aspect Lock, Preview |
 | 🔄 **Rotation pivot** | Вращение вокруг центра объекта (Figma-подобное поведение) |
-| 🔍 **Viewport архитектура** | Бесконечный canvas с корректным zoom/pan без clipping |
+| 🔍 **Viewport culling** | Рендерятся только объекты в текущем viewport — производительность не деградирует при 500+ объектах |
 | ☁️ **Supabase Storage** | Изображения сохраняются в Public Bucket 'assets' |
 | 👩‍🏫 **Синхронизация страниц** | Ученики автоматически следуют за учителем в режиме лекции |
+| 📐 **MathInput Module** | Универсальный ввод с KaTeX-превью, виртуальная клавиатура с 3 раскладками (числа, алгебра, интервалы), защита токенов и Smart Backspace. |
 
 ---
 
@@ -163,7 +165,7 @@ pnpm run dev:electron     # desktop (Electron)
 - **Централизованный контекст:** Вся логика совместной работы инкапсулирована в `CollaborationProvider` (`src/hooks/useCollaborationContext.tsx`). Единый источник правды для состояния комнаты, ролей и прав доступа (`role`, `canEdit`, `boardSettings`).
 - **Транспорт:** Синхронизация через **Supabase Realtime (Broadcast)**. Надёжная доставка сообщений всем участникам комнаты.
 - **CRDT и State Sync:** Yjs CRDT для слияния изменений без конфликтов. Состояние холста (`Y.Map('canvas')`) и настройки доски (`Y.Map('board_settings')`) синхронизируются через кастомный `SupabaseProvider`. Настройки доски в Y.Doc гарантируют получение актуального состояния при переподключении.
-- **Bootstrap синхронизация:** При подключении клиент отправляет `sync-request` с вектором состояния. Peer отвечает `sync-response` с дельтой — холст восстанавливается корректно. `onSynced` callback гарантирует что editor получает данные только после применения `sync-response`, не до него.
+- **Bootstrap синхронизация:** При подключении клиент отправляет `sync-request` с вектором состояния. Peer отвечает `sync-response` с дельтой — холст восстанавливается корректно. `onSynced` callback гарантирует что editor получает данные только после применения `sync-response`, не до него. Провайдер отслеживает фазу синхронизации (`idle` → `waiting_response` → `synced`): если peer обнаружен (получен его `sync-request`), но не ответил в течение 2s — в лог пишется предупреждение о возможно неполном состоянии.
 - **Защита от петель:** Локальные транзакции помечаются origin `'mathviz-local'`. Observer в `useYjsSync` пропускает их. `SupabaseProvider` не ретранслирует обновления с origin `this` (свои же remote applies).
 - **Изоляция локального UI state:** Через Yjs синхронизируются только `objects`, `pages`, `activePageId`. Инструмент, zoom, выделение, курсор — строго локальные.
 - **Явная публикация:** `publishLocalChange` вызывается только из Canvas после завершённых действий пользователя (mouseup, text commit, resize, property change и т.д.). Читает актуальный snapshot через `getCanvasSnapshot()` из refs — никогда не устаревает.
@@ -308,14 +310,31 @@ type AnswerType =
 - Правильный ответ **с подсказкой** → не увеличивает счётчик серии
 - Это мотивирует учеников сначала пытаться решить самостоятельно
 
+### Геймификация (Duolingo-стиль)
+
+Режим задач включает элементы геймификации для повышения мотивации:
+
+| Элемент | Описание |
+|---------|---------|
+| **Session Progress Bar** | Прогресс-бар в верхней части экрана (сессия из 10 задач) |
+| **Streak Counter** | 🔥 бейдж с количеством правильных ответов подряд (сбрасывается при ошибке или подсказке) |
+| **Hint Penalty UI** | Прозрачность штрафов: "Первая подсказка: -50% баллов", "Следующая подсказка: 0 баллов" |
+
+**Логика стрика:**
+- Правильный ответ → streak +1
+- Неправильный ответ → streak = 0
+- Использование подсказки → streak = 0 (штраф за подсказку)
+
 ### Адаптивный алгоритм
+
+За один ответ применяется только одно правило (приоритет: streak > accuracy):
 
 | Условие | Действие |
 |---------|---------|
-| 3 правильных подряд | difficulty +1 |
-| 3 ошибок подряд | difficulty −1 |
-| Accuracy > 80% (10 задач) | difficulty +1 |
-| Accuracy < 40% (10 задач) | difficulty −1 |
+| 3 правильных подряд | difficulty +1 (сбрасывает счётчик) |
+| 3 ошибок подряд | difficulty −1 (сбрасывает счётчик) |
+| Accuracy > 80% (10 задач) | difficulty +1 (если streak не сработал) |
+| Accuracy < 40% (10 задач) | difficulty −1 (если streak не сработал) |
 
 ---
 
@@ -414,7 +433,7 @@ type AnswerType =
 │   ┌─────────────────────────┐   │
 │   │    canvas-world        │   │  ← transform: translate(pan) scale(zoom)
 │   │    ┌───────────────┐   │   │
-│   │    │   SVG (static)│   │   │  ← 800x600 logical canvas
+│   │    │   SVG (2000x2000)│  │   │  ← логический canvas
 │   │    └───────────────┘   │   │
 │   └─────────────────────────┘   │
 └─────────────────────────────────┘
@@ -424,6 +443,46 @@ type AnswerType =
 - Zoom и pan не ограничены размером экрана
 - Pointer events корректно конвертируются через viewport rect
 - Бесконечный canvas для рисования
+- **Viewport culling** (`useViewportCulling`): рендерятся только объекты в текущем viewport ± 150px. Hit-testing, eraser и snap всегда работают с полным списком объектов.
+
+**Декомпозиция инструментов:**
+
+Инструменты с изолированным lifecycle вынесены в отдельные хуки в `src/components/canvas/tools/`:
+
+| Хук | Инструмент | Что инкапсулирует |
+|-----|-----------|-------------------|
+| `useFreehandTool` | Свободный рисунок | state рисования, точки, mousedown/move/up, overlay |
+
+---
+
+## 📐 MathInput Module
+
+Универсальный модуль для ввода математических формул, выражений и интервалов. Заменил собой стандартные поля ввода во всех текстовых типах задач, обеспечивая единый и мощный пользовательский опыт.
+
+### Компоненты
+
+| Компонент | Описание |
+|-----------|----------|
+| `MathInputField.tsx` | Основной компонент, объединяющий поле ввода, KaTeX-превью и виртуальную клавиатуру. Является управляемым компонентом, принимая `value`, `onChange` и `onSubmit`. |
+| `MathKeyboard.tsx` | Виртуальная клавиатура с тактильным откликом и тремя раскладками для удобного ввода. |
+| `useMathInputLogic.ts` | Хук, инкапсулирующий всю сложную логику: управление курсором, обработку токенов, "умный" Backspace и нормализацию выражений. |
+
+### Ключевые возможности
+
+- **KaTeX-превью в реальном времени:** Пользователь сразу видит, как будет выглядеть введённая им формула.
+- **Виртуальная клавиатура с вкладками:**
+  - **123:** Основная раскладка с цифрами, базовыми операциями, корнем и степенью.
+  - **f(x):** Алгебраическая раскладка с переменными (`x, y, a, b...`), знаками равенства/неравенства (`=, ≠, ≤, ≥`) и тригонометрическими функциями.
+  - **[;]:** Раскладка для ввода интервалов и геометрических символов (`(`, `)`, `[`, `]`, `;`, `∞`, `°`).
+- **Защита атомарных токенов:** Функции (`sqrt`, `sin`), константы (`pi`) и спецсимволы (`\le`, `\infty`) обрабатываются как единое целое. Их нельзя "сломать", вставив символ в середину, а Backspace удаляет их целиком.
+- **Двойная нормализация:** Ввод пользователя параллельно преобразуется в два формата:
+  - Чистый **LaTeX** для рендеринга в KaTeX (`x \le 5`).
+  - "Очищенное" выражение для движка **MathJS** или строкового валидатора (`x <= 5`).
+- **Универсальность:** Компонент используется для всех типов ответов: `number`, `fraction`, `expression`, `interval`, `coordinate`.
+
+### Тесты
+
+Логика модуля покрыта юнит-тестами (`useMathInputLogic.test.ts`) с использованием **Vitest**. Тесты проверяют корректность обработки новых символов, логику "умного" удаления и правильность нормализации выражений.
 
 ---
 
@@ -609,7 +668,7 @@ handleShare()
 
 ### Awareness (`src/hooks/useAwareness.ts`)
 
-Подключается к `SimpleAwareness` внутри `SupabaseProvider` через `getProvider()`. Каждый клиент транслирует `{ name, color, cursor }` через broadcast event `'awareness'`. Throttle 50ms (20fps) предотвращает перегрузку канала при движении мыши. При размонтировании или уходе мыши с холста — `setLocalState(null)`, курсор исчезает у остальных участников.
+Подключается к `SimpleAwareness` внутри `SupabaseProvider` через `getProvider()`. Каждый клиент транслирует `{ name, color, cursor }` через broadcast event `'awareness'`. Throttle 50ms (20fps) предотвращает перегрузку канала при движении мыши. При размонтировании или уходе мыши с холста — `setLocalState(null)`, курсор исчезает у остальных участников. Курсоры пиров, которые закрыли вкладку без graceful disconnect, автоматически удаляются через 10 секунд (TTL в `SimpleAwareness`).
 
 ---
 
@@ -677,6 +736,46 @@ difficulties: {
 
 ---
 
+## 🧪 Тесты
+
+Problem Engine покрыт юнит-тестами (Vitest). Запуск: `pnpm run test:run`.
+
+| Файл | Модуль | Тестов |
+|------|--------|--------|
+| `adaptiveEngine.regression.test.ts` | `adaptiveEngine` — streak, accuracy, bounds, sliding window | 20 |
+| `answerValidator.edge.test.ts` | `answerValidator` — number, fraction, coordinate, interval, expression | 69 |
+| `expressionParser.test.ts` | `expressionParser` — арифметика, функции, переменные, edge cases | 37 |
+| `variantGenerator.test.ts` | `variantGenerator` — детерминизм, структура, constraints, expression params | 22 |
+| `variantGenerator.property.test.ts` | `variantGenerator` — property-based (fast-check): NaN/Infinity, детерминизм, constraint exhaustion | 455 |
+
+Итого: **603 теста**, все проходят. Часть тестов намеренно документирует известные баги (помечены комментарием `documents current behaviour`) — они фиксируют текущее поведение, не ожидаемое.
+
+### Стресс-тестирование (Property-based tests)
+
+`variantGenerator.property.test.ts` использует **fast-check** для генерации сотен случайных seed-значений и проверки инвариантов:
+
+| Свойство | Что проверяется | Запусков |
+|----------|----------------|---------|
+| No NaN/Infinity | Каждый числовой шаблон × каждая сложность: ответ всегда `isFinite` | 200 на комбинацию |
+| Determinism | Одинаковый seed → идентичный `GeneratedProblem` (JSON.stringify) | 100 на шаблон |
+| Constraint exhaustion | Все числовые шаблоны × 500 seed: нет NaN, нет исключений | 500 |
+| Tight constraints | `grade8-pythag-leg` diff 1: ответ всегда положительное целое | 500 |
+
+Запуск только PBT: `npx vitest run src/lib/__tests__/variantGenerator.property.test.ts`
+
+**Баги, обнаруженные PBT (не блокирующие, задокументированы):**
+- `expressionParser` не поддерживает `String()` — используется в `answer_formula` некоторых шаблонов с `answer_type: 'text'`; числовые шаблоны не затронуты
+- Глубоко вложенные ternary с кириллическими строками (`i===0?"рабочих":...`) вызывают `Expected :` в парсере; затрагивает только `expression`-параметры типа `choice` со строковыми значениями
+
+### Валидация ответов — гарантии
+
+- Строгий парсинг дробей: `parseStrictFractionValue` принимает только `a/b` (через `parseFractionToRational`) или точный decimal-regex. `parseFloat` не используется в пути дробей.
+- Защита от NaN/Infinity: `validateAnswer` возвращает `false` если expected answer — `NaN` или `Infinity`; аналогично для user input в типах `number` и `fraction`.
+- Защита от null/undefined: `validateAnswer` принимает `null`/`undefined` как `userAnswer` без исключений — возвращает `false`.
+- `variantGenerator`: если `answer_formula` возвращает `Infinity`/`NaN`, в консоль пишется `[variantGenerator] warning` с деталями шаблона и параметров.
+
+---
+
 ## ⚠️ Известные ограничения
 
 | Ограничение | Описание |
@@ -684,6 +783,10 @@ difficulties: {
 | **Expression parser** | Работает только с числовыми выражениями. Строковые `choice`-параметры нельзя использовать в `answer_formula`. |
 | **Numeric answer_formula** | Все шаблоны с `problemType: 'numeric'` должны возвращать числовое значение, не строку. |
 | **canvas_action** | Экспериментальный тип — требует интеграции с интерактивными модулями |
+| **Sync при разрыве соединения** | Если peer отключился во время bootstrap sync, canvas может быть неполным. В консоли появится предупреждение `[provider] sync timeout: peer was detected but did not respond`. |
+| **Offline canvas** | Canvas-изменения не сохраняются в offline-очередь (в отличие от прогресса). При работе без комнаты используется autosave в localStorage. |
+| **validateAnswer — fraction parsing** | ~~`parseFraction()` использует `parseFloat()` как первый шаг~~ — исправлено в v3.2.1. Используется строгий `parseStrictFractionValue`: только `parseFractionToRational` для строк с `/`, только точное decimal-regex для чисел. |
+| **validateAnswer — unicode minus** | Unicode минус (U+2212, `−`) в дробях не поддерживается — `parseFractionToRational` ожидает ASCII дефис (U+002D). Задокументировано в тестах. |
 
 ---
 
@@ -758,12 +861,16 @@ Kaspersky и некоторые другие антивирусы перехва
 
 - [ ] Шаблоны задач 7 класса (алгебра + геометрия)
 - [ ] Расширение шаблонов 8 класса (новые темы)
-- [ ] Property-based тестирование шаблонов (fast-check + variantGenerator)
-- [ ] Debug-страница `/debug/templates`
+- [x] **Property-based тестирование шаблонов** — fast-check + variantGenerator; 455 PBT-тестов; обнаружены 2 бага в expressionParser (String() и глубокие кириллические ternary)
+- [x] **Debug-страница `/debug/templates`** — `TemplateDebug` компонент, доступен в dev-режиме по `/debug/templates`; группировка по классу, генерация 3–5 вариантов, NaN/Infinity badge
 - [ ] Дополнительные интерактивные модули (интегралы, 3D сечения)
 - [ ] Удаление debug-логов из SupabaseProvider перед релизом
+- [x] **Strict number parsing** — `case 'number'` в `validateAnswer` использует regex `^-?(\d+\.?\d*|\.\d+)$` вместо `parseFloat`; `"4abc"` теперь возвращает `false`
+- [x] **Fraction parsing fix** — `parseStrictFractionValue` заменил `parseFraction` в `case 'fraction'`; `'1/0'`, `'4abc'`, `'1/2/3'` теперь возвращают `false`; `0.75` корректно совпадает со строковым ответом `'3/4'`
 - [x] **MathJS интеграция** — символьные вычисления для expression/interval типов
 - [x] **KaTeX рендеринг** — LaTeX формулы в задачах
+- [x] **Геймификация (Duolingo-стиль)** — Session Progress Bar, Streak Counter 🔥, Hint Penalty UI
+- [x] **Исправление генерации задач** — фикс бесконечного цикла в useEffect, корректная генерация новых задач
 - [x] **MathText парсер** — parseMathText разбивает текст по разделителям $...$ и $$...$$
 - [x] **MathText нормализация** — normalizeMathExpression исправляет 1x→x, +-+→-, :→÷
 - [x] **Авто-конвертация дробей** — 1/2 → \frac{1}{2}, a/b → \frac{a}{b}, x^2/y → \frac{x^2}{y}

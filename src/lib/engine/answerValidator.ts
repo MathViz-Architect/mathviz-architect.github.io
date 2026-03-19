@@ -5,9 +5,9 @@
  */
 
 import { GeneratedProblem, AnswerType } from '../types';
-import { 
-  simplify, 
-  evaluate
+import {
+    simplify,
+    evaluate
 } from 'mathjs';
 
 /**
@@ -66,6 +66,7 @@ function reduceFraction(numerator: number, denominator: number): [number, number
 /**
  * Parse fraction string to decimal
  * Accepts: "3/4", "3 / 4", "0.75"
+ * NOTE: used only outside the fraction validation path (e.g. expression fallback).
  */
 function parseFraction(input: string): number | null {
     const trimmed = input.trim();
@@ -83,6 +84,36 @@ function parseFraction(input: string): number | null {
     }
 
     return null;
+}
+
+/**
+ * Strict parser for fraction validation.
+ * Accepts ONLY:
+ *   - Pure decimal strings: "0.75", "3,14" (comma as decimal separator)
+ *   - Fraction strings matched by parseFractionToRational: "3/4", "-1/2"
+ * Rejects anything parseFloat would silently truncate: "1/0", "4abc", "1/2/3"
+ * Returns null for any invalid or ambiguous input.
+ */
+function parseStrictFractionValue(input: string): number | null {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    // If it contains '/', it must be a valid a/b fraction — no fallback to parseFloat
+    if (trimmed.includes('/')) {
+        const rational = parseFractionToRational(trimmed);
+        if (!rational) return null;
+        const value = rational[0] / rational[1];
+        if (!isFinite(value)) return null;
+        return value;
+    }
+
+    // Pure decimal: must match exactly (no trailing garbage)
+    const normalized = trimmed.replace(',', '.');
+    // Reject if not a valid decimal literal (e.g. "4abc" would pass parseFloat)
+    if (!/^-?\d+(\.\d+)?$/.test(normalized)) return null;
+    const decimal = Number(normalized);
+    if (!isFinite(decimal)) return null;
+    return decimal;
 }
 
 /**
@@ -124,18 +155,18 @@ export function compareExpressions(userAnswer: string, expectedAnswer: string): 
     const expectedFrac = parseFractionToRational(cleanedExpected);
 
     if (userFrac && expectedFrac) {
-        return Math.abs(userFrac[0]/userFrac[1] - expectedFrac[0]/expectedFrac[1]) < tolerance;
+        return Math.abs(userFrac[0] / userFrac[1] - expectedFrac[0] / expectedFrac[1]) < tolerance;
     }
 
     if (userFrac && !expectedFrac) {
         const expectedNumeric = parseFloat(cleanedExpected);
         if (!isNaN(expectedNumeric)) {
-            return Math.abs(userFrac[0]/userFrac[1] - expectedNumeric) < tolerance;
+            return Math.abs(userFrac[0] / userFrac[1] - expectedNumeric) < tolerance;
         }
         try {
             const expectedNum = Number(evaluate(cleanedExpected));
             if (!isNaN(expectedNum)) {
-                return Math.abs(userFrac[0]/userFrac[1] - expectedNum) < tolerance;
+                return Math.abs(userFrac[0] / userFrac[1] - expectedNum) < tolerance;
             }
         } catch { /* ignore */ }
     }
@@ -143,12 +174,12 @@ export function compareExpressions(userAnswer: string, expectedAnswer: string): 
     if (expectedFrac && !userFrac) {
         const userNumeric = parseFloat(cleanedUser);
         if (!isNaN(userNumeric)) {
-            return Math.abs(userNumeric - expectedFrac[0]/expectedFrac[1]) < tolerance;
+            return Math.abs(userNumeric - expectedFrac[0] / expectedFrac[1]) < tolerance;
         }
         try {
             const userNum = Number(evaluate(cleanedUser));
             if (!isNaN(userNum)) {
-                return Math.abs(userNum - expectedFrac[0]/expectedFrac[1]) < tolerance;
+                return Math.abs(userNum - expectedFrac[0] / expectedFrac[1]) < tolerance;
             }
         } catch { /* ignore */ }
     }
@@ -156,10 +187,10 @@ export function compareExpressions(userAnswer: string, expectedAnswer: string): 
     try {
         const userResult = evaluate(cleanedUser);
         const expectedResult = evaluate(cleanedExpected);
-        
+
         const userNum = typeof userResult === 'number' ? userResult : Number(userResult);
         const expectedNum = typeof expectedResult === 'number' ? expectedResult : Number(expectedResult);
-        
+
         if (!isNaN(userNum) && !isNaN(expectedNum)) {
             return Math.abs(userNum - expectedNum) < tolerance;
         }
@@ -170,29 +201,29 @@ export function compareExpressions(userAnswer: string, expectedAnswer: string): 
     try {
         const simplifiedUser = simplify(cleanedUser);
         const simplifiedExpected = simplify(cleanedExpected);
-        
+
         const userStr = simplifiedUser.toString();
         const expectedStr = simplifiedExpected.toString();
-        
+
         if (userStr === expectedStr) {
             return true;
         }
-        
+
         try {
             const userCanonical = simplify(cleanedUser, { exact: true });
             const expectedCanonical = simplify(cleanedExpected, { exact: true });
-            
+
             if (userCanonical.toString() === expectedCanonical.toString()) {
                 return true;
             }
         } catch { /* ignore */ }
-        
+
         try {
             const diff = simplify(`(${simplifiedUser.toString()}) - (${simplifiedExpected.toString()})`);
-            
+
             const testValues = [0, 1, 2, -1, 0.5];
             let allZero = true;
-            
+
             for (const val of testValues) {
                 const substituted = diff.evaluate({ x: val });
                 const num = Number(substituted);
@@ -201,12 +232,12 @@ export function compareExpressions(userAnswer: string, expectedAnswer: string): 
                     break;
                 }
             }
-            
+
             if (allZero) {
                 return true;
             }
         } catch { /* ignore */ }
-        
+
     } catch {
         // Simplify failed
     }
@@ -227,10 +258,10 @@ interface ParsedInterval {
 
 function parseInterval(input: string): ParsedInterval | null {
     const trimmed = input.trim();
-    
+
     // Match interval patterns like [2; +inf), (-3; 5], [0; 10)
     const match = trimmed.match(/^[\(\[]\s*([^;]+)\s*;\s*([^)\]]+)\s*[\)\]]$/);
-    
+
     if (!match) {
         return null;
     }
@@ -307,7 +338,7 @@ export function compareIntervals(userAnswer: string, expectedAnswer: string): bo
     }
 
     // Compare bounds
-    if (userInterval.left !== expectedInterval.left || 
+    if (userInterval.left !== expectedInterval.left ||
         userInterval.right !== expectedInterval.right ||
         userInterval.leftInclusive !== expectedInterval.leftInclusive ||
         userInterval.rightInclusive !== expectedInterval.rightInclusive) {
@@ -319,52 +350,78 @@ export function compareIntervals(userAnswer: string, expectedAnswer: string): bo
 
 /**
  * Validate user answer against problem answer
+ *
+ * CONTRACT:
+ * - userAnswer: any string (including empty, whitespace, null/undefined — all handled)
+ * - problem.answer: number | string (NaN/Infinity in numeric answer → false)
+ * - answerType: determines parsing strategy
+ *
+ * TOLERANCE POLICY:
+ * - 'number': tolerance = 0.001 — tight, for exact numeric answers (e.g. "3.14")
+ * - 'fraction' fallback: tolerance = 0.01 — looser, to handle repeating decimals (e.g. 0.333 ≈ 1/3)
+ * - 'expression': tolerance = 1e-9 (inside compareExpressions) — symbolic, near-exact
+ * - 'interval': no tolerance — structural equality only
+ * Tolerance is NOT applied to expression or interval types.
  */
 export function validateAnswer(
     problem: GeneratedProblem,
     userAnswer: string,
     answerType: AnswerType = 'number'
 ): boolean {
+    // Guard: coerce non-string inputs (defensive — callers should pass strings)
+    if (userAnswer === null || userAnswer === undefined) return false;
+    const safeUserAnswer = String(userAnswer);
+
     const answer = problem.answer;
     const tolerance = 0.001;
 
     switch (answerType) {
         case 'number': {
-            // Try numeric comparison
-            const parsed = parseFloat(userAnswer.replace(',', '.').trim());
+            // CONTRACT: accepts only finite numbers.
+            // Strict regex rejects "4abc", "4x", "1/2" — anything parseFloat would silently truncate.
+            // Comma is accepted as decimal separator ("3,14" → 3.14).
+            const normalized = safeUserAnswer.replace(',', '.').trim();
+            // Allow: optional minus, digits, optional decimal point + digits
+            // Also allow: ".5" and "5." (parseFloat-compatible edge cases)
+            if (!/^-?(\d+\.?\d*|\.\d+)$/.test(normalized)) {
+                // Not a valid number literal — fall back to text comparison only
+                return normalized.toLowerCase() === String(answer).trim().toLowerCase();
+            }
+            const parsed = Number(normalized);
             const expected = parseFloat(String(answer));
 
-            if (!isNaN(parsed) && !isNaN(expected)) {
+            if (!isNaN(parsed) && !isNaN(expected) && isFinite(parsed) && isFinite(expected)) {
                 return Math.abs(parsed - expected) < tolerance;
             }
 
-            // Fall back to text comparison
-            return userAnswer.trim().toLowerCase() === String(answer).trim().toLowerCase();
+            return false;
         }
 
         case 'fraction': {
-            // Try to parse user answer as a fraction
-            const userRational = parseFractionToRational(userAnswer);
+            // CONTRACT: accepts only a/b fractions or strict decimals — no parseFloat fallback.
+            // See parseStrictFractionValue for exact rules.
+            const userRational = parseFractionToRational(safeUserAnswer);
 
             // Parse expected answer
             let expectedRational: [number, number] | null = null;
 
             if (typeof answer === 'number') {
-                // Convert decimal to fraction (with reasonable precision)
-                // For example: 0.444... should match 4/9
-                const userDecimal = userRational ? userRational[0] / userRational[1] : parseFraction(userAnswer);
+                if (!isFinite(answer)) return false;
+                // Numeric answer: compare user input (strict) against the numeric value
+                const userDecimal = userRational
+                    ? userRational[0] / userRational[1]
+                    : parseStrictFractionValue(safeUserAnswer);
 
-                if (userDecimal === null) {
+                if (userDecimal === null || !isFinite(userDecimal)) {
                     return false;
                 }
 
-                // Use larger tolerance for decimal comparison with fractions
                 return Math.abs(userDecimal - answer) < 0.01;
             } else if (typeof answer === 'string') {
                 expectedRational = parseFractionToRational(answer);
             }
 
-            // If both are fractions, compare as rational numbers
+            // If both are fractions, compare as rational numbers (exact, no parseFloat)
             if (userRational && expectedRational) {
                 const [userNum, userDen] = reduceFraction(userRational[0], userRational[1]);
                 const [expNum, expDen] = reduceFraction(expectedRational[0], expectedRational[1]);
@@ -372,9 +429,11 @@ export function validateAnswer(
                 return userNum === expNum && userDen === expDen;
             }
 
-            // Fallback to decimal comparison
-            const userValue = parseFraction(userAnswer);
-            const expectedValue = typeof answer === 'number' ? answer : parseFraction(String(answer));
+            // Fallback: both sides parsed strictly — no parseFloat truncation
+            const userValue = parseStrictFractionValue(safeUserAnswer);
+            const expectedValue = typeof answer === 'number'
+                ? (isFinite(answer) ? answer : null)
+                : parseStrictFractionValue(String(answer));
 
             if (userValue === null || expectedValue === null) {
                 return false;
@@ -384,7 +443,7 @@ export function validateAnswer(
         }
 
         case 'coordinate': {
-            const userCoord = parseCoordinate(userAnswer);
+            const userCoord = parseCoordinate(safeUserAnswer);
 
             // Parse expected answer
             let expectedCoord: [number, number] | null = null;
@@ -405,23 +464,23 @@ export function validateAnswer(
         }
 
         case 'expression':
-            return compareExpressions(userAnswer, String(answer));
+            return compareExpressions(safeUserAnswer, String(answer));
 
         case 'interval':
-            return compareIntervals(userAnswer, String(answer));
+            return compareIntervals(safeUserAnswer, String(answer));
 
         case 'set':
             throw new Error('AnswerType "set" is not yet implemented');
 
         default:
-            // Fallback to number validation
-            const parsed = parseFloat(userAnswer.replace(',', '.').trim());
+            // Fallback to number validation (mirrors 'number' case)
+            const parsed = parseFloat(safeUserAnswer.replace(',', '.').trim());
             const expected = parseFloat(String(answer));
 
-            if (!isNaN(parsed) && !isNaN(expected)) {
+            if (!isNaN(parsed) && !isNaN(expected) && isFinite(parsed) && isFinite(expected)) {
                 return Math.abs(parsed - expected) < tolerance;
             }
 
-            return userAnswer.trim().toLowerCase() === String(answer).trim().toLowerCase();
+            return safeUserAnswer.trim().toLowerCase() === String(answer).trim().toLowerCase();
     }
 }

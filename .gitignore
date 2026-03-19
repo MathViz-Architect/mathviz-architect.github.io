@@ -32,3 +32,6 @@ release/
 # Файлы данных (если не хочешь хранить 150к задач в репозитории)
 public/problems.json
 problems.json
+
+# Test coverage
+coverage/

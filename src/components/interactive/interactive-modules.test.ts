@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-const { JSDOM } = require('jsdom');
+import { JSDOM } from 'jsdom';
 
 describe('Phase 1: Bug Condition Exploration Tests', () => {
     describe('1.1 Scroll Blocking Bug', () => {
@@ -51,6 +51,10 @@ describe('Phase 1: Bug Condition Exploration Tests', () => {
             const root = document.getElementById('root');
             const html = document.documentElement;
             const body = document.body;
+
+            // Mock scrollHeight and clientHeight for JSDOM (it doesn't compute layout)
+            Object.defineProperty(root!, 'scrollHeight', { value: 2000, configurable: true });
+            Object.defineProperty(root!, 'clientHeight', { value: 600, configurable: true });
 
             // Check CSS properties - expect overflow: auto (not hidden)
             const rootStyle = dom.window.getComputedStyle(root!);

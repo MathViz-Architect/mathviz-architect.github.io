@@ -11,6 +11,8 @@ import { useEditorContext } from '@/contexts/EditorContext';
 import SkillTree, { type SkillTreeTopic, type SkillTreeProgress } from '@/components/SkillTree/SkillTree';
 import { useStudentProgress, getSkillLevel } from '@/hooks/useStudentProgress';
 import MathText from './MathText';
+import FractionInput from './FractionInput';
+import MathInputField from './MathInputField';
 
 interface OldChallenge {
   id: string;
@@ -376,6 +378,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   const [generatedProblem, setGeneratedProblem] = useState<GeneratedProblem | null>(null);
   const [generatedData, setGeneratedData] = useState<GeneratedData | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
+  const [fractionNumerator, setFractionNumerator] = useState('');
+  const [fractionDenominator, setFractionDenominator] = useState('');
   const [selectedSign, setSelectedSign] = useState<'>' | '<' | '=' | null>(null);
   const [selectedTriangleType, setSelectedTriangleType] = useState<'equilateral' | 'isosceles' | 'scalene' | null>(null);
   const [result, setResult] = useState<'correct' | 'incorrect' | null>(null);
@@ -398,6 +402,10 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   const [adaptiveState, setAdaptiveState] = useState<AdaptiveState>(() => createAdaptiveState());
   const [problemSession, setProblemSession] = useState<ProblemSession | null>(null);
   const [problemKey, setProblemKey] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [sessionProgress, setSessionProgress] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [streakAnimation, setStreakAnimation] = useState(false);
 
   // Use ref to track current difficulty without triggering useEffect
   const currentDifficultyRef = React.useRef(adaptiveState.currentDifficulty);
@@ -409,13 +417,26 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
 
   // Generate problem when a template is selected or problemKey changes
   React.useEffect(() => {
-    if (activeTemplate) {
-      const problem = generateProblem(activeTemplate, currentDifficultyRef.current);
-      setGeneratedProblem(problem);
-    } else {
-      setGeneratedProblem(null);
-    }
-  }, [activeTemplate, problemKey]); // Removed adaptiveState.currentDifficulty from dependencies
+    if (!activeTemplate) return;
+    
+    // Reset generatedProblem before generating new problem
+    setGeneratedProblem(null);
+    setIsGenerating(true);
+    
+    // Use setTimeout to avoid blocking the main thread
+    const timeoutId = setTimeout(() => {
+      try {
+        const problem = generateProblem(activeTemplate, currentDifficultyRef.current);
+        setGeneratedProblem(problem);
+      } catch (error) {
+        console.error('Error generating problem:', error);
+      } finally {
+        setIsGenerating(false);
+      }
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
+  }, [activeTemplate, problemKey]);
 
   // Generate data when a generated challenge is selected (legacy support)
   React.useEffect(() => {
@@ -515,6 +536,13 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
       if (isCorrect) {
         setResult('correct');
         setMistakeFeedback(null);
+        
+        // Update streak and session progress
+        const newStreak = currentStreak + 1;
+        setCurrentStreak(newStreak);
+        setStreakAnimation(true);
+        setTimeout(() => setStreakAnimation(false), 500);
+        setSessionProgress(prev => Math.min(prev + 1, 10));
 
         // Check for achievements
         const topicProgress = newProgress.topics[topicKey];
@@ -533,6 +561,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         }
       } else {
         setResult('incorrect');
+        setCurrentStreak(0);
         const feedback = checkCommonMistake(generatedProblem, activeTemplate, userAnswer, adaptiveState.currentDifficulty);
         setMistakeFeedback(feedback);
       }
@@ -632,6 +661,9 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
           setActiveTemplate(nextTemplate);
         }
 
+        // Reset generatedProblem to trigger new generation in useEffect
+        setGeneratedProblem(null);
+
         // Increment problemKey to force regeneration via useEffect
         setProblemKey(k => k + 1);
 
@@ -645,6 +677,13 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         setShowSolution(false);
         setMistakeFeedback(null);
         setAchievementMessage(null);
+        setFractionNumerator('');
+        setFractionDenominator('');
+        
+        // Reset session progress if completed 10 tasks
+        if (sessionProgress >= 10) {
+          setSessionProgress(0);
+        }
         return;
       }
     }
@@ -654,6 +693,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
     setActiveTemplate(null);
     setGeneratedProblem(null);
     setUserAnswer('');
+    setFractionNumerator('');
+    setFractionDenominator('');
     setSelectedSign(null);
     setSelectedTriangleType(null);
     setResult(null);
@@ -679,6 +720,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
       setSelectedCategory(null);
     }
     setUserAnswer('');
+    setFractionNumerator('');
+    setFractionDenominator('');
     setSelectedSign(null);
     setSelectedTriangleType(null);
     setResult(null);
@@ -686,6 +729,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
     setShowSolution(false);
     setMistakeFeedback(null);
     setAchievementMessage(null);
+    setSessionProgress(0);
+    setCurrentStreak(0);
   };
 
   const getDifficultyColor = (difficulty: number) => {
@@ -700,385 +745,385 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
 
   // If a template is selected, show the template-based challenge interface
   if (activeTemplate && generatedProblem) {
+    const isSimpleProblem = activeTemplate.problemType === 'numeric' && generatedProblem.answer_type === 'number';
+    
     return (
-      <div className="h-full overflow-auto bg-white p-6">
+      <div className="h-full overflow-auto bg-gray-50 p-4 sm:p-6">
         {/* Back button */}
-        <button
-          onClick={handleBack}
-          className="mb-4 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-        >
-          ← Назад к задачам
-        </button>
-
-        {/* Challenge header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <span className={`px-2 py-1 rounded text-xs font-medium ${adaptiveState.currentDifficulty === 1 ? 'bg-green-100 text-green-700' : adaptiveState.currentDifficulty === 2 ? 'bg-yellow-100 text-yellow-700' : adaptiveState.currentDifficulty === 3 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
-              {adaptiveState.currentDifficulty === 1 ? 'Легко' : adaptiveState.currentDifficulty === 2 ? 'Средне' : adaptiveState.currentDifficulty === 3 ? 'Сложно' : 'Олимпиадное'}
-            </span>
-            <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
-              ⚡ {getDifficultyLabel(adaptiveState.currentDifficulty)}
-            </span>
-            {completedChallenges.includes(activeTemplate.id) && (
-              <CheckCircle size={20} className="text-green-500" />
-            )}
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">{activeTemplate.section}</h2>
+        <div className="max-w-3xl mx-auto mb-4">
+          <button
+            onClick={handleBack}
+            className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+          >
+            ← Назад к задачам
+          </button>
         </div>
 
-        {/* Task */}
-        <div className="bg-indigo-50 rounded-xl p-4 mb-6">
-          <h3 className="font-semibold text-indigo-800 mb-3">Задача:</h3>
-          <div className="border-t border-indigo-200 pt-3">
-            <MathText className="text-indigo-700">
-              {generatedProblem.question}
-            </MathText>
+        {/* Challenge container */}
+        <div className={`max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden`}>
+          {/* Session Progress Bar */}
+          <div className="h-2 bg-gray-200 rounded-t-2xl overflow-hidden">
+            <div 
+              className="h-full bg-green-500 rounded-full transition-all duration-500"
+              style={{ width: `${(sessionProgress / 10) * 100}%` }}
+            />
           </div>
-        </div>
 
-        {/* Hint - support both single hint and hints array */}
-        {(generatedProblem.hint || (generatedProblem.hints && generatedProblem.hints.length > 0)) && (
-          <div className="mb-6">
-            {/* Button to show/reveal next hint */}
-            <button
-              onClick={() => {
-                const hintsCount = generatedProblem.hints?.length || 0;
-                if (hintsCount > 0) {
-                  // Multi-hint mode: show next hint progressively
-                  if (activeHintIndex < hintsCount - 1) {
-                    const newIndex = activeHintIndex + 1;
-                    setActiveHintIndex(newIndex);
-                    setHintsUsed(hintsUsed + 1);
-                    setShowHint(true);
-                    // Update adaptive state to track hints usage
-                    setAdaptiveState(prev => updateHintsUsed(prev));
-                  } else if (!showHint && generatedProblem.hint) {
-                    // Fall back to single hint
-                    setShowHint(true);
-                    setHintsUsed(hintsUsed + 1);
-                    setAdaptiveState(prev => updateHintsUsed(prev));
-                  }
-                } else if (generatedProblem.hint) {
-                  // Single hint mode
-                  setShowHint(!showHint);
-                  if (!showHint) {
-                    setHintsUsed(hintsUsed + 1);
-                    setAdaptiveState(prev => updateHintsUsed(prev));
-                  }
-                }
-              }}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
-            >
-              <Lightbulb size={16} />
-              {generatedProblem.hints && generatedProblem.hints.length > 0
-                ? activeHintIndex < (generatedProblem.hints.length - 1)
-                  ? `Подсказка ${activeHintIndex + 2}/${generatedProblem.hints.length}`
-                  : activeHintIndex === (generatedProblem.hints.length - 1) && showHint
-                    ? 'Скрыть подсказки'
-                    : 'Показать подсказку'
-                : showHint
-                  ? 'Скрыть подсказку'
-                  : 'Показать подсказку'
-              }
-            </button>
-            
-            {/* Display hints */}
-            {showHint && (
-              <div className="mt-2 space-y-2">
-                {/* Show progressive hints from the array */}
-                {generatedProblem.hints && generatedProblem.hints.length > 0 && (
-                  <>
-                    {generatedProblem.hints.slice(0, activeHintIndex + 1).map((hint, idx) => (
-                      <div key={idx} className="p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
-                        <span className="font-medium">Подсказка {idx + 1}:</span> <MathText>{hint}</MathText>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {/* Fallback to single hint */}
-                {generatedProblem.hint && (!generatedProblem.hints || generatedProblem.hints.length === 0) && (
-                  <div className="p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
-                    💡 <MathText>{generatedProblem.hint}</MathText>
-                  </div>
-                )}
-                {hintsUsed > 0 && (
-                  <div className="text-xs text-gray-400 mt-1">
-                    Использовано подсказок: {hintsUsed}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Related Module Link */}
-        {activeTemplate?.relatedModule && (
-          <div className="mb-6">
-            <button
-              onClick={handleExploreModule}
-              className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-            >
-              <Search size={16} />
-              🔍 Исследовать в интерактивном модуле
-            </button>
-          </div>
-        )}
-
-        {/* Answer input */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Ваш ответ:
-          </label>
-
-          {/* Comparison problems */}
-          {activeTemplate.problemType === 'comparison' && (
-            <div className="flex items-center justify-center gap-4 p-6 bg-gray-50 rounded-xl">
-              {/* Left fraction/number */}
-              <div className="text-center">
-                {generatedProblem.params.d || generatedProblem.params.d1 ? (
-                  <div className="flex flex-col items-center">
-                    <div className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2">
-                      {generatedProblem.params.a}
-                    </div>
-                    <div className="text-3xl font-bold text-gray-800 px-2 mt-1">
-                      {generatedProblem.params.d || generatedProblem.params.d1}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-3xl font-bold text-gray-800">{generatedProblem.params.a}</div>
-                )}
-              </div>
-
-              {/* Comparison buttons */}
-              <div className="flex gap-2">
-                {['>', '<', '='].map((sign) => (
-                  <button
-                    key={sign}
-                    onClick={() => {
-                      setSelectedSign(sign as '>' | '<' | '=');
-                      if (result === 'incorrect') setResult(null);
-                    }}
-                    className={`w-16 h-16 text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign
-                      ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
-                      }`}
-                  >
-                    {sign}
-                  </button>
-                ))}
-              </div>
-
-              {/* Right fraction/number */}
-              <div className="text-center">
-                {generatedProblem.params.d || generatedProblem.params.d2 ? (
-                  <div className="flex flex-col items-center">
-                    <div className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2">
-                      {generatedProblem.params.b}
-                    </div>
-                    <div className="text-3xl font-bold text-gray-800 px-2 mt-1">
-                      {generatedProblem.params.d || generatedProblem.params.d2}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-3xl font-bold text-gray-800">{generatedProblem.params.b}</div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Text problems (triangle type) */}
-          {activeTemplate.problemType === 'text' && activeTemplate.topic === 'triangles' && (
-            <div className="space-y-2">
-              {[
-                { value: 'равносторонний', label: 'Равносторонний' },
-                { value: 'равнобедренный', label: 'Равнобедренный' },
-                { value: 'разносторонний', label: 'Разносторонний' },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => {
-                    setUserAnswer(option.value);
-                    if (result === 'incorrect') setResult(null);
-                  }}
-                  className={`w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${userAnswer === option.value
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
-                    }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Magic Square problems */}
-          {activeTemplate.problemType === 'magicSquare' && (
-            <div>
-              <div className="flex justify-center p-6 bg-gray-50 rounded-xl mb-4">
-                <div className="inline-grid grid-cols-3 gap-2">
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((index) => {
-                    const cellValue = generatedProblem.params[`c${index}`];
-                    const isHidden = generatedProblem.params.hiddenIndex === index;
-
-                    return (
-                      <div
-                        key={index}
-                        className={`w-16 h-16 flex items-center justify-center text-xl font-bold rounded-lg border-2 ${isHidden
-                          ? 'border-indigo-500 bg-indigo-100 text-indigo-600'
-                          : 'border-gray-300 bg-white text-gray-800'
-                          }`}
-                      >
-                        {isHidden ? '?' : cellValue}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <input
-                type="number"
-                value={userAnswer}
-                onChange={(e) => {
-                  setUserAnswer(e.target.value);
-                  if (result === 'incorrect') setResult(null);
-                }}
-                placeholder="Введите пропущенное число..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                onKeyDown={(e) => e.key === 'Enter' && result !== 'correct' && handleCheck()}
-                disabled={result === 'correct'}
-              />
-            </div>
-          )}
-
-          {/* Numeric problems */}
-          {activeTemplate.problemType === 'numeric' && (
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={userAnswer}
-                onChange={(e) => {
-                  setUserAnswer(e.target.value);
-                  if (result === 'incorrect') setResult(null);
-                }}
-                placeholder={
-                  generatedProblem.answer_type === 'fraction' ? 'Например: 3/4' :
-                    generatedProblem.answer_type === 'coordinate' ? 'Например: (3, 4)' :
-                      'Введите число...'
-                }
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                onKeyDown={(e) => e.key === 'Enter' && result !== 'correct' && handleCheck()}
-                disabled={result === 'correct'}
-              />
-              {result !== 'correct' && (
-                <button
-                  onClick={handleCheck}
-                  disabled={!userAnswer.trim()}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Проверить
-                  <ArrowRight size={18} />
-                </button>
+          {/* Challenge header */}
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className={`px-2 py-1 rounded text-xs font-medium ${adaptiveState.currentDifficulty === 1 ? 'bg-green-100 text-green-700' : adaptiveState.currentDifficulty === 2 ? 'bg-yellow-100 text-yellow-700' : adaptiveState.currentDifficulty === 3 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+                {adaptiveState.currentDifficulty === 1 ? 'Легко' : adaptiveState.currentDifficulty === 2 ? 'Средне' : adaptiveState.currentDifficulty === 3 ? 'Сложно' : 'Олимпиадное'}
+              </span>
+              <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
+                ⚡ {getDifficultyLabel(adaptiveState.currentDifficulty)}
+              </span>
+              {currentStreak > 0 && (
+                <span className={`px-2 py-1 rounded text-xs font-medium bg-amber-50 text-amber-600 flex items-center gap-1 ${streakAnimation ? 'animate-bounce' : ''}`}>
+                  🔥 {currentStreak}
+                </span>
+              )}
+              {completedChallenges.includes(activeTemplate.id) && (
+                <CheckCircle size={20} className="text-green-500" />
               )}
             </div>
-          )}
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{activeTemplate.section}</h2>
+          </div>
 
-          {/* Check button for comparison, text, and magic square problems */}
-          {result !== 'correct' && (
-            activeTemplate.problemType === 'comparison' ||
-            (activeTemplate.problemType === 'text' && activeTemplate.topic === 'triangles') ||
-            activeTemplate.problemType === 'magicSquare'
-          ) && (
-              <button
-                onClick={handleCheck}
-                disabled={
-                  activeTemplate.problemType === 'comparison' ? !selectedSign :
-                    activeTemplate.problemType === 'magicSquare' ? !userAnswer :
-                      !userAnswer
-                }
-                className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Проверить
-                <ArrowRight size={18} />
-              </button>
-            )}
-        </div>
-
-        {/* Result */}
-        {result && (
-          <div className={`p-4 rounded-xl flex items-center gap-3 ${result === 'correct' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {result === 'correct' ? (
-              <>
-                <CheckCircle size={24} />
-                <div className="flex-1">
-                  <div className="font-semibold">Правильно! 🎉</div>
-                  <div className="text-sm">Вы успешно решили задачу.</div>
-                  {achievementMessage && (
-                    <div className="mt-2 px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium flex items-center gap-2">
-                      {achievementMessage}
+          {/* Task block */}
+          <div className="px-4 sm:px-6 py-5">
+            <div className="bg-indigo-50 rounded-xl p-4 sm:p-5">
+              <h3 className="font-semibold text-indigo-800 mb-3">Задача:</h3>
+              <div className="border-t border-indigo-200 pt-3">
+                {/* Special rendering for fraction_property template */}
+                {activeTemplate.topic === 'fraction_property' ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <p className="text-indigo-700 text-base mb-2">Примените основное свойство дроби:</p>
+                    <div className="flex items-center justify-center gap-2 sm:gap-3 text-2xl sm:text-3xl font-bold text-indigo-800">
+                      <MathText>{`$\\frac{${String(generatedProblem.params.a)}}{${String(generatedProblem.params.b)}}$`}</MathText>
+                      <span>=</span>
+                      <MathText>{`$\\frac{?}{${String(generatedProblem.params.c)}}$`}</MathText>
                     </div>
+                  </div>
+                ) : (
+                  <MathText className="text-indigo-700 text-lg">
+                    {generatedProblem.question}
+                  </MathText>
+                )}
+              </div>
+            </div>
+
+            {/* Hint */}
+            {(generatedProblem.hint || (generatedProblem.hints && generatedProblem.hints.length > 0)) && (
+              <div className="mt-5">
+                <button
+                  onClick={() => {
+                    const hintsCount = generatedProblem.hints?.length || 0;
+                    if (hintsCount > 0) {
+                      if (activeHintIndex < hintsCount - 1) {
+                        const newIndex = activeHintIndex + 1;
+                        setActiveHintIndex(newIndex);
+                        setHintsUsed(hintsUsed + 1);
+                        setShowHint(true);
+                        setAdaptiveState(prev => updateHintsUsed(prev));
+                        setCurrentStreak(0);
+                      } else if (!showHint && generatedProblem.hint) {
+                        setShowHint(true);
+                        setHintsUsed(hintsUsed + 1);
+                        setAdaptiveState(prev => updateHintsUsed(prev));
+                        setCurrentStreak(0);
+                      }
+                    } else if (generatedProblem.hint) {
+                      setShowHint(!showHint);
+                      if (!showHint) {
+                        setHintsUsed(hintsUsed + 1);
+                        setAdaptiveState(prev => updateHintsUsed(prev));
+                        setCurrentStreak(0);
+                      }
+                    }
+                  }}
+                  className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+                >
+                  <Lightbulb size={16} />
+                  {generatedProblem.hints && generatedProblem.hints.length > 0
+                    ? activeHintIndex < (generatedProblem.hints.length - 1)
+                      ? `Подсказка ${activeHintIndex + 2}/${generatedProblem.hints.length}`
+                      : activeHintIndex === (generatedProblem.hints.length - 1) && showHint
+                        ? 'Скрыть подсказки'
+                        : 'Показать подсказку'
+                    : showHint
+                      ? 'Скрыть подсказку'
+                      : 'Показать подсказку'
+                  }
+                </button>
+                
+                {/* Hint Penalty UI */}
+                <div className="mt-1">
+                  {hintsUsed === 0 && (
+                    <p className="text-xs text-gray-400">Первая подсказка: -50% баллов</p>
+                  )}
+                  {hintsUsed >= 1 && (
+                    <p className="text-xs text-amber-500">Следующая подсказка: 0 баллов за задачу</p>
                   )}
                 </div>
-              </>
-            ) : (
-              <>
-                <XCircle size={24} />
-                <div>
-                  <div className="font-semibold">Неправильно 😔</div>
-                  <div className="text-sm">{mistakeFeedback ?? 'Попробуйте ещё раз или посмотрите подсказку.'}</div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Show Solution button */}
-        {result && generatedProblem?.solution && (
-          <div className="mt-4">
-            <button
-              onClick={() => setShowSolution(!showSolution)}
-              className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-2"
-            >
-              <HelpCircle size={16} />
-              {showSolution ? 'Скрыть решение' : 'Показать решение'}
-            </button>
-            {showSolution && (
-              <div className="mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="font-semibold text-blue-800 mb-3">Пошаговое решение:</div>
-                <div className="space-y-3">
-                  {generatedProblem.solution.map((step, index) => (
-                    <div key={index} className="flex gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-                        {index + 1}
+                
+                {showHint && (
+                  <div className="mt-2 space-y-2">
+                    {generatedProblem.hints && generatedProblem.hints.length > 0 && (
+                      <>
+                        {generatedProblem.hints.slice(0, activeHintIndex + 1).map((hint, idx) => (
+                          <div key={idx} className="p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
+                            <span className="font-medium">Подсказка {idx + 1}:</span> <MathText>{hint}</MathText>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {generatedProblem.hint && (!generatedProblem.hints || generatedProblem.hints.length === 0) && (
+                      <div className="p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
+                        💡 <MathText>{generatedProblem.hint}</MathText>
                       </div>
-                      <div className="flex-1">
-                        <div className="text-blue-900"><MathText>{step.explanation}</MathText></div>
-                        {step.expression && (
-                          <div className="mt-1 font-mono text-sm text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                            <MathText>{step.expression}</MathText>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Related Module Link */}
+            {activeTemplate?.relatedModule && (
+              <div className="mt-5">
+                <button
+                  onClick={handleExploreModule}
+                  className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                >
+                  <Search size={16} />
+                  🔍 Исследовать в интерактивном модуле
+                </button>
+              </div>
+            )}
+
+            {/* Answer input */}
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ваш ответ:
+              </label>
+
+              {(() => {
+                const problemType = activeTemplate.problemType;
+                const answerType = generatedProblem?.answer_type;
+
+                // Problems that use custom button UI instead of a text field
+                if (problemType === 'comparison') {
+                  return (
+                    <div className="flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 bg-gray-50 rounded-xl">
+                      {/* Comparison UI Logic from previous version */}
+                      <div className="text-center">
+                         {generatedProblem.params.d || generatedProblem.params.d1 ? (
+                          <div className="flex flex-col items-center">
+                            <div className="text-2xl sm:text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2">
+                              {generatedProblem.params.a}
+                            </div>
+                            <div className="text-2xl sm:text-3xl font-bold text-gray-800 px-2 mt-1">
+                              {generatedProblem.params.d || generatedProblem.params.d1}
+                            </div>
                           </div>
+                        ) : (
+                          <div className="text-2xl sm:text-3xl font-bold text-gray-800">{generatedProblem.params.a}</div>
                         )}
-                        {step.result && (
-                          <div className="mt-1 font-semibold text-blue-800">
-                            = <MathText>{step.result}</MathText>
+                      </div>
+                      <div className="flex gap-2">
+                        {['>', '<', '='].map((sign) => (
+                          <button
+                            key={sign}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSign(sign as '>' | '<' | '=');
+                              if (result === 'incorrect') setResult(null);
+                            }}
+                            className={`w-12 h-12 sm:w-16 sm:h-16 text-xl sm:text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+                              }`}
+                          >
+                            {sign}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="text-center">
+                         {generatedProblem.params.d || generatedProblem.params.d2 ? (
+                          <div className="flex flex-col items-center">
+                            <div className="text-2xl sm:text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2">
+                              {generatedProblem.params.b}
+                            </div>
+                            <div className="text-2xl sm:text-3xl font-bold text-gray-800 px-2 mt-1">
+                              {generatedProblem.params.d || generatedProblem.params.d2}
+                            </div>
                           </div>
+                        ) : (
+                          <div className="text-2xl sm:text-3xl font-bold text-gray-800">{generatedProblem.params.b}</div>
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                }
+
+                if (problemType === 'text' && activeTemplate.topic === 'triangles') {
+                  return (
+                    <div className="space-y-2">
+                      {[
+                        { value: 'равносторонний', label: 'Равносторонний' },
+                        { value: 'равнобедренный', label: 'Равнобедренный' },
+                        { value: 'разносторонний', label: 'Разносторонний' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setUserAnswer(option.value);
+                            if (result === 'incorrect') setResult(null);
+                          }}
+                          className={`w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${userAnswer === option.value
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+                            }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                }
+
+                // Default to MathInputField for all other problem types
+                const placeholder = 
+                      answerType === 'coordinate' ? 'Например: (3; 4)' :
+                      answerType === 'interval' ? 'Например: [-5; 10)' :
+                      answerType === 'fraction' ? 'Например: 3/4' :
+                      'Введите число или выражение...';
+
+                return (
+                  <div className="flex flex-col gap-3">
+                    <MathInputField
+                      value={userAnswer}
+                      onChange={(val) => {
+                        setUserAnswer(val);
+                        if (result === 'incorrect') setResult(null);
+                      }}
+                      onSubmit={handleCheck}
+                      placeholder={placeholder}
+                      disabled={result === 'correct'}
+                      autoFocus
+                    />
+                    {result !== 'correct' && (
+                      <button
+                        onClick={handleCheck}
+                        disabled={!userAnswer.trim()}
+                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed self-start"
+                      >
+                        Проверить
+                        <ArrowRight size={18} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Check button for comparison, text problems */}
+              {result !== 'correct' && (
+                activeTemplate.problemType === 'comparison' ||
+                (activeTemplate.problemType === 'text' && activeTemplate.topic === 'triangles')
+              ) && (
+                  <button
+                    onClick={handleCheck}
+                    disabled={
+                      activeTemplate.problemType === 'comparison' ? !selectedSign : !userAnswer
+                    }
+                    className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Проверить
+                    <ArrowRight size={18} />
+                  </button>
+                )}
+            </div>
+
+            {/* Result */}
+            {result && (
+              <div className={`mt-6 p-4 rounded-xl flex items-center gap-3 ${result === 'correct' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {result === 'correct' ? (
+                  <>
+                    <CheckCircle size={24} />
+                    <div className="flex-1">
+                      <div className="font-semibold">Правильно! 🎉</div>
+                      <div className="text-sm">Вы успешно решили задачу.</div>
+                      {achievementMessage && (
+                        <div className="mt-2 px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium flex items-center gap-2">
+                          {achievementMessage}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <XCircle size={24} />
+                    <div>
+                      <div className="font-semibold">Неправильно 😔</div>
+                      <div className="text-sm">{mistakeFeedback ?? 'Попробуйте ещё раз или посмотрите подсказку.'}</div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {/* Next button */}
-        {result === 'correct' && (
-          <button
-            onClick={handleNextChallenge}
-            className="mt-4 w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            Следующая задача →
-          </button>
-        )}
+            {/* Show Solution button */}
+            {result && generatedProblem?.solution && (
+              <div className="mt-4">
+                <button
+                  onClick={() => setShowSolution(!showSolution)}
+                  className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-2"
+                >
+                  <HelpCircle size={16} />
+                  {showSolution ? 'Скрыть решение' : 'Показать решение'}
+                </button>
+                {showSolution && (
+                  <div className="mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="font-semibold text-blue-800 mb-3">Пошаговое решение:</div>
+                    <div className="space-y-3">
+                      {generatedProblem.solution.map((step, index) => (
+                        <div key={index} className="flex gap-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-blue-900"><MathText>{step.explanation}</MathText></div>
+                            {step.expression && (
+                              <div className="mt-1 font-mono text-sm text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                                <MathText>{step.expression}</MathText>
+                              </div>
+                            )}
+                            {step.result && (
+                              <div className="mt-1 font-semibold text-blue-800">
+                                = <MathText>{step.result}</MathText>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Next button */}
+            {result === 'correct' && (
+              <button
+                onClick={handleNextChallenge}
+                className="mt-6 w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Следующая задача →
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -1086,326 +1131,331 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   // If a challenge is selected, show the challenge interface
   if (activeChallenge) {
     return (
-      <div className="h-full overflow-auto bg-white p-6">
+      <div className="h-full overflow-auto bg-gray-50 p-4 sm:p-6">
         {/* Back button */}
-        <button
-          onClick={handleBack}
-          className="mb-4 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-        >
-          ← Назад к задачам
-        </button>
+        <div className="max-w-3xl mx-auto mb-4">
+          <button
+            onClick={handleBack}
+            className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+          >
+            ← Назад к задачам
+          </button>
+        </div>
 
-        {/* Challenge header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(activeChallenge.difficulty)}`}>
-              {activeChallenge.difficulty === 1 ? 'Легко' : activeChallenge.difficulty === 2 ? 'Средне' : activeChallenge.difficulty === 3 ? 'Сложно' : 'Очень сложно'}
-            </span>
-            {completedChallenges.includes(activeChallenge.id) && (
-              <CheckCircle size={20} className="text-green-500" />
+        {/* Challenge container */}
+        <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Challenge header */}
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
+              <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(activeChallenge.difficulty)}`}>
+                {activeChallenge.difficulty === 1 ? 'Легко' : activeChallenge.difficulty === 2 ? 'Средне' : activeChallenge.difficulty === 3 ? 'Сложно' : 'Очень сложно'}
+              </span>
+              {completedChallenges.includes(activeChallenge.id) && (
+                <CheckCircle size={20} className="text-green-500" />
+              )}
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{activeChallenge.title}</h2>
+            {activeChallenge.type === 'static' && (
+              <p className="text-gray-600 mt-2">{activeChallenge.description}</p>
             )}
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">{activeChallenge.title}</h2>
-          {activeChallenge.type === 'static' && (
-            <p className="text-gray-600 mt-2">{activeChallenge.description}</p>
-          )}
-        </div>
 
-        {/* Task */}
-        <div className="bg-indigo-50 rounded-xl p-4 mb-6">
-          <h3 className="font-semibold text-indigo-800 mb-2">Задача:</h3>
-          {activeChallenge.type === 'generated' && generatedData ? (
-            activeChallenge.topic === 'magicSquare' && 'sq' in generatedData ? (
-              <div>
-                <p className="text-indigo-700 mb-3">
-                  Магический квадрат (сумма строк, столбцов и диагоналей = <strong>{generatedData.magicSum}</strong>).
-                  Найдите пропущенное число:
-                </p>
-                <div className="inline-grid grid-cols-3 gap-1 mb-1">
-                  {(generatedData.sq as number[]).map((val, i) => (
-                    <div
-                      key={i}
-                      className={`w-12 h-12 flex items-center justify-center text-lg font-bold rounded border-2 ${val === 0
-                        ? 'border-indigo-500 bg-indigo-100 text-indigo-600'
-                        : 'border-gray-300 bg-white text-gray-800'
-                        }`}
-                    >
-                      {val === 0 ? '?' : val}
+          {/* Task block */}
+          <div className="px-4 sm:px-6 py-5">
+            <div className="bg-indigo-50 rounded-xl p-4 sm:p-5">
+              <h3 className="font-semibold text-indigo-800 mb-2">Задача:</h3>
+              {activeChallenge.type === 'generated' && generatedData ? (
+                activeChallenge.topic === 'magicSquare' && 'sq' in generatedData ? (
+                  <div>
+                    <p className="text-indigo-700 mb-3">
+                      Магический квадрат (сумма строк, столбцов и диагоналей = <strong>{generatedData.magicSum}</strong>).
+                      Найдите пропущенное число:
+                    </p>
+                    <div className="inline-grid grid-cols-3 gap-1 mb-1">
+                      {(generatedData.sq as number[]).map((val, i) => (
+                        <div
+                          key={i}
+                          className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-base sm:text-lg font-bold rounded border-2 ${val === 0
+                            ? 'border-indigo-500 bg-indigo-100 text-indigo-600'
+                            : 'border-gray-300 bg-white text-gray-800'
+                            }`}
+                        >
+                          {val === 0 ? '?' : val}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-indigo-700">{activeChallenge.render(generatedData).question}</p>
-            )
-          ) : activeChallenge.type === 'static' ? (
-            <p className="text-indigo-700">{activeChallenge.question}</p>
-          ) : (
-            <p className="text-indigo-700">Загрузка...</p>
-          )}
-        </div>
-
-        {/* Hint */}
-        <div className="mb-6">
-          <button
-            onClick={() => setShowHint(!showHint)}
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
-          >
-            <HelpCircle size={16} />
-            {showHint ? 'Скрыть подсказку' : 'Показать подсказку'}
-          </button>
-          {showHint && (
-            <div className="mt-2 p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
-              💡 {activeChallenge.type === 'generated' && generatedData
-                ? activeChallenge.render(generatedData).hint || 'Подсказка недоступна'
-                : activeChallenge.type === 'static'
-                  ? activeChallenge.hint
-                  : 'Подсказка недоступна'}
-            </div>
-          )}
-        </div>
-
-        {/* Answer input */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Ваш ответ:
-          </label>
-
-          {/* Generated challenge with comparison (if data has num1 and num2) */}
-          {activeChallenge.type === 'generated' && generatedData && 'num1' in generatedData && 'num2' in generatedData && (
-            <div className="flex items-center justify-center gap-4 p-6 bg-gray-50 rounded-xl">
-              <div className="text-3xl font-bold text-gray-800">{generatedData.num1}</div>
-              <div className="flex gap-2">
-                {['>', '<', '='].map((sign) => (
-                  <button
-                    key={sign}
-                    onClick={() => setSelectedSign(sign as '>' | '<' | '=')}
-                    className={`w-16 h-16 text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign
-                      ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
-                      }`}
-                  >
-                    {sign}
-                  </button>
-                ))}
-              </div>
-              <div className="text-3xl font-bold text-gray-800">{generatedData.num2}</div>
-            </div>
-          )}
-
-          {/* Comparison challenge */}
-          {activeChallenge.type === 'static' && (activeChallenge as any).type === 'comparison' && (
-            <div className="flex items-center justify-center gap-4 p-6 bg-gray-50 rounded-xl">
-              <div className="text-3xl font-bold text-gray-800">{(activeChallenge as any).num1}</div>
-              <div className="flex gap-2">
-                {['>', '<', '='].map((sign) => (
-                  <button
-                    key={sign}
-                    onClick={() => setSelectedSign(sign as '>' | '<' | '=')}
-                    className={`w-16 h-16 text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign
-                      ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
-                      }`}
-                  >
-                    {sign}
-                  </button>
-                ))}
-              </div>
-              <div className="text-3xl font-bold text-gray-800">{(activeChallenge as any).num2}</div>
-            </div>
-          )}
-
-          {/* Sequence challenge */}
-          {activeChallenge.type === 'static' && (activeChallenge as any).type === 'sequence' && (
-            <div>
-              <div className="flex items-center justify-center gap-3 p-6 bg-gray-50 rounded-xl mb-4">
-                {(activeChallenge as any).sequence?.map((num: any, idx: number) => (
-                  <div key={idx} className="text-2xl font-bold text-gray-800">
-                    {num !== null ? num : '?'}
-                    {idx < ((activeChallenge as any).sequence?.length || 0) - 1 && <span className="mx-2 text-gray-400">,</span>}
                   </div>
-                ))}
-              </div>
-              <input
-                type="number"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="Введите пропущенное число..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
-              />
+                ) : (
+                  <p className="text-indigo-700">{activeChallenge.render(generatedData).question}</p>
+                )
+              ) : activeChallenge.type === 'static' ? (
+                <p className="text-indigo-700">{activeChallenge.question}</p>
+              ) : (
+                <p className="text-indigo-700">Загрузка...</p>
+              )}
             </div>
-          )}
 
-          {/* Perimeter challenge */}
-          {activeChallenge.type === 'static' && (activeChallenge as any).type === 'perimeter' && (
-            <div>
-              <div className="flex flex-col items-center p-6 bg-gray-50 rounded-xl mb-4">
-                <svg width="200" height="150" className="mb-4">
-                  <rect
-                    x="50"
-                    y="25"
-                    width={(activeChallenge as any).width! * 10}
-                    height={(activeChallenge as any).height! * 10}
-                    fill="none"
-                    stroke="#4F46E5"
-                    strokeWidth="2"
+            {/* Hint */}
+            <div className="mt-5">
+              <button
+                onClick={() => setShowHint(!showHint)}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                <HelpCircle size={16} />
+                {showHint ? 'Скрыть подсказку' : 'Показать подсказку'}
+              </button>
+              {showHint && (
+                <div className="mt-2 p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
+                  💡 {activeChallenge.type === 'generated' && generatedData
+                    ? activeChallenge.render(generatedData).hint || 'Подсказка недоступна'
+                    : activeChallenge.type === 'static'
+                      ? activeChallenge.hint
+                      : 'Подсказка недоступна'}
+                </div>
+              )}
+            </div>
+
+            {/* Answer input */}
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ваш ответ:
+              </label>
+
+              {/* Generated challenge with comparison (if data has num1 and num2) */}
+              {activeChallenge.type === 'generated' && generatedData && 'num1' in generatedData && 'num2' in generatedData && (
+                <div className="flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 bg-gray-50 rounded-xl">
+                  <div className="text-xl sm:text-3xl font-bold text-gray-800">{generatedData.num1}</div>
+                  <div className="flex gap-2">
+                    {['>', '<', '='].map((sign) => (
+                      <button
+                        key={sign}
+                        onClick={() => setSelectedSign(sign as '>' | '<' | '=')}
+                        className={`w-12 h-12 sm:w-16 sm:h-16 text-xl sm:text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+                          }`}
+                      >
+                        {sign}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-xl sm:text-3xl font-bold text-gray-800">{generatedData.num2}</div>
+                </div>
+              )}
+
+              {/* Comparison challenge */}
+              {activeChallenge.type === 'static' && (activeChallenge as any).type === 'comparison' && (
+                <div className="flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 bg-gray-50 rounded-xl">
+                  <div className="text-xl sm:text-3xl font-bold text-gray-800">{(activeChallenge as any).num1}</div>
+                  <div className="flex gap-2">
+                    {['>', '<', '='].map((sign) => (
+                      <button
+                        key={sign}
+                        onClick={() => setSelectedSign(sign as '>' | '<' | '=')}
+                        className={`w-12 h-12 sm:w-16 sm:h-16 text-xl sm:text-2xl font-bold rounded-lg border-2 transition-all ${selectedSign === sign
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+                          }`}
+                      >
+                        {sign}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-xl sm:text-3xl font-bold text-gray-800">{(activeChallenge as any).num2}</div>
+                </div>
+              )}
+
+              {/* Sequence challenge */}
+              {activeChallenge.type === 'static' && (activeChallenge as any).type === 'sequence' && (
+                <div>
+                  <div className="flex items-center justify-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gray-50 rounded-xl mb-4">
+                    {(activeChallenge as any).sequence?.map((num: any, idx: number) => (
+                      <div key={idx} className="text-lg sm:text-2xl font-bold text-gray-800">
+                        {num !== null ? num : '?'}
+                        {idx < ((activeChallenge as any).sequence?.length || 0) - 1 && <span className="mx-1 sm:mx-2 text-gray-400">,</span>}
+                      </div>
+                    ))}
+                  </div>
+                  <input
+                    type="number"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    placeholder="Введите пропущенное число..."
+                    className="w-full sm:max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
                   />
-                  <text x="100" y="15" textAnchor="middle" className="text-sm fill-gray-700">
-                    {(activeChallenge as any).width} см
-                  </text>
-                  <text x="30" y="75" textAnchor="middle" className="text-sm fill-gray-700">
-                    {(activeChallenge as any).height} см
-                  </text>
-                </svg>
-              </div>
-              <input
-                type="number"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="Введите периметр в см..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
-              />
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Triangle type challenge */}
-          {activeChallenge.type === 'static' && (activeChallenge as any).type === 'triangle-type' && (
-            <div>
-              <div className="flex items-center justify-center gap-6 p-6 bg-gray-50 rounded-xl mb-4">
-                <div className="text-center">
-                  <div className="text-sm text-gray-500 mb-1">Стороны треугольника:</div>
-                  <div className="text-2xl font-bold text-gray-800">
-                    {(activeChallenge as any).sides?.join(', ')} см
+              {/* Perimeter challenge */}
+              {activeChallenge.type === 'static' && (activeChallenge as any).type === 'perimeter' && (
+                <div>
+                  <div className="flex flex-col items-center p-4 sm:p-6 bg-gray-50 rounded-xl mb-4">
+                    <svg width="180" height="130" className="mb-4">
+                      <rect
+                        x="50"
+                        y="25"
+                        width={(activeChallenge as any).width! * 10}
+                        height={(activeChallenge as any).height! * 10}
+                        fill="none"
+                        stroke="#4F46E5"
+                        strokeWidth="2"
+                      />
+                      <text x="100" y="15" textAnchor="middle" className="text-sm fill-gray-700">
+                        {(activeChallenge as any).width} см
+                      </text>
+                      <text x="30" y="75" textAnchor="middle" className="text-sm fill-gray-700">
+                        {(activeChallenge as any).height} см
+                      </text>
+                    </svg>
+                  </div>
+                  <input
+                    type="number"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    placeholder="Введите периметр в см..."
+                    className="w-full sm:max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
+                  />
+                </div>
+              )}
+
+              {/* Triangle type challenge */}
+              {activeChallenge.type === 'static' && (activeChallenge as any).type === 'triangle-type' && (
+                <div>
+                  <div className="flex items-center justify-center gap-4 sm:gap-6 p-4 sm:p-6 bg-gray-50 rounded-xl mb-4">
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500 mb-1">Стороны треугольника:</div>
+                      <div className="text-lg sm:text-2xl font-bold text-gray-800">
+                        {(activeChallenge as any).sides?.join(', ')} см
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'equilateral', label: 'Равносторонний' },
+                      { value: 'isosceles', label: 'Равнобедренный' },
+                      { value: 'scalene', label: 'Разносторонний' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setSelectedTriangleType(option.value as any)}
+                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${selectedTriangleType === option.value
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+                          }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                {[
-                  { value: 'equilateral', label: 'Равносторонний' },
-                  { value: 'isosceles', label: 'Равнобедренный' },
-                  { value: 'scalene', label: 'Разносторонний' },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setSelectedTriangleType(option.value as any)}
-                    className={`w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${selectedTriangleType === option.value
-                      ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
-                      }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Magic square challenge */}
-          {activeChallenge.type === 'static' && (activeChallenge as any).type === 'magic-square' && (
-            <div>
-              <div className="flex justify-center p-6 bg-gray-50 rounded-xl mb-4">
-                <div className="grid grid-cols-3 gap-2">
-                  {(activeChallenge as any).grid?.flat().map((num: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="w-16 h-16 flex items-center justify-center border-2 border-gray-300 rounded-lg bg-white text-xl font-bold text-gray-800"
-                    >
-                      {num !== null ? num : '?'}
+              {/* Magic square challenge */}
+              {activeChallenge.type === 'static' && (activeChallenge as any).type === 'magic-square' && (
+                <div>
+                  <div className="flex justify-center p-4 sm:p-6 bg-gray-50 rounded-xl mb-4">
+                    <div className="grid grid-cols-3 gap-2">
+                      {(activeChallenge as any).grid?.flat().map((num: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center border-2 border-gray-300 rounded-lg bg-white text-base sm:text-xl font-bold text-gray-800"
+                        >
+                          {num !== null ? num : '?'}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    placeholder="Введите пропущенные числа через запятую..."
+                    className="w-full sm:max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
+                  />
                 </div>
+              )}
+
+              {/* Default numeric input for generated challenges and other types */}
+              {(activeChallenge.type === 'generated' && generatedData && !('num1' in generatedData && 'num2' in generatedData)) ||
+                (activeChallenge.type === 'static' && !['comparison', 'sequence', 'perimeter', 'triangle-type', 'magic-square'].includes((activeChallenge as any).type)) ? (
+                <div className="flex flex-col gap-3">
+                  <MathInputField
+                    value={userAnswer}
+                    onChange={setUserAnswer}
+                    placeholder="Введите число или выражение..."
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleCheck}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+                  >
+                    Проверить
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Check button for special types */}
+              {((activeChallenge.type === 'generated' && generatedData && 'num1' in generatedData && 'num2' in generatedData) ||
+                (activeChallenge.type === 'static' && ['comparison', 'triangle-type'].includes((activeChallenge as any).type))) && (
+                  <button
+                    onClick={handleCheck}
+                    className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
+                  >
+                    Проверить
+                    <ArrowRight size={18} />
+                  </button>
+                )}
+
+              {/* Check button for input types */}
+              {activeChallenge.type === 'static' && ['sequence', 'perimeter', 'magic-square'].includes((activeChallenge as any).type) && (
+                <button
+                  onClick={handleCheck}
+                  className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
+                >
+                  Проверить
+                  <ArrowRight size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Result */}
+            {result && (
+              <div className={`mt-6 p-4 rounded-xl flex items-center gap-3 ${result === 'correct' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {result === 'correct' ? (
+                  <>
+                    <CheckCircle size={24} />
+                    <div>
+                      <div className="font-semibold">Правильно! 🎉</div>
+                      <div className="text-sm">Вы успешно решили задачу.</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <XCircle size={24} />
+                    <div>
+                      <div className="font-semibold">Неправильно 😔</div>
+                      <div className="text-sm">Попробуйте ещё раз или посмотрите подсказку.</div>
+                    </div>
+                  </>
+                )}
               </div>
-              <input
-                type="text"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="Введите пропущенные числа через запятую..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
-              />
-            </div>
-          )}
-
-          {/* Default numeric input for generated challenges and other types */}
-          {(activeChallenge.type === 'generated' && generatedData && !('num1' in generatedData && 'num2' in generatedData)) ||
-            (activeChallenge.type === 'static' && !['comparison', 'sequence', 'perimeter', 'triangle-type', 'magic-square'].includes((activeChallenge as any).type)) ? (
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="Введите число..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
-              />
-              <button
-                onClick={handleCheck}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
-              >
-                Проверить
-                <ArrowRight size={18} />
-              </button>
-            </div>
-          ) : null}
-
-          {/* Check button for special types */}
-          {((activeChallenge.type === 'generated' && generatedData && 'num1' in generatedData && 'num2' in generatedData) ||
-            (activeChallenge.type === 'static' && ['comparison', 'triangle-type'].includes((activeChallenge as any).type))) && (
-              <button
-                onClick={handleCheck}
-                className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
-              >
-                Проверить
-                <ArrowRight size={18} />
-              </button>
             )}
 
-          {/* Check button for input types */}
-          {activeChallenge.type === 'static' && ['sequence', 'perimeter', 'magic-square'].includes((activeChallenge as any).type) && (
-            <button
-              onClick={handleCheck}
-              className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
-            >
-              Проверить
-              <ArrowRight size={18} />
-            </button>
-          )}
-        </div>
-
-        {/* Result */}
-        {result && (
-          <div className={`p-4 rounded-xl flex items-center gap-3 ${result === 'correct' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {result === 'correct' ? (
-              <>
-                <CheckCircle size={24} />
-                <div>
-                  <div className="font-semibold">Правильно! 🎉</div>
-                  <div className="text-sm">Вы успешно решили задачу.</div>
-                </div>
-              </>
-            ) : (
-              <>
-                <XCircle size={24} />
-                <div>
-                  <div className="font-semibold">Неправильно 😔</div>
-                  <div className="text-sm">Попробуйте ещё раз или посмотрите подсказку.</div>
-                </div>
-              </>
+            {/* Next button */}
+            {result === 'correct' && (
+              <button
+                onClick={handleNextChallenge}
+                className="mt-6 w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Следующая задача →
+              </button>
             )}
           </div>
-        )}
-
-        {/* Next button */}
-        {result === 'correct' && (
-          <button
-            onClick={handleNextChallenge}
-            className="mt-4 w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            Следующая задача →
-          </button>
-        )}
+        </div>
       </div>
     );
   }
@@ -1473,6 +1523,9 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
               onClick={() => {
                 setActiveTemplate(template);
                 setAdaptiveState(createAdaptiveState(1));
+                setFractionNumerator('');
+                setFractionDenominator('');
+                setUserAnswer('');
               }}
               className="w-full p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left"
             >

@@ -9,6 +9,7 @@ import { PropertiesPanel } from './components/PropertiesPanel';
 import { TemplateLibrary } from './components/TemplateLibrary';
 import { InteractiveLibrary } from './components/interactive/InteractiveLibrary';
 import { ChallengeMode } from './components/challenge/ChallengeMode';
+import { TemplateDebug } from './components/challenge/TemplateDebug';
 import { WelcomeScreen } from './components/interactive/WelcomeScreen';
 import { ProjectsPanel } from './components/ProjectsPanel';
 import { ExportModal } from './components/ExportModal';
@@ -45,9 +46,9 @@ function AppContent() {
 
   const handlePasteImage = useCallback(async () => {
     if (!canEdit) return;
-    
+
     console.log('[App] Paste detected, canEdit:', canEdit);
-    
+
     const result = await createAndUploadImage((id, updates) => {
       updateObject(id, updates);
     });
@@ -138,7 +139,7 @@ function AppContent() {
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       if (!canEdit) return;
-      
+
       const activeTag = document.activeElement?.tagName.toLowerCase();
       const isEditing = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
       if (isEditing) return;
@@ -196,7 +197,7 @@ function AppContent() {
 
   useEffect(() => {
     if (!window.electronAPI) return;
-    const cleanups = [ window.electronAPI.onMenuNewProject(handleNew), window.electronAPI.onMenuOpenProject(async (filePath) => {}), window.electronAPI.onMenuSaveProject(handleSave), window.electronAPI.onMenuSaveProjectAs(async () => {}), window.electronAPI.onMenuUndo(undo), window.electronAPI.onMenuRedo(redo) ];
+    const cleanups = [window.electronAPI.onMenuNewProject(handleNew), window.electronAPI.onMenuOpenProject(async (filePath) => { }), window.electronAPI.onMenuSaveProject(handleSave), window.electronAPI.onMenuSaveProjectAs(async () => { }), window.electronAPI.onMenuUndo(undo), window.electronAPI.onMenuRedo(redo)];
     return () => { cleanups.forEach((cleanup) => cleanup()); };
   }, [handleNew, handleSave, state, loadProject, setProjectPath, markAsSaved, undo, redo]);
 
@@ -222,9 +223,9 @@ function AppContent() {
           )}
           <TopBar zenMode={zenMode} onToggleZenMode={toggleZenMode} onAuthClick={() => setShowAuthModal(true)} />
           {renderMainContent()}
-          {!['interactive', 'challenge', 'projects'].includes(state.mode) && ( <PageSwitcher pages={state.pages} activePageId={state.activePageId} onSwitch={switchPage} onAdd={addPage} onRemove={removePage} /> )}
+          {!['interactive', 'challenge', 'projects'].includes(state.mode) && (<PageSwitcher pages={state.pages} activePageId={state.activePageId} onSwitch={switchPage} onAdd={addPage} onRemove={removePage} />)}
         </div>
-        {!zenMode && !['interactive', 'challenge', 'library', 'projects'].includes(state.mode) && (selectedObjects.length > 0 || ['freehand', 'shape', 'text'].includes(state.mode)) && ( <PropertiesPanel /> )}
+        {!zenMode && !['interactive', 'challenge', 'library', 'projects'].includes(state.mode) && (selectedObjects.length > 0 || ['freehand', 'shape', 'text'].includes(state.mode)) && (<PropertiesPanel />)}
       </div>
       {showWelcome && <WelcomeScreen onClose={() => setShowWelcome(false)} />}
       {showExportModal && <ExportModal onClose={() => setShowExportModal(false)} />}
@@ -242,6 +243,11 @@ function AppContent() {
 }
 
 function App() {
+  // Dev-only QA tool — not included in production routing
+  if (import.meta.env.DEV && window.location.pathname === '/debug/templates') {
+    return <TemplateDebug />;
+  }
+
   return (
     <EditorProvider>
       <CollaborationProvider>

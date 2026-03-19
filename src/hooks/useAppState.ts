@@ -10,10 +10,8 @@ import {
   Command,
 } from '@/lib/commands';
 
-// Generate unique ID
-export const generateId = (): string => {
-  return `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
+// Generate unique ID using the Web Crypto API — collision-proof even under rapid creation
+export const generateId = (): string => crypto.randomUUID();
 
 // Deep copy objects array to prevent shared references between pages
 const cloneObjects = (objects: AnyCanvasObject[]): AnyCanvasObject[] =>
@@ -349,7 +347,10 @@ export function useAppState() {
 
   // Remote sync: updates only canvas data (objects, pages, activePageId).
   // Does NOT touch: mode, selectedObjectIds (only filters out deleted ones),
-  // isDirty, projectName, projectPath, or CommandHistory.
+  // isDirty, projectName, projectPath.
+  // Clears CommandHistory — undo after a remote sync would jump back to a
+  // stale local state that would immediately be overwritten by the next remote
+  // update, causing a confusing visual flicker.
   const setCanvasState = useCallback((canvasState: {
     objects: AnyCanvasObject[];
     pages: Page[];
@@ -360,21 +361,29 @@ export function useAppState() {
     const activeObjects = cloneObjects(objects);
     const activeObjectIds = new Set(activeObjects.map(o => o.id));
 
+    // Only clear undo history when the remote state meaningfully diverges
+    // from what we have locally — avoids wiping history on every throttled
+    // remote tick when the canvas hasn't actually changed.
+    const localObjects = objectsRef.current;
+    const stateChanged =
+      activePageId !== activePageIdRef.current ||
+      activeObjects.length !== localObjects.length;
+
     objectsRef.current = activeObjects;
     pagesRef.current = pages;
     activePageIdRef.current = activePageId;
+
+    if (stateChanged) {
+      historyRef.current.clear();
+    }
 
     setState(prev => ({
       ...prev,
       objects: activeObjects,
       pages,
       activePageId,
-      // Remove from selection any objects that no longer exist
       selectedObjectIds: prev.selectedObjectIds.filter(id => activeObjectIds.has(id)),
-      // isDirty is NOT changed — remote sync is not a user edit
-      // mode, projectName, projectPath are preserved via ...prev
     }));
-    // historyRef is NOT touched — remote sync bypasses command history
   }, []);
 
   // Get selected objects
@@ -395,7 +404,7 @@ export function useAppState() {
 
   // Copy selected objects to clipboard
   const copyToClipboard = useCallback(() => {
-    const selected = objectsRef.current.filter(obj => 
+    const selected = objectsRef.current.filter(obj =>
       state.selectedObjectIds.includes(obj.id)
     );
     clipboardRef.current = cloneObjects(selected);
@@ -404,11 +413,11 @@ export function useAppState() {
   // Paste objects from clipboard with offset
   const pasteFromClipboard = useCallback(() => {
     if (clipboardRef.current.length === 0) return;
-    
+
     const offset = 20;
     const newObjects: AnyCanvasObject[] = [];
     const idMap = new Map<string, string>();
-    
+
     clipboardRef.current.forEach(obj => {
       const newId = generateId();
       idMap.set(obj.id, newId);
@@ -420,14 +429,14 @@ export function useAppState() {
       };
       newObjects.push(newObj);
     });
-    
+
     if (newObjects.length > 0) {
-      const commands = newObjects.map(obj => 
+      const commands = newObjects.map(obj =>
         new AddObjectCommand(objectsRef.current, obj, setObjects)
       );
       const batchCommand = new BatchCommand(commands, 'Вставить');
       historyRef.current.execute(batchCommand);
-      
+
       setState(prev => ({
         ...prev,
         selectedObjectIds: newObjects.map(obj => obj.id),
@@ -446,15 +455,15 @@ export function useAppState() {
 
   // Duplicate selected objects
   const duplicateSelected = useCallback(() => {
-    const selected = objectsRef.current.filter(obj => 
+    const selected = objectsRef.current.filter(obj =>
       state.selectedObjectIds.includes(obj.id)
     );
-    
+
     if (selected.length === 0) return;
-    
+
     const offset = 20;
     const newObjects: AnyCanvasObject[] = [];
-    
+
     selected.forEach(obj => {
       const newId = generateId();
       const newObj: AnyCanvasObject = {
@@ -465,14 +474,14 @@ export function useAppState() {
       };
       newObjects.push(newObj);
     });
-    
+
     if (newObjects.length > 0) {
-      const commands = newObjects.map(obj => 
+      const commands = newObjects.map(obj =>
         new AddObjectCommand(objectsRef.current, obj, setObjects)
       );
       const batchCommand = new BatchCommand(commands, 'Дублировать');
       historyRef.current.execute(batchCommand);
-      
+
       setState(prev => ({
         ...prev,
         selectedObjectIds: newObjects.map(obj => obj.id),

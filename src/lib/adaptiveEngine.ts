@@ -55,21 +55,17 @@ export function updateAdaptiveState(
 
     let newDifficulty = state.currentDifficulty;
 
+    // Apply only one rule per answer to prevent double difficulty jumps.
+    // Priority: streak rules (fast feedback) > accuracy rules (long-term trend).
     if (newConsecutiveCorrect >= 3) {
         newDifficulty = Math.min(4, newDifficulty + 1) as 1 | 2 | 3 | 4;
         newConsecutiveCorrect = 0;
-    }
-
-    if (newConsecutiveWrong >= 3) {
+    } else if (newConsecutiveWrong >= 3) {
         newDifficulty = Math.max(1, newDifficulty - 1) as 1 | 2 | 3 | 4;
         newConsecutiveWrong = 0;
-    }
-
-    if (newRecentAnswers.length >= 10 && accuracy < 0.4) {
+    } else if (newRecentAnswers.length >= 10 && accuracy < 0.4) {
         newDifficulty = Math.max(1, newDifficulty - 1) as 1 | 2 | 3 | 4;
-    }
-
-    if (newRecentAnswers.length >= 10 && accuracy > 0.8) {
+    } else if (newRecentAnswers.length >= 10 && accuracy > 0.8) {
         newDifficulty = Math.min(4, newDifficulty + 1) as 1 | 2 | 3 | 4;
     }
 
