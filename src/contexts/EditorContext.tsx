@@ -39,6 +39,7 @@ interface EditorContextValue {
   setProjectName: (name: string) => void;
   markAsSaved: () => void;
   clearCanvas: () => void;
+  clearBoard: () => void;
   zoom: number;
   setZoom: (zoom: number) => void;
   showGrid: boolean;
@@ -66,8 +67,8 @@ interface EditorContextValue {
   setInteractiveModuleId: (moduleId: string | null) => void;
   penSettings: { width: number; color: string };
   setPenSettings: (settings: Partial<{ width: number; color: string }>) => void;
-  shapeType: 'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad';
-  setShapeType: (type: 'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad') => void;
+  shapeType: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad';
+  setShapeType: (type: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad') => void;
   /**
    * Применяет состояние холста от удалённого участника (Yjs).
    * Обновляет только objects/pages/activePageId.
@@ -95,7 +96,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [gridWeight, setGridWeight] = useState<'thin' | 'bold'>('thin');
   const [interactiveModuleId, setInteractiveModuleId] = useState<string | null>(null);
   const [penSettings, setPenSettingsState] = useState<{ width: number; color: string }>({ width: 3, color: '#374151' });
-  const [shapeType, setShapeType] = useState<'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad'>('rectangle');
+  const [shapeType, setShapeType] = useState<'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad'>('rectangle');
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setPenSettings = useCallback((settings: Partial<{ width: number; color: string }>) => {

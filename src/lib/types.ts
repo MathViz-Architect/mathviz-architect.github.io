@@ -21,7 +21,7 @@ export interface ObjectStyle {
 
 export interface CanvasObject {
   id: string;
-  type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle' | 'polygon' | 'geoshape' | 'geopoint' | 'geosegment' | 'geoangle' | 'freehand';
+  type: 'rectangle' | 'circle' | 'line' | 'text' | 'image' | 'chart' | 'fraction' | 'arrow' | 'group' | 'triangle' | 'polygon' | 'geoshape' | 'geopoint' | 'geosegment' | 'geoangle' | 'freehand' | 'highlighter';
   x: number;
   y: number;
   width: number;
@@ -200,7 +200,16 @@ export interface FreehandPathObject extends CanvasObject {
   };
 }
 
-export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | PolygonObject | GeoShapeObject | GeoPointObject | GeoSegmentObject | GeoAngleObject | FreehandPathObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | ImageObject | CanvasObject;
+export interface HighlighterObject extends CanvasObject {
+  type: 'highlighter';
+  data: {
+    points: { x: number; y: number }[];
+    color: string;
+    width: number;
+  };
+}
+
+export type AnyCanvasObject = RectangleObject | CircleObject | TriangleObject | PolygonObject | GeoShapeObject | GeoPointObject | GeoSegmentObject | GeoAngleObject | FreehandPathObject | HighlighterObject | FractionObject | ChartObject | TextObject | ArrowObject | LineObject | ImageObject | CanvasObject;
 
 export interface Page {
   id: string;
@@ -235,7 +244,7 @@ export interface Tool {
   createObject: () => Partial<AnyCanvasObject>;
 }
 
-export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser' | 'projects' | 'geopoint' | 'geosegment' | 'geoangle' | 'freehand';
+export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser' | 'projects' | 'geopoint' | 'geosegment' | 'geoangle' | 'freehand' | 'highlighter';
 
 export interface AppState {
   mode: AppMode;
@@ -303,10 +312,17 @@ export interface ProblemTemplate {
 
 export interface GeneratedProblem {
   id: string;
-  template_id: string;
-  seed: number;              // для воспроизводимости задачи
-  params: Record<string, number | string>;
-  question: string;
+  template_id?: string;
+  class?: number;
+  subject?: string;
+  topic?: string;
+  template?: string;
+  parameters?: Record<string, unknown>;
+  problemType?: string;
+  difficulties?: Record<string, unknown>;
+  seed?: number;             // для воспроизводимости задачи
+  params?: Record<string, number | string>;
+  question?: string;
   answer: number | string;
   hint?: string;
   hints?: string[];          // Progressive hints for the task

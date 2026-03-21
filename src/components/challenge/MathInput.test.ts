@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   normalizeMathExpression,
+  autoConvertFractions,
   getCleanExpression,
   getCursorState,
   processDigitInput,
@@ -265,6 +266,48 @@ describe('MathInput Logic Tests', () => {
     it('2^3 -> 2^{3}', () => {
       const result = normalizeMathExpression('2^3');
       expect(result).toBe('2^{3}');
+    });
+  });
+
+  describe('13. autoConvertFractions — preview layer only', () => {
+    it('a/b -> \\frac{a}{b}', () => {
+      expect(autoConvertFractions('a/b')).toBe('\\frac{a}{b}');
+    });
+
+    it('(x-1)/(x+2) -> \\frac{x-1}{x+2}', () => {
+      expect(autoConvertFractions('(x-1)/(x+2)')).toBe('\\frac{x-1}{x+2}');
+    });
+
+    it('(x-1)/2 -> \\frac{x-1}{2}', () => {
+      expect(autoConvertFractions('(x-1)/2')).toBe('\\frac{x-1}{2}');
+    });
+
+    it('3/(x+1) -> \\frac{3}{x+1}', () => {
+      expect(autoConvertFractions('3/(x+1)')).toBe('\\frac{3}{x+1}');
+    });
+
+    it('no slash -> unchanged', () => {
+      expect(autoConvertFractions('x+y')).toBe('x+y');
+    });
+
+    it('already \\frac{}{} -> not double-processed', () => {
+      const input = '\\frac{a}{b}';
+      expect(autoConvertFractions(input)).toBe('\\frac{a}{b}');
+    });
+
+    it('\\frac{a}{b} + c/d -> second fraction converted, first preserved', () => {
+      const result = autoConvertFractions('\\frac{a}{b} + c/d');
+      expect(result).toBe('\\frac{a}{b} + \\frac{c}{d}');
+    });
+
+    it('1/x+y -> only x in denominator, +y outside', () => {
+      // token/token: token stops at +, so only x is denominator
+      const result = autoConvertFractions('1/x+y');
+      expect(result).toBe('\\frac{1}{x}+y');
+    });
+
+    it('empty string -> empty string', () => {
+      expect(autoConvertFractions('')).toBe('');
     });
   });
 });

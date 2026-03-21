@@ -9,11 +9,13 @@ import {
   isPointInObject, objectsIntersectRect, screenToCanvas, applyDelta,
   calculateArrowAngle, calculateArrowHeadPoints, calculateDistance,
 } from '@/math-core';
-import { findNearbyPoint, SNAP_RADIUS } from '@/lib/geometry';
+import { SNAP_RADIUS } from '@/lib/geometry';
+import { getSnapPoint } from '@/lib/geometry/snapping';
 import { ResizeHandle, calculateResize, getHandleCursor } from '@/lib/canvas/resizeImage';
 import { useAppState } from '@/hooks/useAppState';
 import { ResizeObjectCommand } from '@/lib/commands';
 import { useFreehandTool } from './canvas/tools/useFreehandTool';
+import { useHighlighterTool } from './canvas/tools/useHighlighterTool';
 import { useViewportCulling } from './canvas/useViewportCulling';
 
 export const Canvas: React.FC = () => {
@@ -39,7 +41,9 @@ export const Canvas: React.FC = () => {
   }, [publishLocalChange, getCanvasSnapshot]);
 
   // ─── Tool hooks ─────────────────────────────────────────────────────────────
-  const freehand = useFreehandTool({ penSettings, onAddObject, publishState });
+  // mode is passed so tools can self-abort on tool switch mid-stroke
+  const freehand = useFreehandTool({ penSettings, onAddObject, publishState, mode });
+  const highlighter = useHighlighterTool({ penSettings, onAddObject, publishState, mode });
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -75,7 +79,7 @@ export const Canvas: React.FC = () => {
   const [anglePointAId, setAnglePointAId] = useState<string | null>(null);
   const [anglePointBId, setAnglePointBId] = useState<string | null>(null);
   const [anglePreview, setAnglePreview] = useState<Point | null>(null);
-  const [snapTarget, setSnapTarget] = useState<{ x: number; y: number; snapped: boolean } | null>(null);
+  const [snapTarget, setSnapTarget] = useState<{ x: number; y: number; snapped: boolean; targetId?: string } | null>(null);
   const [panOffset, setPanOffset] = useState<Point>({ x: 0, y: 0 });
 
   // ─── Viewport culling ────────────────────────────────────────────────────────
@@ -114,10 +118,10 @@ export const Canvas: React.FC = () => {
   };
 
   const snapOrCreatePoint = (x: number, y: number): string => {
-    const existing = findNearbyPoint(objects, x, y, SNAP_RADIUS);
-    if (existing) return existing.id;
+    const snap = getSnapPoint(objects, x, y, SNAP_RADIUS);
+    if (snap.snapped && snap.targetId) return snap.targetId;
     const R = 5;
-    const newPoint: AnyCanvasObject = { id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, type: 'geopoint', x: x - R, y: y - R, width: R * 2, height: R * 2, rotation: 0, opacity: 1, visible: true, locked: false, data: { color: '#1D4ED8', radius: R, label: nextPointLabel() } };
+    const newPoint: AnyCanvasObject = { id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, type: 'geopoint', x: snap.x - R, y: snap.y - R, width: R * 2, height: R * 2, rotation: 0, opacity: 1, visible: true, locked: false, data: { color: '#1D4ED8', radius: R, label: nextPointLabel() } };
     onAddObject(newPoint);
     return newPoint.id;
   };
@@ -243,8 +247,8 @@ export const Canvas: React.FC = () => {
     // This is handled by the native listener above
   }, []);
 
-  const handleObjectMouseDown = (e: React.MouseEvent, objectId: string) => {
-    if (!canEdit || mode === 'line' || mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser' || mode === 'freehand') return;
+  const handleObjectPointerDown = (e: React.PointerEvent, objectId: string) => {
+    if (!canEdit || mode === 'line' || mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser' || mode === 'freehand' || mode === 'highlighter') return;
     e.stopPropagation();
     const obj = objects.find((o) => o.id === objectId);
     if (obj?.locked) return;
@@ -263,8 +267,8 @@ export const Canvas: React.FC = () => {
   const handleMouseUp = () => { if (isDragging) { setIsDragging(false); setDragStart(null); setDragObjectId(null); } };
 
   // Resize handlers for images
-  const handleImageResizeStart = useCallback((handle: ResizeHandle, e: React.MouseEvent) => {
-    if (!canEdit || mode === 'line' || mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser' || mode === 'freehand') return;
+  const handleImageResizeStart = useCallback((handle: ResizeHandle, e: React.PointerEvent) => {
+    if (!canEdit || mode === 'line' || mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser' || mode === 'freehand' || mode === 'highlighter') return;
 
     const objectId = selectedObjectIds.find(id => {
       const obj = objects.find(o => o.id === id);
@@ -409,10 +413,19 @@ export const Canvas: React.FC = () => {
     if (isEmptyCanvas && !['arrow', 'line', 'eraser'].includes(mode)) onSelectObject(null);
   };
 
-  const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || (isSpacePressed && e.button === 0)) { setIsPanning(true); setPanStart({ x: e.clientX, y: e.clientY }); e.preventDefault(); e.stopPropagation(); return; }
+  const handleCanvasPointerDown = (e: React.PointerEvent) => {
+    if (e.button === 1 || (isSpacePressed && e.buttons > 0 && e.button === 0)) { setIsPanning(true); setPanStart({ x: e.clientX, y: e.clientY }); e.preventDefault(); e.stopPropagation(); return; }
     if (isSpacePressed) return;
+    // Unified input detection: pen, touch, or left-button mouse (covers styluses
+    // that report as 'mouse' but with pressure > 0)
+    const isDrawingInput =
+      e.pointerType === 'pen' ||
+      e.pointerType === 'touch' ||
+      (e.pointerType === 'mouse' && e.button === 0);
+    if (!isDrawingInput) return;
     if (!canEdit) return;
+    console.log('[canvas] DOWN', e.pointerType, 'pressure:', e.pressure);
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
     const svgRect = canvasRef.current?.getBoundingClientRect();
     if (!svgRect) return;
     const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height, zoom, panOffset.x, panOffset.y);
@@ -421,10 +434,10 @@ export const Canvas: React.FC = () => {
     if (mode === 'line') { setIsDrawingLine(true); setLineStart({ x, y }); setLineEnd({ x, y }); e.stopPropagation(); }
     if (mode === 'eraser') { setIsErasing(true); handleEraserDelete(x, y); e.stopPropagation(); }
     if (mode === 'geopoint') {
-      const existing = findNearbyPoint(objects, x, y, SNAP_RADIUS);
-      if (existing) { onSelectObject(existing.id); e.stopPropagation(); return; }
+      const snap = getSnapPoint(objects, x, y, SNAP_RADIUS);
+      if (snap.snapped && snap.targetId) { onSelectObject(snap.targetId); e.stopPropagation(); return; }
       const R = 5;
-      const newPoint: AnyCanvasObject = { id: `obj_${Date.now()}`, type: 'geopoint', x: x - R, y: y - R, width: R * 2, height: R * 2, rotation: 0, opacity: 1, visible: true, locked: false, data: { color: '#1D4ED8', radius: R, label: nextPointLabel() } };
+      const newPoint: AnyCanvasObject = { id: `obj_${Date.now()}`, type: 'geopoint', x: snap.x - R, y: snap.y - R, width: R * 2, height: R * 2, rotation: 0, opacity: 1, visible: true, locked: false, data: { color: '#1D4ED8', radius: R, label: nextPointLabel() } };
       onAddObject(newPoint);
       e.stopPropagation(); setSnapTarget(null);
       publishState();
@@ -432,10 +445,11 @@ export const Canvas: React.FC = () => {
     if (mode === 'geosegment') { handleSegmentClick(x, y); e.stopPropagation(); }
     if (mode === 'geoangle') { handleAngleClick(x, y); e.stopPropagation(); }
     if (mode === 'freehand') { freehand.onMouseDown(x, y); e.stopPropagation(); }
+    if (mode === 'highlighter') { highlighter.onMouseDown(x, y); e.stopPropagation(); }
     if (mode === 'shape') { setIsDrawingShape(true); setShapeDrawStart({ x, y }); setShapeDrawEnd({ x, y }); e.stopPropagation(); }
   };
 
-  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+  const handleCanvasPointerMove = (e: React.PointerEvent) => {
     if (isPanning && panStart) {
       const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y;
       const viewportRect = canvasRef.current?.getBoundingClientRect();
@@ -470,23 +484,43 @@ export const Canvas: React.FC = () => {
     if (isDragging && dragStart && dragObjectId) { const dx = x - dragStart.x, dy = y - dragStart.y; setDragDelta({ dx, dy }); return; }
     if (mode === 'geosegment' && segmentStep === 1) {
       setSegmentPreview({ x, y });
-      const near = findNearbyPoint(objects, x, y, SNAP_RADIUS);
-      if (near) { const nx = near.x + near.width / 2, ny = near.y + near.height / 2; setSnapTarget({ x: nx, y: ny, snapped: true }); } else setSnapTarget({ x, y, snapped: false });
+      const snap = getSnapPoint(objects, x, y, SNAP_RADIUS);
+      setSnapTarget({ x: snap.x, y: snap.y, snapped: snap.snapped, targetId: snap.targetId });
     }
     if (mode === 'geoangle' && angleStep >= 1) {
       setAnglePreview({ x, y });
-      const near = findNearbyPoint(objects, x, y, SNAP_RADIUS);
-      if (near) { const nx = near.x + near.width / 2, ny = near.y + near.height / 2; setSnapTarget({ x: nx, y: ny, snapped: true }); } else setSnapTarget({ x, y, snapped: false });
+      const snap = getSnapPoint(objects, x, y, SNAP_RADIUS);
+      setSnapTarget({ x: snap.x, y: snap.y, snapped: snap.snapped, targetId: snap.targetId });
     }
     if (mode === 'geopoint') {
-      const near = findNearbyPoint(objects, x, y, SNAP_RADIUS);
-      if (near) { const nx = near.x + near.width / 2, ny = near.y + near.height / 2; setSnapTarget({ x: nx, y: ny, snapped: true }); } else setSnapTarget(null);
+      const snap = getSnapPoint(objects, x, y, SNAP_RADIUS);
+      if (snap.snapped) { setSnapTarget({ x: snap.x, y: snap.y, snapped: true, targetId: snap.targetId }); } else setSnapTarget(null);
     }
     if (mode === 'shape' && isDrawingShape) { setShapeDrawEnd({ x, y }); return; }
-    if (mode === 'freehand' && freehand.isDrawing) { freehand.onMouseMove(x, y); }
+    // Use isDrawingRef (never stale) instead of isDrawing state
+    if (mode === 'freehand' && freehand.isDrawingRef.current) { freehand.onMouseMove(x, y); }
+    if (mode === 'highlighter' && highlighter.isDrawingRef.current) { highlighter.onMouseMove(x, y); }
   };
 
-  const handleCanvasMouseUp = (e: React.MouseEvent) => {
+  const handleCanvasPointerCancel = (e: React.PointerEvent) => {
+    console.log('[canvas] CANCEL', e.pointerType);
+    try { (e.currentTarget as Element).releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    // Use onCancel (abort without committing object) — isDrawingRef guards against double-call
+    freehand.onCancel();
+    highlighter.onCancel();
+    setIsPanning(false); setPanStart(null);
+    setIsDrawingArrow(false); setArrowStart(null); setArrowEnd(null);
+    setIsDrawingLine(false); setLineStart(null); setLineEnd(null);
+    setIsDrawingShape(false); setShapeDrawStart(null); setShapeDrawEnd(null);
+    setIsErasing(false);
+    setIsMarqueeSelecting(false); setMarqueeStart(null); setMarqueeEnd(null);
+    setIsDragging(false); setDragStart(null); setDragObjectId(null);
+    setIsResizing(false); setResizeHandle(null); setResizeStartPos(null); setResizeObjectId(null);
+  };
+
+  const handleCanvasPointerUp = (e: React.PointerEvent) => {
+    console.log('[canvas] UP', e.pointerType);
+    try { (e.currentTarget as Element).releasePointerCapture(e.pointerId); } catch { /* already released */ }
     if (isPanning) { setIsPanning(false); setPanStart(null); return; }
     if (isResizing) {
       handleImageResizeEnd();
@@ -531,6 +565,17 @@ export const Canvas: React.FC = () => {
         switch (shapeType) {
           case 'circle': newShape = { id, type: 'circle', x: sx, y: sy, width: w, height: w, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: '#10B981', stroke: '#047857', strokeWidth: 2 } }; break;
           case 'triangle': newShape = { id, type: 'triangle', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: '#F59E0B', stroke: '#D97706', strokeWidth: 2 } }; break;
+          case 'polygon': {
+            const points = [
+              { x: 0.5, y: 0 },
+              { x: 1, y: 0.38 },
+              { x: 0.81, y: 1 },
+              { x: 0.19, y: 1 },
+              { x: 0, y: 0.38 },
+            ];
+            newShape = { id, type: 'polygon', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { points, fill: '#F59E0B', stroke: '#D97706', strokeWidth: 2 } };
+            break;
+          }
           case 'geoshape-circle': newShape = { id, type: 'geoshape', x: sx, y: sy, width: w, height: w, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'circle', radius: Math.round(w / 2), stroke: '#374151', strokeWidth: 2 } }; break;
           case 'geoshape-triangle': newShape = { id, type: 'geoshape', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'triangle', sideA: Math.round(w), sideB: Math.round(w), sideC: Math.round(w), stroke: '#374151', strokeWidth: 2 } }; break;
           case 'geoshape-quad': newShape = { id, type: 'geoshape', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'quadrilateral', sideAB: Math.round(w), sideBC: Math.round(h), sideCD: Math.round(w), sideDA: Math.round(h), stroke: '#374151', strokeWidth: 2 } }; break;
@@ -540,8 +585,12 @@ export const Canvas: React.FC = () => {
       }
       publishState(); return;
     }
-    if (freehand.isDrawing) {
+    if (freehand.isDrawingRef.current) {
       freehand.onMouseUp();
+      return;
+    }
+    if (highlighter.isDrawingRef.current) {
+      highlighter.onMouseUp();
       return;
     }
     if (isDragging) {
@@ -605,10 +654,14 @@ export const Canvas: React.FC = () => {
       </div>
 
       <div ref={canvasRef} className={`canvas-viewport w-full h-full overflow-hidden select-none ${!canEdit ? 'pointer-events-none' : ''}`}
-        onClick={handleCanvasClick} onDoubleClick={handleCanvasDoubleClick} onMouseDown={handleCanvasMouseDown} onMouseMove={handleCanvasMouseMove} onMouseUp={handleCanvasMouseUp}
+        onClick={handleCanvasClick} onDoubleClick={handleCanvasDoubleClick}
+        onPointerDown={handleCanvasPointerDown}
+        onPointerMove={handleCanvasPointerMove}
+        onPointerUp={handleCanvasPointerUp}
+        onPointerCancel={handleCanvasPointerCancel}
         onWheel={handleWheel}
-        onMouseLeave={() => { updateCursor(null); setSnapTarget(null); if (isPanning) { setIsPanning(false); setPanStart(null); } else if (isResizing) { handleImageResizeEnd(); } else if (isDrawingArrow) { setIsDrawingArrow(false); setArrowStart(null); setArrowEnd(null); } else if (isDrawingLine) { setIsDrawingLine(false); setLineStart(null); setLineEnd(null); } else if (isErasing) { setIsErasing(false); } else if (freehand.isDrawing) { freehand.onMouseUp(); } else if (isMarqueeSelecting) { setIsMarqueeSelecting(false); setMarqueeStart(null); setMarqueeEnd(null); } else handleMouseUp(); }}
-        style={{ cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : isResizing && resizeHandle ? getHandleCursor(resizeHandle) : ['arrow', 'line', 'eraser', 'draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle', 'freehand', 'shape'].includes(mode) ? 'crosshair' : 'default' }}>
+        onPointerLeave={() => { updateCursor(null); setSnapTarget(null); if (isPanning) { setIsPanning(false); setPanStart(null); } else if (isResizing) { handleImageResizeEnd(); } else if (isDrawingArrow) { setIsDrawingArrow(false); setArrowStart(null); setArrowEnd(null); } else if (isDrawingLine) { setIsDrawingLine(false); setLineStart(null); setLineEnd(null); } else if (isErasing) { setIsErasing(false); } else if (freehand.isDrawingRef.current) { /* pointer capture keeps events flowing — leave is safe to ignore */ } else if (highlighter.isDrawingRef.current) { /* same */ } else if (isMarqueeSelecting) { setIsMarqueeSelecting(false); setMarqueeStart(null); setMarqueeEnd(null); } else handleMouseUp(); }}
+        style={{ touchAction: 'none', cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : isResizing && resizeHandle ? getHandleCursor(resizeHandle) : ['arrow', 'line', 'eraser', 'draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle', 'freehand', 'highlighter', 'shape'].includes(mode) ? 'crosshair' : 'default' }}>
 
         <div
           className="canvas-world"
@@ -618,21 +671,22 @@ export const Canvas: React.FC = () => {
           }}
         >
           <svg ref={svgRef} data-canvas-svg width={CANVAS_WIDTH} height={CANVAS_HEIGHT} viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`} style={{ backgroundColor: '#FFFFFF', filter: 'drop-shadow(0 0 10px rgba(0,0,0,0.15))' }}
-            onMouseDown={(e: React.MouseEvent<SVGSVGElement>) => {
+            onPointerDown={(e: React.PointerEvent<SVGSVGElement>) => {
               if (!canEdit || isPanning || isSpacePressed) return;
-              if (['line', 'geosegment', 'shape'].includes(mode)) { handleCanvasMouseDown(e as unknown as React.MouseEvent); return; }
+              if (['line', 'geosegment', 'shape'].includes(mode)) { handleCanvasPointerDown(e as unknown as React.PointerEvent<HTMLDivElement>); return; }
               if (mode === 'select' && e.target === e.currentTarget) { const viewportRect = canvasRef.current?.getBoundingClientRect(); if (!viewportRect) return; const { x, y } = screenToCanvas(e.clientX, e.clientY, viewportRect, canvasSize.width, canvasSize.height, zoom, panOffset.x, panOffset.y); setIsMarqueeSelecting(true); setMarqueeStart({ x, y }); setMarqueeEnd({ x, y }); e.stopPropagation(); }
             }}>
             {renderGrid()}
-            {visibleObjects.filter((o) => o.visible).map((obj) => (<ObjectRenderer key={obj.id} obj={obj} isSelected={selectedObjectIds.includes(obj.id)} dragDelta={isDragging ? dragDelta : null} objects={objects} editingTextId={editingTextId} editingText={editingText} editingTextSize={editingTextSize} canvasWidth={canvasSize.width} textareaRef={textareaRef} onMouseDown={handleObjectMouseDown} onTextDoubleClick={handleTextDoubleClick} onEditingTextChange={setEditingText} onTextEditComplete={handleTextEditComplete} onTextEditCancel={() => { setEditingTextId(null); setEditingText(''); setEditingTextSize(null); }} onAutoResize={autoResizeTextarea} zoom={zoom} onImageResizeStart={handleImageResizeStart} />))}
+            {visibleObjects.filter((o) => o.visible).map((obj) => (<ObjectRenderer key={obj.id} obj={obj} isSelected={selectedObjectIds.includes(obj.id)} dragDelta={isDragging ? dragDelta : null} objects={objects} editingTextId={editingTextId} editingText={editingText} editingTextSize={editingTextSize} canvasWidth={canvasSize.width} textareaRef={textareaRef} onPointerDown={handleObjectPointerDown} onTextDoubleClick={handleTextDoubleClick} onEditingTextChange={setEditingText} onTextEditComplete={handleTextEditComplete} onTextEditCancel={() => { setEditingTextId(null); setEditingText(''); setEditingTextSize(null); }} onAutoResize={autoResizeTextarea} zoom={zoom} onImageResizeStart={handleImageResizeStart} />))}
             {canEdit && isDrawingArrow && arrowStart && arrowEnd && (calculateDistance(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y) > 5) && (() => { const angle = calculateArrowAngle(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y); const head = calculateArrowHeadPoints(arrowEnd.x, arrowEnd.y, angle, 15, 'forward'); return <g opacity={0.5}><line x1={arrowStart.x} y1={arrowStart.y} x2={arrowEnd.x} y2={arrowEnd.y} stroke="#374151" strokeWidth={2} strokeDasharray="5,5" /><polygon points={`${arrowEnd.x},${arrowEnd.y} ${head.point1X},${head.point1Y} ${head.point2X},${head.point2Y}`} fill="#374151" /></g>; })()}
             {canEdit && isDrawingLine && lineStart && lineEnd && (calculateDistance(lineStart.x, lineStart.y, lineEnd.x, lineEnd.y) > 5) && <line x1={lineStart.x} y1={lineStart.y} x2={lineEnd.x} y2={lineEnd.y} stroke="#374151" strokeWidth={2} strokeDasharray="5,5" strokeLinecap="round" opacity={0.6} />}
             {canEdit && isMarqueeSelecting && marqueeStart && marqueeEnd && <rect x={Math.min(marqueeStart.x, marqueeEnd.x)} y={Math.min(marqueeStart.y, marqueeEnd.y)} width={Math.abs(marqueeEnd.x - marqueeStart.x)} height={Math.abs(marqueeEnd.y - marqueeStart.y)} fill="rgba(59,130,246,0.1)" stroke="#3b82f6" strokeDasharray="4,4" strokeWidth={1} />}
-            {canEdit && isDrawingShape && shapeDrawStart && shapeDrawEnd && (() => { const x = Math.min(shapeDrawStart.x, shapeDrawEnd.x), y = Math.min(shapeDrawStart.y, shapeDrawEnd.y), w = Math.abs(shapeDrawEnd.x - shapeDrawStart.x), h = Math.abs(shapeDrawEnd.y - shapeDrawStart.y); const p = { fill: 'rgba(79,70,229,0.08)', stroke: '#4F46E5', strokeWidth: 1.5, strokeDasharray: '6,3', style: { pointerEvents: 'none' } as React.CSSProperties }; if (shapeType === 'circle') return <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} {...p} />; if (shapeType === 'triangle') return <polygon points={`${x + w / 2},${y} ${x + w},${y + h} ${x},${y + h}`} {...p} />; return <rect x={x} y={y} width={w} height={h} {...p} />; })()}
+            {canEdit && isDrawingShape && shapeDrawStart && shapeDrawEnd && (() => { const x = Math.min(shapeDrawStart.x, shapeDrawEnd.x), y = Math.min(shapeDrawStart.y, shapeDrawEnd.y), w = Math.abs(shapeDrawEnd.x - shapeDrawStart.x), h = Math.abs(shapeDrawEnd.y - shapeDrawStart.y); const p = { fill: 'rgba(79,70,229,0.08)', stroke: '#4F46E5', strokeWidth: 1.5, strokeDasharray: '6,3', style: { pointerEvents: 'none' } as React.CSSProperties }; if (shapeType === 'circle') return <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} {...p} />; if (shapeType === 'triangle') return <polygon points={`${x + w / 2},${y} ${x + w},${y + h} ${x},${y + h}`} {...p} />; if (shapeType === 'polygon') { const pts = [[x + w * 0.5, y], [x + w, y + h * 0.38], [x + w * 0.81, y + h], [x + w * 0.19, y + h], [x, y + h * 0.38]].map(([px, py]) => `${px},${py}`).join(' '); return <polygon points={pts} {...p} />; } return <rect x={x} y={y} width={w} height={h} {...p} />; })()}
             {canEdit && mode === 'geosegment' && segmentStep === 1 && segmentPointAId && segmentPreview && (() => { const ptA = objects.find(o => o.id === segmentPointAId); if (!ptA) return null; return <line x1={ptA.x + ptA.width / 2} y1={ptA.y + ptA.height / 2} x2={segmentPreview.x} y2={segmentPreview.y} stroke="#374151" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" opacity={0.5} />; })()}
             {canEdit && mode === 'geoangle' && anglePreview && (() => { if (angleStep === 1 && anglePointAId) { const ptA = objects.find(o => o.id === anglePointAId); if (!ptA) return null; return <line x1={ptA.x + ptA.width / 2} y1={ptA.y + ptA.height / 2} x2={anglePreview.x} y2={anglePreview.y} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" opacity={0.5} />; } if (angleStep === 2 && anglePointAId && anglePointBId) { const ptA = objects.find(o => o.id === anglePointAId), ptB = objects.find(o => o.id === anglePointBId); if (!ptA || !ptB) return null; return <g opacity={0.5}><line x1={ptA.x + ptA.width / 2} y1={ptA.y + ptA.height / 2} x2={ptB.x + ptB.width / 2} y2={ptB.y + ptB.height / 2} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" /><line x1={ptB.x + ptB.width / 2} y1={ptB.y + ptB.height / 2} x2={anglePreview.x} y2={anglePreview.y} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" /></g>; } return null; })()}
-            {canEdit && snapTarget && ['geosegment', 'geoangle', 'geopoint'].includes(mode) && <circle cx={snapTarget.x} cy={snapTarget.y} r={snapTarget.snapped ? 9 : 5} fill="none" stroke={snapTarget.snapped ? '#10B981' : '#7C3AED'} strokeWidth={snapTarget.snapped ? 2.5 : 1.5} strokeDasharray={snapTarget.snapped ? undefined : '3,3'} opacity={0.8} style={{ pointerEvents: 'none' }} />}
-            {canEdit && freehand.overlay && freehand.overlay.points.length >= 2 && <path d={buildSmoothPath(freehand.overlay.points)} stroke={freehand.overlay.color} strokeWidth={freehand.overlay.width} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.7} style={{ pointerEvents: 'none' }} />}
+            {canEdit && snapTarget && ['geosegment', 'geoangle', 'geopoint'].includes(mode) && <circle cx={snapTarget.x} cy={snapTarget.y} r={snapTarget.snapped ? 11 : 5} fill={snapTarget.snapped ? 'rgba(16,185,129,0.12)' : 'none'} stroke={snapTarget.snapped ? '#10B981' : '#7C3AED'} strokeWidth={snapTarget.snapped ? 3 : 1.5} strokeDasharray={snapTarget.snapped ? undefined : '3,3'} opacity={snapTarget.snapped ? 1 : 0.7} style={{ pointerEvents: 'none' }} />}
+            {canEdit && freehand.overlay && freehand.overlay.points.length >= 1 && <path d={buildSmoothPath(freehand.overlay.points)} stroke={freehand.overlay.color} strokeWidth={freehand.overlay.width} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.7} style={{ pointerEvents: 'none' }} />}
+            {canEdit && highlighter.overlay && highlighter.overlay.points.length >= 1 && <path d={buildSmoothPath(highlighter.overlay.points)} stroke={highlighter.overlay.color} strokeWidth={highlighter.overlay.width} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.4} style={{ pointerEvents: 'none', mixBlendMode: 'multiply' }} />}
           </svg>
         </div>
       </div>

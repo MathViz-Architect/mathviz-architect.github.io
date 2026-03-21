@@ -1,82 +1,62 @@
 import { AnyCanvasObject } from '@/lib/types';
 
 /**
- * Convert screen coordinates to canvas (SVG viewBox) coordinates
- * Accounts for zoom and pan transformations applied to the world div
- * 
- * Architecture:
- * - viewport: screen-sized container with overflow:hidden
- * - world: transformed div with translate(panX, panY) scale(zoom)
- * - svg: static logical canvas inside world
- * 
- * Coordinate conversion:
- * 1. Get mouse position relative to viewport
- * 2. Subtract pan offset (in screen pixels)
- * 3. Divide by zoom to get world coordinates
- * 4. These are already in canvas (viewBox) coordinates
+ * Convert screen coordinates to canvas (SVG viewBox) coordinates.
+ *
+ * ## Coordinate System Protocol
+ *
+ * Layout hierarchy:
+ *   viewport div  — overflow:hidden, fills the screen panel
+ *     world div   — CSS transform: translate(panX px, panY px) scale(zoom), transformOrigin: '0 0'
+ *       SVG       — logical canvas, width=CANVAS_WIDTH, height=CANVAS_HEIGHT
+ *
+ * Forward transform (canvas → screen):
+ *   screenX = canvasX * zoom + panX + viewportRect.left
+ *   screenY = canvasY * zoom + panY + viewportRect.top
+ *
+ * Inverse transform (screen → canvas):
+ *   canvasX = (screenX - viewportRect.left - panX) / zoom
+ *   canvasY = (screenY - viewportRect.top  - panY) / zoom
+ *
+ * NOTE: canvasWidth/canvasHeight are NOT used in the conversion — the CSS
+ * transform is the only scaling applied. These parameters are kept for
+ * API compatibility but are intentionally ignored.
  */
 export const screenToCanvas = (
     screenX: number,
     screenY: number,
     viewportRect: DOMRect,
-    canvasWidth: number,
-    canvasHeight: number,
+    _canvasWidth: number,
+    _canvasHeight: number,
     zoom: number = 1,
     panX: number = 0,
     panY: number = 0
 ): { x: number; y: number } => {
-    // Position relative to viewport top-left
-    const viewportX = screenX - viewportRect.left;
-    const viewportY = screenY - viewportRect.top;
-    
-    // Calculate scaling factor between screen pixels and logical canvas
-    // This accounts for when SVG is smaller/larger than the logical canvas
-    const scaleX = canvasWidth / viewportRect.width;
-    const scaleY = canvasHeight / viewportRect.height;
-    
-    // Convert to canvas coordinates (logical space)
-    const canvasX = viewportX * scaleX;
-    const canvasY = viewportY * scaleY;
-    
-    // Apply pan and zoom transformations
-    const worldX = (canvasX - panX) / zoom;
-    const worldY = (canvasY - panY) / zoom;
-    
     return {
-        x: worldX,
-        y: worldY,
+        x: (screenX - viewportRect.left - panX) / zoom,
+        y: (screenY - viewportRect.top - panY) / zoom,
     };
 };
 
 /**
- * Convert canvas (SVG viewBox) coordinates to screen coordinates
- * Inverse of screenToCanvas
+ * Convert canvas (SVG viewBox) coordinates to screen coordinates.
+ * Exact inverse of screenToCanvas.
+ *
+ * NOTE: canvasWidth/canvasHeight are kept for API compatibility but unused.
  */
 export const canvasToScreen = (
     canvasX: number,
     canvasY: number,
     viewportRect: DOMRect,
-    canvasWidth: number,
-    canvasHeight: number,
+    _canvasWidth: number,
+    _canvasHeight: number,
     zoom: number = 1,
     panX: number = 0,
     panY: number = 0
 ): { x: number; y: number } => {
-    // Apply pan and zoom in reverse
-    const worldX = canvasX * zoom + panX;
-    const worldY = canvasY * zoom + panY;
-    
-    // Calculate scaling factor
-    const scaleX = viewportRect.width / canvasWidth;
-    const scaleY = viewportRect.height / canvasHeight;
-    
-    // Convert to screen coordinates
-    const screenX = worldX * scaleX + viewportRect.left;
-    const screenY = worldY * scaleY + viewportRect.top;
-    
     return {
-        x: screenX,
-        y: screenY,
+        x: canvasX * zoom + panX + viewportRect.left,
+        y: canvasY * zoom + panY + viewportRect.top,
     };
 };
 

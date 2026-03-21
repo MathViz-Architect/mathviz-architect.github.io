@@ -5,6 +5,32 @@
 
 import { ProblemTemplate, GeneratedProblem, SolutionStep, DifficultyConfig } from '../types';
 import { evaluateFormula } from './expressionParser';
+import { normalizeMathExpression } from '../math/normalization';
+
+/**
+ * Normalize only the math fragments ($...$ and $$...$$) inside a string.
+ * Plain text between math blocks is left untouched.
+ *
+ * This is the correct architectural boundary: normalization happens once,
+ * here in the generator, before the output reaches any UI renderer.
+ */
+export function normalizeMathFragments(text: string): string {
+    if (!text || typeof text !== 'string') return text ?? '';
+
+    // Split on $$...$$ first (display math), then $...$ (inline math).
+    // We process display math first to avoid the inline regex consuming $$ as two $.
+    // Strategy: replace each math block with its normalized version.
+    return text.replace(
+        /(\$\$[\s\S]*?\$\$|\$[^$\n]*?\$)/g,
+        (match) => {
+            const isDisplay = match.startsWith('$$');
+            const delim = isDisplay ? '$$' : '$';
+            const inner = match.slice(delim.length, match.length - delim.length);
+            const normalized = normalizeMathExpression(inner);
+            return `${delim}${normalized}${delim}`;
+        }
+    );
+}
 
 /**
  * Seeded pseudo-random number generator (mulberry32)
@@ -243,6 +269,21 @@ export function generateProblem(template: ProblemTemplate, difficulty: 1 | 2 | 3
 
             return generatedStep;
         });
+    }
+
+    // ─── Normalize math fragments ────────────────────────────────────────────
+    // Apply normalization to all math blocks ($...$, $$...$$) in generated text.
+    // This is the single normalization boundary — UI renderers must NOT re-normalize.
+    question = normalizeMathFragments(question);
+    if (hint) hint = normalizeMathFragments(hint);
+    if (hints) hints = hints.map(normalizeMathFragments);
+    if (solution) {
+        solution = solution.map(step => ({
+            ...step,
+            explanation: normalizeMathFragments(step.explanation),
+            ...(step.expression !== undefined && { expression: normalizeMathFragments(step.expression) }),
+            ...(step.result !== undefined && { result: normalizeMathFragments(step.result) }),
+        }));
     }
 
     return {

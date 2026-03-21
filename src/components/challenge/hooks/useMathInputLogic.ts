@@ -40,7 +40,7 @@ export const isCursorInsideKeyword = (text: string, pos: number): boolean => {
 export const moveCursorToKeywordBoundary = (text: string, pos: number, direction: 'left' | 'right' = 'right'): number => {
   const kw = findKeywordAtPosition(text, pos);
   if (!kw) return pos;
-  
+
   if (direction === 'right') {
     const afterKw = kw.end;
     if (text[afterKw] === '(') {
@@ -105,9 +105,68 @@ export const normalizeMathExpression = (text: string): string => {
     outerIterations++;
   } while (result !== prev && outerIterations < 10);
 
-  result = result.replace(/(\d+)\/([^+*/]*)/g, (_, n, d) => `\\frac{${n}}{${d}}`);
+  // Auto-convert fraction patterns to \frac{}{} for preview rendering.
+  // Applied before the legacy digit-only rule so it takes precedence.
+  result = autoConvertFractions(result);
 
   return result;
+};
+
+/**
+ * Convert natural fraction notation to LaTeX \frac{}{} for preview rendering.
+ *
+ * Handles (in order of precedence):
+ *   (expr)/(expr)  →  \frac{expr}{expr}
+ *   token/token    →  \frac{token}{token}
+ *
+ * A "token" is a maximal run of: word chars, digits, ^, _, \, {, }, ., spaces inside parens.
+ * Already-converted \frac{}{} blocks are left untouched.
+ *
+ * This function is ONLY used in the preview/normalization path.
+ * The raw input value is never mutated during typing.
+ */
+export const autoConvertFractions = (text: string): string => {
+  if (!text.includes('/')) return text;
+
+  // Protect existing \frac{}{} so we don't double-process them.
+  // Replace each \frac{N}{D} with a placeholder, restore at the end.
+  const protected_: string[] = [];
+  let s = text.replace(/\\frac\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g, (m) => {
+    protected_.push(m);
+    return `\x00FRAC${protected_.length - 1}\x00`;
+  });
+
+  // Pass 1: (expr)/(expr) — parenthesized numerator and/or denominator
+  // Match: optional_paren_or_token / optional_paren_or_token
+  s = s.replace(
+    /\(([^()]+)\)\s*\/\s*\(([^()]+)\)/g,
+    (_, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+
+  // Pass 2: (expr)/token — parenthesized numerator, plain denominator
+  s = s.replace(
+    /\(([^()]+)\)\s*\/\s*([\w.\\^_]+)/g,
+    (_, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+
+  // Pass 3: token/(expr) — plain numerator, parenthesized denominator
+  s = s.replace(
+    /([\w.\\^_]+)\s*\/\s*\(([^()]+)\)/g,
+    (_, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+
+  // Pass 4: token/token — both plain (no parens)
+  // Token: sequence of word chars, digits, backslash sequences, ^, _, .
+  // Must not match inside already-converted \frac
+  s = s.replace(
+    /([\w.\\^_]+)\s*\/\s*([\w.\\^_]+)/g,
+    (_, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+
+  // Restore protected \frac blocks
+  s = s.replace(/\x00FRAC(\d+)\x00/g, (_, i) => protected_[Number(i)]);
+
+  return s;
 };
 
 export const getCleanExpression = (text: string): string => {
@@ -260,6 +319,10 @@ export const processDelete = (val: string, cur: CursorState): InputResult => {
 
   const pos = cur.selectionStart;
 
+  // Atomic backspace for empty \\frac{}{}
+  const fracResult = processFracBackspace(val, cur);
+  if (fracResult) return fracResult;
+
   if (pos >= 4) {
     const before = val.slice(0, pos);
     for (const kw of KEYWORDS) {
@@ -296,15 +359,122 @@ export const processMoveCursor = (val: string, cur: CursorState, dir: 'left' | '
   return { value: val, cursorPosition: newPos };
 };
 
+// --- Fraction support ---
+
+const FRAC_TEMPLATE = '\\frac{}{}';
+// Positions within \\frac{}{}: numerator starts at 7 (after "\\frac{"), denominator starts at 9 (after "\\frac{}{")
+const FRAC_NUMERATOR_OFFSET = 7;   // cursor inside first {}
+const FRAC_DENOMINATOR_OFFSET = 9; // cursor inside second {}
+
+/**
+ * Inserts \\frac{}{} at cursor position and places cursor inside the numerator.
+ */
+export const processFractionInsert = (val: string, cur: CursorState): InputResult => {
+  const pos = cur.hasSelection ? cur.selectionStart : cur.selectionStart;
+  const before = val.slice(0, pos);
+  const after = val.slice(cur.hasSelection ? cur.selectionEnd : pos);
+  const newVal = before + FRAC_TEMPLATE + after;
+  return { value: newVal, cursorPosition: pos + FRAC_NUMERATOR_OFFSET };
+};
+
+/**
+ * Finds the \\frac{}{} structure that the cursor is currently inside.
+ * Returns the start index of the \\frac token, or -1 if not inside one.
+ */
+export const findFracAtCursor = (val: string, pos: number): { fracStart: number; numStart: number; numEnd: number; denStart: number; denEnd: number } | null => {
+  // Search backwards for \\frac{ that contains the cursor
+  let searchFrom = pos;
+  while (searchFrom >= 0) {
+    const fracIdx = val.lastIndexOf('\\frac{', searchFrom);
+    if (fracIdx === -1) return null;
+
+    // Parse \\frac{num}{den} from fracIdx
+    const openNum = fracIdx + 6; // index of char after first {
+    // find matching } for numerator
+    let depth = 1;
+    let closeNum = -1;
+    for (let i = openNum; i < val.length; i++) {
+      if (val[i] === '{') depth++;
+      else if (val[i] === '}') { depth--; if (depth === 0) { closeNum = i; break; } }
+    }
+    if (closeNum === -1) { searchFrom = fracIdx - 1; continue; }
+
+    if (val[closeNum + 1] !== '{') { searchFrom = fracIdx - 1; continue; }
+    const openDen = closeNum + 2;
+    depth = 1;
+    let closeDen = -1;
+    for (let i = openDen; i < val.length; i++) {
+      if (val[i] === '{') depth++;
+      else if (val[i] === '}') { depth--; if (depth === 0) { closeDen = i; break; } }
+    }
+    if (closeDen === -1) { searchFrom = fracIdx - 1; continue; }
+
+    // Check if cursor is inside this frac structure
+    if (pos >= openNum && pos <= closeDen + 1) {
+      return { fracStart: fracIdx, numStart: openNum, numEnd: closeNum, denStart: openDen, denEnd: closeDen };
+    }
+    searchFrom = fracIdx - 1;
+  }
+  return null;
+};
+
+/**
+ * Handles ArrowRight/Left navigation between numerator and denominator of \\frac{}{}.
+ * Returns null if no special navigation needed (fall through to normal move).
+ */
+export const processFracNavigation = (val: string, cur: CursorState, dir: 'left' | 'right'): InputResult | null => {
+  const frac = findFracAtCursor(val, cur.selectionStart);
+  if (!frac) return null;
+
+  const { numEnd, denStart, denEnd } = frac;
+
+  if (dir === 'right' && cur.selectionStart === numEnd) {
+    // At end of numerator → jump into denominator
+    return { value: val, cursorPosition: denStart };
+  }
+  if (dir === 'left' && cur.selectionStart === denStart) {
+    // At start of denominator → jump back to end of numerator
+    return { value: val, cursorPosition: numEnd };
+  }
+  // Also: if cursor is right after the closing } of denominator, don't do special nav
+  return null;
+};
+
+/**
+ * Handles Backspace for \\frac{}{} — removes the whole structure if both parts are empty.
+ */
+export const processFracBackspace = (val: string, cur: CursorState): InputResult | null => {
+  const frac = findFracAtCursor(val, cur.selectionStart);
+  if (!frac) return null;
+
+  const { fracStart, numStart, numEnd, denStart, denEnd } = frac;
+  const numeratorContent = val.slice(numStart, numEnd);
+  const denominatorContent = val.slice(denStart, denEnd);
+
+  if (numeratorContent === '' && denominatorContent === '') {
+    // Remove entire \\frac{}{} token
+    const fracEnd = denEnd + 1; // position after closing }
+    const newVal = val.slice(0, fracStart) + val.slice(fracEnd);
+    return { value: newVal, cursorPosition: fracStart };
+  }
+  return null;
+};
+
 export const unifiedInputPipeline = (val: string, cur: CursorState, input: { type: string; value?: string; direction?: 'left' | 'right' }): InputResult | null => {
   switch (input.type) {
     case 'digit': return processDigitInput(val, cur, input.value || '');
     case 'operator': return processOperatorInput(val, cur, input.value || '');
     case 'pi': return processPiInput(val, cur);
     case 'function': return processFunctionInput(val, cur, input.value || '');
+    case 'fraction': return processFractionInsert(val, cur);
     case 'delete': return processDelete(val, cur);
     case 'clear': return { value: '', cursorPosition: 0 };
-    case 'move': return processMoveCursor(val, cur, input.direction || 'left');
+    case 'move': {
+      const dir = input.direction || 'left';
+      const fracNav = processFracNavigation(val, cur, dir);
+      if (fracNav) return fracNav;
+      return processMoveCursor(val, cur, dir);
+    }
     default: return null;
   }
 };

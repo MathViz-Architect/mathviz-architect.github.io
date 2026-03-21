@@ -51,8 +51,8 @@ interface EditorContextValue {
   setInteractiveModuleId: (moduleId: string | null) => void;
   penSettings: { width: number; color: string };
   setPenSettings: (settings: Partial<{ width: number; color: string }>) => void;
-  shapeType: 'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad';
-  setShapeType: (type: 'rectangle' | 'circle' | 'triangle' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad') => void;
+  shapeType: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad';
+  setShapeType: (type: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad') => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);

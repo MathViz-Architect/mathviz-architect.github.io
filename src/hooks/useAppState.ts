@@ -4,6 +4,7 @@ import { CommandHistory } from '@/lib/commandHistory';
 import {
   AddObjectCommand,
   DeleteObjectCommand,
+  ClearCanvasCommand,
   UpdateObjectCommand,
   MoveObjectsCommand,
   BatchCommand,
@@ -245,13 +246,17 @@ export function useAppState() {
         selectedObjectIds: [],
       }));
     } else {
-      // Otherwise, clear entire canvas
-      const commands = currentObjects.map(
-        obj => new DeleteObjectCommand(currentObjects, obj.id, setObjects)
-      );
-      const batchCommand = new BatchCommand(commands, 'Очистить холст');
-      historyRef.current.execute(batchCommand);
+      // Otherwise, clear entire canvas atomically (single undo step)
+      const command = new ClearCanvasCommand(currentObjects, setObjects);
+      historyRef.current.execute(command);
     }
+  }, [setObjects]);
+
+  // Clear entire board (always clears all objects, undoable)
+  const clearBoard = useCallback(() => {
+    const command = new ClearCanvasCommand(objectsRef.current, setObjects);
+    historyRef.current.execute(command);
+    setState((prev) => ({ ...prev, selectedObjectIds: [] }));
   }, [setObjects]);
 
   // Page management
@@ -511,6 +516,7 @@ export function useAppState() {
     setProjectName,
     markAsSaved,
     clearCanvas,
+    clearBoard,
     selectMultiple,
     addPage,
     removePage,

@@ -7,7 +7,7 @@ interface ImageResizeHandlesProps {
   width: number;
   height: number;
   zoom: number;
-  onResizeStart: (handle: ResizeHandle, e: React.MouseEvent) => void;
+  onResizeStart: (handle: ResizeHandle, e: React.PointerEvent) => void;
 }
 
 const HANDLE_SIZE = 10;
@@ -28,7 +28,7 @@ export const ImageResizeHandles: React.FC<ImageResizeHandlesProps> = ({
       {HANDLES.map((handle) => {
         const pos = getHandlePosition(x, y, width, height, handle);
         const cursor = getHandleCursor(handle);
-        
+
         return (
           <rect
             key={handle}
@@ -40,14 +40,14 @@ export const ImageResizeHandles: React.FC<ImageResizeHandlesProps> = ({
             stroke="#3B82F6"
             strokeWidth={2 / zoom}
             style={{ cursor }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               e.stopPropagation();
               onResizeStart(handle, e);
             }}
           />
         );
       })}
-      
+
       <rect
         x={x}
         y={y}

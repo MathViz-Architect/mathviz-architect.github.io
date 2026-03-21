@@ -28,6 +28,7 @@
 - [Режим задач](#-режим-задач)
 - [Интерактивные модули](#-интерактивные-модули-18-шт)
 - [Canvas-редактор](#️-canvas-редактор)
+- [Coordinate System Protocol](#coordinate-system-protocol)
 - [MathInput Module](#-mathinput-module)
 - [Учебная программа](#-учебная-программа)
 - [Инфраструктура](#️-инфраструктура-supabase)
@@ -47,10 +48,11 @@
 |---|---|
 | 🎯 **Skill-based прогрессия** | Темы разблокируются по мере прохождения — как в Duolingo |
 | ⚙️ **Advanced Problem Engine** | LaTeX-рендеринг формул, символьные вычисления, сравнение эквивалентных выражений (1/2 = 0.5, √8 = 2√2) |
+| ⚛️ **High-School Math Engine** | Equivalence checks, interval parsing, and advanced function support for grades 9-11 curriculum. |
 | 📊 **Интервалы и выражения** | Поддержка ответов в виде числовых промежутков [2; +∞), (-3; 5] и алгебраических выражений |
 | 💡 **Система подсказок** | Динамическая помощь с прогрессивным раскрытием, влияет на алгоритм адаптивности |
 | 🔬 **Визуальные модули** | 18 интерактивных объяснений: функции, геометрия, тригонометрия |
-| 🖊️ **Canvas-редактор** | Геометрические фигуры, точки, отрезки, углы — с живой геометрией |
+| 🖊️ **Canvas-редактор** | Геометрические фигуры, точки, отрезки, углы, свободный рисунок, маркер-выделитель — с живой геометрией |
 | 🤝 **Совместная работа** | Room-based холст в реальном времени — учитель делится ссылкой, ученик заходит без регистрации |
 | 👩‍🏫 **Управление доской** | Три режима: лекция, совместная работа, ответ у доски |
 | 👤 **Система ролей** | Teacher/Student на основе владения комнатой |
@@ -62,11 +64,13 @@
 | 🖼️ **Вставка изображений** | Ctrl+V для вставки изображений из буфера обмена с мгновенным предпросмотром (Optimistic UI) |
 | 📐 **Resize изображений** | Drag угловых handles для изменения размера с сохранением пропорций (Shift) |
 | 🔄 **Properties Panel** | Современная панель с Transform, Rotation, Aspect Lock, Preview |
+| 📱 **Мобильная адаптация** | Responsive layout для всех модулей, компактная клавиатура, Bottom Sheet панель свойств, pointer events для touch/stylus |
 | 🔄 **Rotation pivot** | Вращение вокруг центра объекта (Figma-подобное поведение) |
 | 🔍 **Viewport culling** | Рендерятся только объекты в текущем viewport — производительность не деградирует при 500+ объектах |
 | ☁️ **Supabase Storage** | Изображения сохраняются в Public Bucket 'assets' |
 | 👩‍🏫 **Синхронизация страниц** | Ученики автоматически следуют за учителем в режиме лекции |
 | 📐 **MathInput Module** | Универсальный ввод с KaTeX-превью, виртуальная клавиатура с 3 раскладками (числа, алгебра, интервалы), защита токенов и Smart Backspace. |
+| ✍️ **Natural Math Input** | Ввод выражений в формате `a/b`, `sqrt(x)`, `2^3` — без знания LaTeX. Автоматическая конвертация в `\frac{a}{b}`, `\sqrt{x}` в слое рендеринга. |
 
 ---
 
@@ -116,7 +120,7 @@ pnpm run dev:electron     # desktop (Electron)
 | Слой | Технологии |
 |------|-----------|
 | **Frontend** | React 18.3 · TypeScript 5.6 · Vite 6.0 · Tailwind 3.4 |
-| **UI** | Radix UI · Lucide React |
+| **UI** | Radix UI · Lucide React · vaul (bottom sheet) |
 | **Математика** | MathJS 15 (символьные вычисления) · KaTeX 0.16 (рендеринг формул) · normalizeMathExpression (нормализация) |
 | **Desktop** | Electron 40.8 · Electron Builder |
 | **Backend** | Supabase (PostgreSQL + Auth + RLS) |
@@ -213,8 +217,9 @@ pnpm run dev:electron     # desktop (Electron)
 ```
 src/
 ├── components/
-│   ├── Canvas.tsx               # Холст рисования
-│   ├── PropertiesPanel.tsx       # Панель свойств (обёртка)
+│   ├── Canvas.tsx               # Холст рисования (pointer events, touch-action: none)
+│   ├── PropertiesPanel.tsx       # Панель свойств (sidebar на десктопе / bottom sheet на мобильном)
+│   ├── MobileBottomSheet.tsx     # vaul-based bottom sheet для мобильных
 │   ├── properties/              # Декомпозированные компоненты панели
 │   │   ├── TransformSection.tsx  # X, Y, Width, Height + aspect lock
 │   │   ├── RotationSection.tsx   # Slider + input + reset
@@ -223,7 +228,10 @@ src/
 │   ├── canvas/
 │   │   ├── ObjectRenderer.tsx    # Рендер объектов
 │   │   ├── ImageResizeHandles.tsx # Угловые handles для resize
-│   │   └── resizeImage.ts       # Логика resize
+│   │   ├── resizeImage.ts       # Логика resize
+│   │   └── tools/
+│   │       ├── useFreehandTool.ts    # Хук свободного рисунка
+│   │       └── useHighlighterTool.ts # Хук маркера-выделителя (Выделитель)
 │   ├── room/
 │   │   ├── TeacherControlPanel.tsx # Панель управления для учителя
 │   │   └── RemoteCursors.tsx    # Оверлей курсоров участников
@@ -249,6 +257,7 @@ src/
 │   ├── useRoom.ts               # Создание/вход в комнату
 │   ├── useYjsSync.ts            # CRDT синхронизация через Supabase Broadcast
 │   ├── useAwareness.ts          # Курсоры и присутствие участников
+│   ├── useIsMobile.ts           # matchMedia hook, true при viewport < 768px
 │   └── useCollaborationContext.tsx # Центральный провайдер совместной работы
 └── contexts/
     └── EditorContext.tsx        # Глобальный контекст редактора
@@ -295,6 +304,24 @@ type AnswerType =
   | 'canvas_action'; // Экспериментальный: действие на холсте
 ```
 
+### Template Authoring Rules
+
+> Обязательные правила при написании шаблонов задач. Нарушение приводит к артефактам вида `"" + "\\frac" + ...` в UI.
+
+| Правило | Верно | Неверно |
+|---------|-------|---------|
+| Подстановка параметров | `{a}x + {b}` | `` `${a}x + ${b}` `` |
+| LaTeX-дроби в `result` | `\\frac{{a}}{{b}}` | `a + "/" + b` |
+| Логика вычислений | в `answer_formula` | в строках `template`/`result` |
+| Строковая конкатенация | ❌ запрещена | `"" + "\\frac" + ...` |
+
+**Ключевые ограничения:**
+
+- ❗ В полях `template` и `result` разрешена **только** `{param}` substitution. JS-выражения, шаблонные строки и конкатенация запрещены — они не вычисляются движком и попадают в UI как есть.
+- ❗ `answer_formula` предназначен **только** для вычисления числового ответа. Не используйте его для построения строк с LaTeX.
+- LaTeX-дроби всегда пишутся как `\\frac{числитель}{знаменатель}` — никогда как `числитель/знаменатель` в `result`.
+- Вся логика (условия, ветвления, вычисления) выносится в `parameters`, а не в строки шаблона.
+
 ### Weight-based Assessment (Система весов)
 
 Использование подсказок влияет на расчёт прогрессии:
@@ -340,13 +367,24 @@ type AnswerType =
 
 ## 🔬 Интерактивные модули (18 шт.)
 
-Каждый модуль — отдельный React-компонент в `src/components/interactive/`. Layout: двухколоночный (график слева + панель управления справа).
+Каждый модуль — отдельный React-компонент в `src/components/interactive/`. Layout: двухколоночный на десктопе (график слева + панель управления справа), одноколоночный на мобильных (<768px, график сверху + панель снизу с `max-h-64`).
 
 Регистрация через `registerModule()` в `src/modules/index.ts`.
 
 ---
 
 ## 🖊️ Canvas-редактор
+
+### Command System
+
+Все мутации холста проходят через паттерн **Command** (`src/lib/commands/`). Это обеспечивает:
+
+- **Undo/Redo** — детерминированные переходы состояния через `CommandHistory`
+- **Предсказуемость** — каждое действие инкапсулирует `execute()` и `undo()`
+
+Примеры команд: `ClearCanvasCommand`, `ResizeObjectCommand`, `MoveObjectsCommand`.
+
+> При добавлении нового инструмента, изменяющего объекты, интегрируй его через команду — не через прямой вызов `updateObject`.
 
 ### Команды
 
@@ -404,9 +442,20 @@ type AnswerType =
 | `S` | Геоотрезок |
 | `A` | Геоугол |
 | `L` | Линия |
-| `F` | Свободный рисунок |
+| `F` | Свободный рисунок (Карандаш) |
+| `H` | Выделитель (Highlighter) |
 | `T` | Текст |
 | `E` | Ластик |
+
+**Highlighter (Выделитель):**
+
+Инструмент для полупрозрачного выделения частей геометрических фигур (например, для демонстрации равенства или подобия треугольников) без перекрытия нижележащих штрихов.
+
+- Толщина штриха: ~28px по умолчанию
+- Прозрачность: `opacity: 0.4`
+- Режим наложения: `mix-blend-mode: multiply` — реалистично затемняет область под маркером, не закрашивает её
+- Реализован как вариант `FreehandTool` (`useHighlighterTool` в `src/components/canvas/tools/`)
+- Объект типа `HighlighterObject` хранится отдельно от `FreehandPathObject` в `AnyCanvasObject`
 
 ### Properties Panel
 
@@ -418,6 +467,14 @@ type AnswerType =
 | **Transform** | X, Y, Width, Height + lock соотношения сторон |
 | **Rotation** | Slider + input + reset кнопка |
 | **Actions** | Duplicate, Delete, Bring to Front, Send to Back |
+
+**Mobile Bottom Sheet:**
+
+На мобильных устройствах (<768px) панель свойств рендерится как vaul bottom sheet вместо правого сайдбара:
+- `modal={false}` — холст остаётся интерактивным пока открыт sheet
+- `snapPoints={[0.4]}` — занимает 40vh, оставляя холст видимым
+- Drag handle для закрытия
+- Реализовано в `MobileBottomSheet.tsx` + `useIsMobile.ts`
 
 **Aspect Ratio Lock:**
 - Lock button между Width и Height
@@ -451,7 +508,106 @@ type AnswerType =
 
 | Хук | Инструмент | Что инкапсулирует |
 |-----|-----------|-------------------|
-| `useFreehandTool` | Свободный рисунок | state рисования, точки, mousedown/move/up, overlay |
+| `useFreehandTool` | Свободный рисунок | refs-first state, точки, `onMouseDown/Move/Up`, `finalize()`, `abort()`, overlay, поддержка tap/drag/stylus |
+| `useHighlighterTool` | Выделитель | то же, что `useFreehandTool`; создаёт `HighlighterObject` вместо `FreehandPathObject` |
+
+Оба хука используют единую модель ввода: `isDrawingRef` (не React state) как авторитетный флаг, `finalize()` для фиксации штриха и `abort()` для отмены без создания объекта. Overlay управляется внутри хука — Canvas не хранит его.
+
+**Live Drawing Overlay:**
+
+Пока пользователь рисует, штрих отображается через временный overlay-слой прямо в SVG — без записи в список объектов. Overlay управляется самим хуком инструмента (`setOverlay` внутри `useFreehandTool` / `useHighlighterTool`), а не Canvas. Это гарантирует:
+
+- Overlay очищается при `pointerup`, `pointercancel` и переключении инструмента.
+- Ghost-оверлеи невозможны: overlay существует только пока `isDrawingRef.current === true`.
+- React не перерисовывает весь список объектов при каждом движении — только overlay-элемент.
+
+Финальный объект добавляется через `onAddObject` только в `finalize()`.
+
+**Touch / Stylus поддержка:**
+
+Canvas использует `onPointerDown/Move/Up/Cancel` вместо mouse-событий и `touch-action: none` на контейнере — браузер не перехватывает скролл при рисовании. `ImageResizeHandles` также переведён на pointer events.
+
+Поддерживаемые типы ввода: мышь, touch, стилус (pen). Некоторые стилусы (например, Wacom в режиме совместимости) сообщают `pointerType === 'mouse'` — они корректно обрабатываются через проверку `button === 0`.
+
+Унифицированное определение рисующего ввода:
+
+```ts
+const isDrawingInput =
+  e.pointerType === 'pen' ||
+  e.pointerType === 'touch' ||
+  (e.pointerType === 'mouse' && e.button === 0);
+```
+
+**Полный lifecycle указателя:**
+
+| Событие | Действие |
+|---------|---------|
+| `pointerdown` | `setPointerCapture` + старт штриха (`onMouseDown`) |
+| `pointermove` | добавление точки (`onMouseMove`) через `isDrawingRef` — не stale state |
+| `pointerup` | `releasePointerCapture` + `finalize()` — объект создаётся |
+| `pointercancel` | `releasePointerCapture` + `abort()` — объект НЕ создаётся |
+
+`pointercancel` — принудительное прерывание (например, системный жест, потеря захвата). Всегда вызывает `abort()`, а не `finalize()`.
+
+Pointer capture (`setPointerCapture`) удерживает события даже когда указатель выходит за пределы canvas — рисование продолжается. `releasePointerCapture` вызывается в `pointerup` и `pointercancel` с `try/catch` на случай если захват уже был снят.
+
+**Модель состояния ввода:**
+
+- `isDrawingRef` (`useRef`) — авторитетный флаг реального времени, никогда не устаревает в callbacks
+- `isDrawing` (React state) — только для UI (overlay рендеринг)
+- `pointsRef` — накапливает точки без ре-рендера
+- `finalize()` / `abort()` — единственные пути завершения штриха
+
+**Tap (одиночный клик → точка):**
+
+Одиночный `pointerdown` + `pointerup` без движения создаёт объект с одной точкой. Точка дублируется (`[p, p]`) для формирования валидного path-сегмента нулевой длины. `strokeLinecap="round"` рендерит его как видимую точку.
+
+**Инварианты:**
+
+- Каждый `pointerdown` завершается `pointerup` ИЛИ `pointercancel`
+- Overlay не может существовать без активного рисования
+- Pointer capture всегда освобождается
+- Состояние рисования не может "застрять"
+
+---
+
+### Coordinate System Protocol
+
+> Этот раздел — обязательное чтение перед любой работой с координатами на холсте. Нарушение протокола приводит к "дрейфу" объектов при зуме.
+
+**Иерархия трансформаций:**
+
+```
+viewport div  — overflow:hidden, getBoundingClientRect() → screen-space rect
+  world div   — CSS: translate(panX px, panY px) scale(zoom), transformOrigin: '0 0'
+    SVG       — width=2000, height=2000, viewBox="0 0 2000 2000" (логический canvas)
+```
+
+**Прямое преобразование (canvas → screen):**
+
+```
+screenX = canvasX * zoom + panX + viewportRect.left
+screenY = canvasY * zoom + panY + viewportRect.top
+```
+
+**Обратное преобразование (screen → canvas):**
+
+```
+canvasX = (screenX - viewportRect.left - panX) / zoom
+canvasY = (screenY - viewportRect.top  - panY) / zoom
+```
+
+Реализовано в `src/math-core/transforms.ts` → `screenToCanvas` / `canvasToScreen`.
+
+**Правила:**
+
+1. `viewportRect` — всегда `canvasRef.current.getBoundingClientRect()` (viewport div, не SVG).
+2. `panOffset` вычитается **до** деления на `zoom` — именно так работает CSS `translate` + `scale`.
+3. Никакого множителя `canvasWidth / viewportRect.width` — SVG масштабируется только через CSS `scale(zoom)`, не через атрибуты `width`/`height`.
+4. Device Pixel Ratio не применяется — проект использует SVG (не `<canvas>`), DPR обрабатывается браузером автоматически.
+5. Все инструменты (freehand, shape, arrow, line, geopoint, eraser, marquee) получают координаты **только** через `screenToCanvas` — никаких прямых вычислений с `clientX/Y`.
+
+**Тесты:** `src/math-core/transforms.test.ts` — 26 тестов, включая round-trip инварианты при произвольных zoom/pan.
 
 ---
 
@@ -482,7 +638,73 @@ type AnswerType =
 
 ### Тесты
 
-Логика модуля покрыта юнит-тестами (`useMathInputLogic.test.ts`) с использованием **Vitest**. Тесты проверяют корректность обработки новых символов, логику "умного" удаления и правильность нормализации выражений.
+Логика модуля покрыта юнит-тестами (`MathInput.test.ts`, `MathInput.fraction.test.ts`) с использованием **Vitest**. Тесты проверяют корректность обработки новых символов, логику "умного" удаления, правильность нормализации выражений и конвертацию дробей.
+
+### Fraction Input UX
+
+Пользователь никогда не взаимодействует с LaTeX напрямую. LaTeX — это только слой рендеринга.
+
+**Принцип работы (input → normalize → render):**
+
+```
+Пользователь вводит:  a/b   или   (3x-5)/(5x+1)
+                        ↓
+normalizeMathExpression()  →  autoConvertFractions()
+                        ↓
+LaTeX:  \frac{a}{b}   или   \frac{3x-5}{5x+1}
+                        ↓
+KaTeX рендерит формулу в браузере
+```
+
+**Правила конвертации (`autoConvertFractions`):**
+
+| Ввод пользователя | LaTeX в превью |
+|-------------------|----------------|
+| `a/b` | `\frac{a}{b}` |
+| `(x-1)/(x+2)` | `\frac{x-1}{x+2}` |
+| `(x-1)/2` | `\frac{x-1}{2}` |
+| `3/(x+1)` | `\frac{3}{x+1}` |
+| `1/x+y` | `\frac{1}{x}+y` (только `x` в знаменателе) |
+| `\frac{a}{b}` | `\frac{a}{b}` (уже LaTeX — не трогается) |
+
+**Важно:**
+- Конвертация происходит **только** в `normalizeMathExpression` (preview-слой).
+- Сырое значение поля ввода **никогда не мутируется** во время набора.
+- Уже существующие `\frac{}{}` защищены от двойной обработки через placeholder-механизм.
+- Кнопка `a/b` на виртуальной клавиатуре вставляет структурный `\frac{}{}` с курсором внутри числителя (см. `processFractionInsert`).
+
+**Принципы UX (Mathway-style):**
+- WYSIWYG: пользователь видит красивую дробь, вводит обычный текст.
+- Нет необходимости знать LaTeX-синтаксис.
+- Навигация между числителем и знаменателем через `ArrowRight`/`ArrowLeft`.
+- Backspace на пустом `\frac{}{}` удаляет всю структуру атомарно.
+
+---
+
+### Advanced Math Support (Grades 9-11)
+
+To support complex topics for senior classes, we have implemented a new set of engine components and UI features.
+
+#### Equivalence Engine (`src/lib/engine/equivalence.ts`)
+
+Instead of symbolic AST analysis, which is complex and slow, we use a robust sampling-based approach to check if two expressions are equivalent (e.g., `sin(x)^2 + cos(x)^2` and `1`).
+
+-   **Algorithm**: The engine generates ~20 candidate points (a mix of random values in `[-10, 10]` and special points like `0, 1, PI, e`).
+-   **Validation**: It evaluates both expressions at these points, ignoring domain errors (like `log(-1)`). The first 7 valid pairs of results are used for comparison.
+-   **Floating-Point Safe**: Comparisons use an epsilon of `1e-9` to correctly handle floating-point inaccuracies.
+-   **Result**: The `checkEquivalence` function returns an object containing `{ isEquivalent: boolean, confidence: number, validPointsUsed: number }`, providing a reliable and fast check suitable for most school-level problems.
+
+#### Custom Interval Parser (`src/lib/engine/intervals.ts`)
+
+The system now supports answers in the form of interval unions, like `(-Infinity; -2] U [2; +Infinity)`.
+
+-   **Custom Parser**: A lightweight, dependency-free parser (`parseIntervalSet`) handles the interval syntax, including inclusive/exclusive boundaries and infinities.
+-   **Robust Comparison**: The `intervalSetsEqual` function compares two interval sets by testing over 50 critical points, including the boundaries themselves and points infinitesimally close (`1e-9`) to them, ensuring high accuracy.
+
+#### Upgraded Token Pipeline & Keyboard
+
+-   **Normalization**: The token pipeline (`src/lib/math/normalization.ts`) now correctly handles complex structures like `log_a(b)`, `sin^2(x)`, and nested absolute values `|x|`, converting them to distinct formats for MathJS evaluation and KaTeX rendering.
+-   **New Keyboard Layout**: The virtual math keyboard (`src/components/challenge/MathKeyboard.tsx`) includes a new row with 10 buttons for senior-class functions and symbols: `log`, `ln`, `lg`, `|x|`, `arcsin`, `arccos`, `arctan`, `∪`, `∈`, `∞`.
 
 ---
 
@@ -891,6 +1113,14 @@ Kaspersky и некоторые другие антивирусы перехва
 - [x] **Streamlined Share logic** — единая кнопка "Поделиться" в TopBar, удалён дублирующий floating button из Canvas
 - [x] **Image paste support (Optimistic UI)** — Ctrl+V для вставки изображений из буфера обмена с мгновенным предпросмотром через blob URL
 - [x] **Page sync (Lecture Mode)** — студенты автоматически следуют за учителем в режиме просмотра
+- [x] **Мобильная адаптация интерактивных модулей** — responsive layout (flex-col на мобильном, flex-row на десктопе) для всех 17 модулей
+- [x] **Компактная MathKeyboard на мобильном** — уменьшенные кнопки и padding на экранах < 768px
+- [x] **TopBar мобильное меню** — zoom/grid/selection скрыты за hamburger-кнопкой на мобильном
+- [x] **Canvas pointer events** — замена mouse events на pointer events + `touch-action: none` для поддержки touch/stylus
+- [x] **PropertiesPanel Mobile Bottom Sheet** — vaul-based bottom sheet на мобильном (<768px), холст остаётся интерактивным (`modal={false}`)
+- [x] **EquivalenceEngine иррациональные точки** — сэмплирование на π/4, √2, e + jitter для устранения ложных срабатываний на периодических функциях
+- [x] **Динамическое извлечение переменных** — `extractVariables()` вместо хардкода `['x','y','z','a','b','c']`
+- [x] **constants.ts** — единый источник правды для `TRIG_FUNCTIONS`, `IMPLICIT_MULT_VARS`, `DEFAULT_EQUIVALENCE_VARS`, `ATOMIC_KEYWORDS`
 - [x] **Курсоры участников на совместном холсте** (SimpleAwareness + RemoteCursors)
 - [x] **Production-стабильная синхронизация** (loop protection, stale closure fix, bootstrap timing)
 - [x] **Изоляция локального UI state** (tool, zoom, selection не синхронизируются)
@@ -953,3 +1183,146 @@ Kaspersky и некоторые другие антивирусы перехва
 ---
 
 **Приятной работы! 🚀**
+
+---
+
+## 🖊️ Input System (Pointer Events)
+
+Canvas использует `onPointerDown/Move/Up/Leave/Cancel` вместо mouse-событий — это обеспечивает корректную работу со стилусом, touch и мышью в одном коде.
+
+**Ключевые изменения:**
+
+- Все обработчики переименованы: `handleCanvasMouseDown/Move/Up` → `handleCanvasPointerDown/Move/Up`, принимают `React.PointerEvent`
+- Убраны проверки `e.button !== 0`; вместо них: `if (e.pointerType === 'mouse' && e.button !== 0) return`
+- Определение стилуса/touch: `const isPenLike = e.pointerType === 'pen' || e.pointerType === 'touch' || e.pressure > 0`
+- `setPointerCapture` на `pointerdown`, `releasePointerCapture` на `pointerup` — гарантирует получение событий даже при выходе курсора за пределы элемента
+- `touch-action: none` на viewport div — браузер не перехватывает скролл при рисовании
+- `ObjectRenderer` и `ImageResizeHandles` переведены на `onPointerDown` / `React.PointerEvent`
+
+**`onPointerCancel` handling:**
+
+`handleCanvasPointerCancel` вызывается системой при прерывании ввода (жест ОС, palm rejection, переключение приложения). Безопасно завершает любое активное рисование:
+
+```typescript
+const handleCanvasPointerCancel = (e: React.PointerEvent) => {
+  e.currentTarget.releasePointerCapture(e.pointerId);
+  if (freehand.isDrawing) freehand.onMouseUp();
+  if (highlighter.isDrawing) highlighter.onMouseUp();
+  // ... сброс остальных drawing states
+};
+```
+
+Без этого обработчика прерванный штрих мог бы "зависнуть" в состоянии рисования.
+
+**Stylus fallback:**
+
+Некоторые устройства (Wacom, старые Android) сообщают `pointerType === 'mouse'` даже для стилуса. Рисование разрешается если `pressure > 0` — это надёжный признак стилуса независимо от `pointerType`.
+
+**Поддерживаемые устройства ввода:**
+
+| Тип | `pointerType` | Примечание |
+|-----|--------------|-----------|
+| Мышь | `'mouse'` | `button === 0` для рисования |
+| Touch | `'touch'` | Работает через pointer events |
+| Стилус (Wacom, Apple Pencil) | `'pen'` | `pressure` доступен |
+| Стилус-fallback | `'mouse'` + `pressure > 0` | Некоторые устройства |
+
+**Файлы:** `src/components/Canvas.tsx`, `src/components/canvas/ObjectRenderer.tsx`, `src/components/canvas/ImageResizeHandles.tsx`
+
+---
+
+## 📍 Snapping System
+
+Централизованная логика привязки геометрических инструментов к существующим точкам.
+
+**API (`src/lib/geometry/snapping.ts`):**
+
+```typescript
+export interface SnapResult {
+    x: number;
+    y: number;
+    snapped: boolean;
+    targetId?: string;
+}
+
+export function getSnapPoint(
+    objects: AnyCanvasObject[],
+    x: number,
+    y: number,
+    radius: number,
+): SnapResult
+```
+
+- Ищет ближайший `geopoint` в радиусе `radius`
+- Возвращает центр точки при совпадении, иначе исходные координаты с `snapped: false`
+- Заменяет устаревшую `findNearbyPoint` во всех инструментах (`geopoint`, `geosegment`, `geoangle`)
+- `snapTarget` state расширен полем `targetId?: string`
+
+**Визуальная обратная связь:**
+
+| Состояние | Радиус | Stroke | Заливка |
+|-----------|--------|--------|---------|
+| Snapped | 11 | 3, зелёный | зелёный |
+| Unsnapped | 5 | 1, пунктир | серый |
+
+**Файлы:** `src/lib/geometry/snapping.ts`, `src/components/Canvas.tsx`
+
+---
+
+## 🔷 Shape System Fixes
+
+**Polygon:**
+
+- Добавлен `case 'polygon'` в switch создания фигур в `handleCanvasPointerUp`
+- Нормализованные 5 вершин: `[{x:0.5,y:0},{x:1,y:0.38},{x:0.81,y:1},{x:0.19,y:1},{x:0,y:0.38}]`
+- Добавлен SVG-превью `<polygon>` в оверлей во время рисования (аналогично triangle)
+- `ObjectRenderer` уже поддерживал `case 'polygon'` — изменений не потребовалось
+
+**Файлы:** `src/components/Canvas.tsx`
+
+---
+
+## 🗑️ Command System — Clear Board
+
+**`ClearCanvasCommand` (`src/lib/commands.ts`):**
+
+```typescript
+class ClearCanvasCommand implements Command {
+    execute()  // → setObjects([])
+    undo()     // → setObjects(previousObjects)
+}
+```
+
+- Сохраняет предыдущее состояние при создании
+- Полностью интегрирован в `CommandHistory` — Undo/Redo работает
+- `clearBoard()` в `useAppState` выполняет команду и вызывает `publishLocalChange(getCanvasSnapshot())` для синхронизации через Yjs
+- Кнопка в `TopBar` (иконка `Trash2`) видна только при `roomState.role === 'teacher'`
+
+**Файлы:** `src/lib/commands.ts`, `src/hooks/useAppState.ts`, `src/components/TopBar.tsx`
+
+---
+
+## 🔄 Collaboration / Page Sync
+
+**Исправление бесконечного цикла обновлений:**
+
+Корневая причина: `handleActivePageIdChange` → `setActivePageId` → обновление `state.activePageId` → срабатывание `usePageSync` → повторный вызов `setActivePageId` → цикл.
+
+**Решение:**
+
+- `handleActivePageIdChange` в `useCollaborationContext.tsx` сохраняет страницу учителя в отдельный `useState<string | undefined>` (`teacherPageId`) — не вызывает `setActivePageId` напрямую
+- `usePageSync` принимает `teacherPageId` как prop, сравнивает с `state.activePageId`, использует `appliedPageRef` для предотвращения дублирующих вызовов
+- Строгий guard: `if (teacherPageId && teacherPageId !== currentPageId) { setActivePageId(teacherPageId); }`
+- Лог срабатывает только при реальном переключении страницы
+
+**Файлы:** `src/hooks/usePageSync.ts`, `src/hooks/useCollaborationContext.tsx`
+
+---
+
+## 🗺️ Known Next Steps (TODO)
+
+- **Snapping:** расширить на линии, середины отрезков, пересечения
+- **`pointercancel`:** добавить обработчик для корректного завершения жеста при системных прерываниях
+- **Image interaction:** стабилизировать resize при быстрых движениях стилуса
+- **Yjs batching:** добавить throttle/debounce для `publishLocalChange` при массовых операциях
+- **Polygon:** поддержка произвольного числа вершин через интерактивное добавление точек

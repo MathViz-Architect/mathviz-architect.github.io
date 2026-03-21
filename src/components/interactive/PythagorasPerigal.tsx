@@ -340,7 +340,7 @@ export const PythagorasPerigal: React.FC<{
         />
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* SVG canvas */}
         <div className="flex-1 flex items-center justify-center bg-gray-50 p-3 min-w-0">
           <svg

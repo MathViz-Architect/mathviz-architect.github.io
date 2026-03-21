@@ -112,7 +112,7 @@ export const FunctionTransformations: React.FC = () => {
             </div>
 
             {/* Main content - two columns */}
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                 {/* Left: Graph */}
                 <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
                     <div className="w-full max-w-2xl">

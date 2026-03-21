@@ -76,7 +76,7 @@ export const ExponentialFunction: React.FC = () => {
                 />
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                 <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
                     <div className="w-full max-w-2xl">
                         <svg viewBox="0 0 400 300" className="w-full h-auto border border-gray-200 rounded-lg bg-white shadow-sm">
@@ -118,7 +118,7 @@ export const ExponentialFunction: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="w-96 border-l bg-white overflow-y-auto">
+                <div className="w-full md:w-96 border-t md:border-t-0 md:border-l bg-white overflow-y-auto max-h-64 md:max-h-none">
                     <div className="p-6 space-y-6">
                         <div>
                             <h3 className="text-lg font-semibold text-gray-800">Показательная функция</h3>

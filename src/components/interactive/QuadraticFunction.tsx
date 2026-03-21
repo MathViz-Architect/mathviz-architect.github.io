@@ -111,7 +111,7 @@ export const QuadraticFunction: React.FC<QuadraticFunctionProps> = ({ onInsert }
       </div>
 
       {/* Main content - two columns */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Left: Graph */}
         <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
           <div className="w-full max-w-2xl">
@@ -164,7 +164,7 @@ export const QuadraticFunction: React.FC<QuadraticFunctionProps> = ({ onInsert }
         </div>
 
         {/* Right: Controls */}
-        <div className="w-96 border-l bg-white overflow-y-auto">
+        <div className="w-full md:w-96 border-t md:border-t-0 md:border-l bg-white overflow-y-auto max-h-64 md:max-h-none">
           <div className="p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">

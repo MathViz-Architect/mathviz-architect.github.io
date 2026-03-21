@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   MousePointer2, Square, Type, Minus, Eraser, Library, Brain, FunctionSquare,
   Undo2, Redo2, Save, FolderOpen, FilePlus, Download, Trash2, FolderKanban,
-  Dot, Spline, Triangle, Pencil, Circle, Pentagon, LucideIcon,
+  Dot, Spline, Triangle, Pencil, Circle, Pentagon, Highlighter, LucideIcon,
 } from 'lucide-react';
 import { AppMode } from '@/lib/types';
 import { useEditorContext } from '@/contexts/EditorContext';
@@ -14,7 +14,7 @@ interface ToolGroup { id: string; name: string; icon: LucideIcon; accent?: 'indi
 const TOOL_GROUPS: ToolGroup[] = [
   { id: 'select', name: 'Выбор', icon: MousePointer2, tools: [{ id: 'select', name: 'Выбор', icon: MousePointer2, mode: 'select' }, { id: 'eraser', name: 'Ластик', icon: Eraser, mode: 'eraser' }] },
   { id: 'geometry', name: 'Геометрия', icon: Dot, tools: [{ id: 'geopoint', name: 'Точка', icon: Dot, mode: 'geopoint' }, { id: 'geosegment', name: 'Отрезок', icon: Spline, mode: 'geosegment' }, { id: 'line', name: 'Линия', icon: Minus, mode: 'line' }, { id: 'geoangle', name: 'Угол', icon: Triangle, mode: 'geoangle' }] },
-  { id: 'freehand', name: 'Карандаш', icon: Pencil, tools: [{ id: 'freehand', name: 'Карандаш', icon: Pencil, mode: 'freehand' }] },
+  { id: 'freehand', name: 'Карандаш', icon: Pencil, tools: [{ id: 'freehand', name: 'Карандаш', icon: Pencil, mode: 'freehand' }, { id: 'highlighter', name: 'Выделитель', icon: Highlighter, mode: 'highlighter' }] },
   { id: 'shapes', name: 'Фигуры', icon: Square, tools: [{ id: 'shape-rect', name: 'Прямоугольник', icon: Square, mode: 'shape' }, { id: 'shape-circle', name: 'Круг', icon: Circle, mode: 'shape' }, { id: 'shape-triangle', name: 'Треугольник', icon: Triangle, mode: 'shape' }, { id: 'shape-geo-circle', name: 'Окружность', icon: Circle, mode: 'shape' }, { id: 'shape-geo-triangle', name: '△ с параметрами', icon: Triangle, mode: 'shape' }, { id: 'shape-geo-quad', name: '□ с параметрами', icon: Pentagon, mode: 'shape' }] },
   { id: 'text', name: 'Текст', icon: Type, tools: [{ id: 'text', name: 'Текст', icon: Type, mode: 'text' }] },
   { id: 'interactive', name: 'Интерактив', icon: FunctionSquare, accent: 'indigo', tools: [{ id: 'interactive', name: 'Интерактив', icon: FunctionSquare, mode: 'interactive' }] },

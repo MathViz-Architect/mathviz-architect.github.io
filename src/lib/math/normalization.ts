@@ -1,129 +1,125 @@
+import { TRIG_FUNCTIONS, IMPLICIT_MULT_VARS } from './constants';
+
 /**
- * Universal fraction converter using regex - stable and idempotent.
- * Converts: 1/2 → \frac{1}{2}, a/b → \frac{a}{b}, x^2/y → \frac{x^2}{y}
- * 
- * Key: processes in a single pass from left to right, replacing fractions with LaTeX.
+ * Handles vertical bars | for absolute values, using a stack-based approach
+ * to correctly handle nested structures.
+ *
+ * @param text The input string.
+ * @param format 'KaTeX' or 'MathJS'.
+ * @returns The processed string.
  */
-export function convertFractions(text: string): string {
-    if (!text || typeof text !== 'string') return text || '';
-    if (!text.includes('/')) return text;
-
-    // Strategy: find each /, then look backwards/forwards to find valid numerator/denominator
-    // This is more stable than multiple regex passes
-
-    // First, protect existing \frac{...}{...} by marking them
-    const protectedText = text.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '__FRAC_PROTECTED__$1__$2__FRAC__');
-
-    // Now find and replace fractions
+function processAbs(text: string, format: 'KaTeX' | 'MathJS'): string {
     let result = '';
-    let i = 0;
+    const stack: ('abs' | 'other')[] = [];
 
-    while (i < protectedText.length) {
-        // Find next /
-        const slashIdx = protectedText.indexOf('/', i);
-        if (slashIdx === -1) {
-            result += protectedText.slice(i);
-            break;
-        }
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '|') {
+            const prevChar = text[i - 1] || '';
+            // Heuristic: a bar is "opening" if it's at the start,
+            // or preceded by an operator/space, or an opening bracket.
+            const isOpening = i === 0 || /[\s(+\-*/^=]/.test(prevChar);
 
-        // Check if preceded by protected marker or :
-        if (slashIdx > 0 && (
-            protectedText.slice(slashIdx - 5, slashIdx) === '__FRAC' ||
-            protectedText[slashIdx - 1] === ':' ||
-            protectedText[slashIdx - 1] === '\\'
-        )) {
-            result += protectedText.slice(i, slashIdx + 1);
-            i = slashIdx + 1;
-            continue;
-        }
-
-        // Find numerator (look backwards)
-        let numEnd = slashIdx;
-        while (numEnd > 0 && /\s/.test(protectedText[numEnd - 1])) numEnd--;
-
-        let numStart = numEnd;
-        // Allow: digits, letters, ^ for powers
-        while (numStart > 0 && /[a-zA-Z0-9^]/.test(protectedText[numStart - 1])) numStart--;
-
-        // Must have at least one valid char in numerator
-        if (numStart === numEnd) {
-            result += protectedText.slice(i, slashIdx + 1);
-            i = slashIdx + 1;
-            continue;
-        }
-
-        // Find denominator (look forwards)
-        let denStart = slashIdx + 1;
-        while (denStart < protectedText.length && /\s/.test(protectedText[denStart])) denStart++;
-
-        let denEnd = denStart;
-        while (denEnd < protectedText.length && /[a-zA-Z0-9^]/.test(protectedText[denEnd])) denEnd++;
-
-        // Must have at least one valid char in denominator
-        if (denStart === denEnd) {
-            result += protectedText.slice(i, slashIdx + 1);
-            i = slashIdx + 1;
-            continue;
-        }
-
-        const numerator = protectedText.slice(numStart, numEnd);
-        const denominator = protectedText.slice(denStart, denEnd);
-
-        // Valid fraction: both parts have valid characters
-        if (/^[a-zA-Z0-9^]+$/.test(numerator) && /^[a-zA-Z0-9^]+$/.test(denominator)) {
-            result += protectedText.slice(i, numStart);
-            result += `\\frac{${numerator}}{${denominator}}`;
-            i = denEnd;
+            if (isOpening) {
+                stack.push('abs');
+                result += format === 'KaTeX' ? '\\left| ' : 'abs(';
+            } else {
+                if (stack.length > 0) {
+                    stack.pop();
+                    result += format === 'KaTeX' ? ' \\right|' : ')';
+                } else {
+                    // Unmatched closing bar, treat as a literal character
+                    result += '|';
+                }
+            }
         } else {
-            result += protectedText.slice(i, slashIdx + 1);
-            i = slashIdx + 1;
+            result += text[i];
         }
     }
 
-    // Restore protected \frac
-    return result.replace(/__FRAC_PROTECTED__([^_]+)__([^_]+)__FRAC__/g, '\\frac{$1}{$2}');
+    // This simplistic approach assumes well-formed input.
+    // A more advanced parser would be needed for complex ambiguous cases.
+    return result;
 }
 
+
+/**
+ * Converts an expression to a format compatible with the MathJS library.
+ * This includes handling functions, powers, and special constants.
+ *
+ * @param text The raw mathematical expression.
+ * @returns A string that can be safely evaluated by MathJS.
+ */
+export function toMathJSExpression(text: string): string {
+    if (!text || typeof text !== 'string') return '';
+
+    let result = text.trim();
+
+    // 1. Unicode and LaTeX to ASCII/MathJS syntax
+    result = result.replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/≠/g, '!=');
+    result = result.replace(/⋅/g, '*').replace(/\\cdot/g, '*');
+    result = result.replace(/\\le/g, '<=').replace(/\\ge/g, '>=').replace(/\\neq/g, '!=');
+    result = result.replace(/\\approx/g, '~').replace(/\\infty/g, 'Infinity');
+    result = result.replace(/\^\\circ/g, 'deg');
+    result = result.replace(/\\cup/g, '').replace(/\\in/g, ''); // Remove set operators for now
+
+    // 2. Handle absolute values: |x| -> abs(x)
+    result = processAbs(result, 'MathJS');
+
+    // 3. Handle logarithms
+    result = result.replace(/log_\{?([\w\d().]+)\}?\s*\((.*?)\)/g, 'log($2, $1)');
+    result = result.replace(/\bln\s*\((.*?)\)/g, 'log($1)');
+    result = result.replace(/\blg\s*\((.*?)\)/g, 'log($1, 10)');
+
+    // 4. Handle trigonometric powers: sin^2(x) -> (sin(x))^2
+    TRIG_FUNCTIONS.forEach(func => {
+        const regex = new RegExp(`\\b${func}\\^([-+]?\\d+)\\s*\\((.*?)\\)`, 'g');
+        result = result.replace(regex, `(${func}($2))^$1`);
+    });
+
+    // 5. Add implicit multiplication (e.g., 2x -> 2*x)
+    IMPLICIT_MULT_VARS.forEach(v => {
+        // Add multiplication between a digit and a variable (e.g., "2x" -> "2*x")
+        const digitVarRegex = new RegExp(`(\\d)(${v})`, 'g');
+        result = result.replace(digitVarRegex, `$1*${v}`);
+        // Add multiplication between a variable and a digit (e.g., "x2" -> "x*2")
+        const varDigitRegex = new RegExp(`(${v})(\\d)`, 'g');
+        result = result.replace(varDigitRegex, `$1*$2`);
+    });
+
+    return result;
+}
+
+
+/**
+ * Normalizes a raw math expression for KaTeX rendering.
+ */
 export function normalizeMathExpression(text: string): string {
     if (!text || typeof text !== 'string') return '';
 
     let result = text;
-    result = result.split('\n').map(l => l.trim()).join(' ');
-    result = result.replace(/[\s\u00A0\u2007\u202F\u2009]+/g, ' ');
 
-    // STEP 1: Convert fractions to LaTeX
-    result = convertFractions(result);
+    // 1. Use the robust handler for absolute values
+    result = processAbs(result, 'KaTeX');
 
-    // STEP 2: Math symbol normalization
-    result = result.replace(/⋅/g, '\\cdot');
-    result = result.replace(/\s*\*\s*/g, ' \\cdot ');
-    result = result.replace(/(\d)\s+([a-zA-Z])/g, '$1$2');
-    result = result.replace(/(\d)\s+(?=\d)/g, '$1');
-    result = result.replace(/(?<!\d)\s*:\s*(?!\d)/g, ' \\div ');
+    // 2. LaTeX symbol normalization
+    result = result.replace(/⋅/g, '\\cdot').replace(/\s*\*\s*/g, ' \\cdot ');
+    result = result.replace(/<=/g, '\\le ').replace(/>=/g, '\\ge ');
+
+    // 3. Handle logarithms for KaTeX
+    result = result.replace(/log_\{?([\w\d]+)\}?\s*\((.*?)\)/g, '\\log_{$1}($2)');
+    result = result.replace(/\bln\((.*?)\)/g, '\\ln($1)');
+    result = result.replace(/\blg\((.*?)\)/g, '\\lg($1)');
+
+    // 4. Basic structural cleanup for better display
     result = result.replace(/(\S)\s*([+\-*/^=])\s*(\S)/g, '$1 $2 $3');
-    result = result.replace(/\s*\+\s*-\s*/g, ' − ');
-    result = result.replace(/\s*-\s*-\s*/g, ' + ');
 
-    // STEP 3: Simplify expressions
-    result = result.replace(/\b1([a-zA-Z])\b/g, '$1');
-    result = result.replace(/\b1([a-zA-Z])\^/g, '$1^');
-    result = result.replace(/\^1\s*([+\-]|$)/g, '$1');
-    result = result.replace(/[a-zA-Z]\^0(?=[^0-9])/g, '1');
-    result = result.replace(/\b0([a-zA-Z])\b/g, '0');
-    result = result.replace(/x\s*\+\s*0(\s|$|[^+−])/g, 'x$1');
-    result = result.replace(/x\s*-\s*0(\s|$|[^+−])/g, 'x$1');
-    result = result.replace(/\s*\+\s*0(\s|[+\-−]|$)/g, '$1');
-    result = result.replace(/\s*-\s*0(\s|[+\-−]|$)/g, '$1');
-
-    // STEP 4: Unicode superscripts
-    result = result.replace(/²/g, '^2');
-    result = result.replace(/³/g, '^3');
-
-    return result.replace(/\s+/g, ' ').trim();
+    return result.trim();
 }
 
-export function hasLatexCommands(text: string): boolean {
-    return /\\frac|\\sqrt|\^|_|\\cdot|\\div/.test(text) ||
-           /[a-zA-Z]\s*\/\s*[a-zA-Z0-9(]/.test(text) ||
-           /\([^)]+\)\s*\/\s*\([^)]+\)/.test(text);
+// BACKWARD COMPAT
+export function convertFractions(input: string): string {
+    return normalizeMathExpression(input)
+}
+export function hasLatexCommands(input: string): boolean {
+    return /\\[a-zA-Z]+/.test(input)
 }

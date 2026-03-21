@@ -17,10 +17,11 @@ describe('transforms', () => {
                 toJSON: () => ({})
             };
 
+            // zoom=1, pan=0: canvasX = (screenX - left - panX) / zoom
             const result = screenToCanvas(500, 350, svgRect, 1600, 1200);
 
-            expect(result.x).toBe(800); // (500 - 100) * (1600 / 800)
-            expect(result.y).toBe(600); // (350 - 50) * (1200 / 600)
+            expect(result.x).toBe(400); // (500 - 100 - 0) / 1
+            expect(result.y).toBe(300); // (350 - 50  - 0) / 1
         });
 
         it('should handle top-left corner', () => {
@@ -42,23 +43,64 @@ describe('transforms', () => {
             expect(result.y).toBe(0);
         });
 
-        it('should handle scaling when SVG is smaller than canvas', () => {
+        it('should handle zoom=2 with no pan', () => {
             const svgRect: DOMRect = {
                 left: 0,
                 top: 0,
-                width: 200,
-                height: 150,
-                right: 200,
-                bottom: 150,
+                width: 800,
+                height: 600,
+                right: 800,
+                bottom: 600,
                 x: 0,
                 y: 0,
                 toJSON: () => ({})
             };
 
-            const result = screenToCanvas(100, 75, svgRect, 800, 600);
+            // zoom=2: canvasX = (screenX - 0 - 0) / 2
+            const result = screenToCanvas(400, 300, svgRect, 2000, 2000, 2, 0, 0);
 
-            expect(result.x).toBe(400); // 100 * (800 / 200)
-            expect(result.y).toBe(300); // 75 * (600 / 150)
+            expect(result.x).toBe(200); // 400 / 2
+            expect(result.y).toBe(150); // 300 / 2
+        });
+
+        it('should handle zoom and pan together', () => {
+            const svgRect: DOMRect = {
+                left: 0,
+                top: 0,
+                width: 800,
+                height: 600,
+                right: 800,
+                bottom: 600,
+                x: 0,
+                y: 0,
+                toJSON: () => ({})
+            };
+
+            // zoom=2, pan=(100,50): canvasX = (screenX - 0 - 100) / 2
+            const result = screenToCanvas(500, 350, svgRect, 2000, 2000, 2, 100, 50);
+
+            expect(result.x).toBe(200); // (500 - 0 - 100) / 2
+            expect(result.y).toBe(150); // (350 - 0 - 50)  / 2
+        });
+
+        it('should handle viewport with non-zero offset', () => {
+            const svgRect: DOMRect = {
+                left: 200,
+                top: 100,
+                width: 800,
+                height: 600,
+                right: 1000,
+                bottom: 700,
+                x: 200,
+                y: 100,
+                toJSON: () => ({})
+            };
+
+            // canvasX = (screenX - left - panX) / zoom = (700 - 200 - 0) / 1 = 500
+            const result = screenToCanvas(700, 400, svgRect, 2000, 2000, 1, 0, 0);
+
+            expect(result.x).toBe(500);
+            expect(result.y).toBe(300);
         });
     });
 
@@ -190,10 +232,11 @@ describe('transforms', () => {
                 toJSON: () => ({})
             };
 
-            const result = canvasToScreen(800, 600, svgRect, 1600, 1200);
+            // zoom=1, pan=0: screenX = canvasX * zoom + panX + left
+            const result = canvasToScreen(400, 300, svgRect, 1600, 1200);
 
-            expect(result.x).toBe(500); // 800 * (800 / 1600) + 100
-            expect(result.y).toBe(350); // 600 * (600 / 1200) + 50
+            expect(result.x).toBe(500); // 400 * 1 + 0 + 100
+            expect(result.y).toBe(350); // 300 * 1 + 0 + 50
         });
 
         it('should handle origin point', () => {
@@ -215,23 +258,44 @@ describe('transforms', () => {
             expect(result.y).toBe(0);
         });
 
-        it('should handle scaling when canvas is larger than viewport', () => {
+        it('should handle zoom=2 with no pan', () => {
             const svgRect: DOMRect = {
                 left: 0,
                 top: 0,
-                width: 200,
-                height: 150,
-                right: 200,
-                bottom: 150,
+                width: 800,
+                height: 600,
+                right: 800,
+                bottom: 600,
                 x: 0,
                 y: 0,
                 toJSON: () => ({})
             };
 
-            const result = canvasToScreen(400, 300, svgRect, 800, 600);
+            // screenX = canvasX * zoom + panX + left = 200 * 2 + 0 + 0 = 400
+            const result = canvasToScreen(200, 150, svgRect, 2000, 2000, 2, 0, 0);
 
-            expect(result.x).toBe(100); // 400 * (200 / 800)
-            expect(result.y).toBe(75); // 300 * (150 / 600)
+            expect(result.x).toBe(400);
+            expect(result.y).toBe(300);
+        });
+
+        it('should handle zoom and pan together', () => {
+            const svgRect: DOMRect = {
+                left: 0,
+                top: 0,
+                width: 800,
+                height: 600,
+                right: 800,
+                bottom: 600,
+                x: 0,
+                y: 0,
+                toJSON: () => ({})
+            };
+
+            // screenX = 200 * 2 + 100 + 0 = 500
+            const result = canvasToScreen(200, 150, svgRect, 2000, 2000, 2, 100, 50);
+
+            expect(result.x).toBe(500);
+            expect(result.y).toBe(350);
         });
     });
 
@@ -246,12 +310,12 @@ describe('transforms', () => {
 
         it('should maintain round-trip accuracy at identity transform', () => {
             const rect = createRect(0, 0, 800, 600);
-            
+
             for (let x = 0; x <= 800; x += 100) {
                 for (let y = 0; y <= 600; y += 100) {
                     const screen = canvasToScreen(x, y, rect, 800, 600, 1, 0, 0);
                     const back = screenToCanvas(screen.x, screen.y, rect, 800, 600, 1, 0, 0);
-                    
+
                     expect(back.x).toBeCloseTo(x, 10);
                     expect(back.y).toBeCloseTo(y, 10);
                 }
@@ -263,12 +327,12 @@ describe('transforms', () => {
             const zoom = 2;
             const panX = 100;
             const panY = 50;
-            
+
             for (let x = 100; x <= 700; x += 100) {
                 for (let y = 100; y <= 500; y += 100) {
                     const screen = canvasToScreen(x, y, rect, 800, 600, zoom, panX, panY);
                     const back = screenToCanvas(screen.x, screen.y, rect, 800, 600, zoom, panX, panY);
-                    
+
                     expect(back.x).toBeCloseTo(x, 5);
                     expect(back.y).toBeCloseTo(y, 5);
                 }
@@ -278,16 +342,16 @@ describe('transforms', () => {
         it('should maintain round-trip accuracy with various zoom levels', () => {
             const rect = createRect(50, 50, 400, 300);
             const zoomLevels = [0.1, 0.5, 1, 2, 5, 10];
-            
+
             for (const zoom of zoomLevels) {
                 const x = 400;
                 const y = 300;
                 const panX = 200;
                 const panY = 150;
-                
+
                 const screen = canvasToScreen(x, y, rect, 800, 600, zoom, panX, panY);
                 const back = screenToCanvas(screen.x, screen.y, rect, 800, 600, zoom, panX, panY);
-                
+
                 expect(back.x).toBeCloseTo(x, 3);
                 expect(back.y).toBeCloseTo(y, 3);
             }
@@ -296,15 +360,15 @@ describe('transforms', () => {
         it('should maintain round-trip accuracy with large pan values', () => {
             const rect = createRect(0, 0, 800, 600);
             const panValues = [-1000, -500, 500, 1000];
-            
+
             for (const panX of panValues) {
                 for (const panY of panValues) {
                     const x = 400;
                     const y = 300;
-                    
+
                     const screen = canvasToScreen(x, y, rect, 800, 600, 1, panX, panY);
                     const back = screenToCanvas(screen.x, screen.y, rect, 800, 600, 1, panX, panY);
-                    
+
                     expect(back.x).toBeCloseTo(x, 3);
                     expect(back.y).toBeCloseTo(y, 3);
                 }
@@ -313,7 +377,7 @@ describe('transforms', () => {
 
         it('should handle extreme zoom values without precision explosion', () => {
             const rect = createRect(0, 0, 800, 600);
-            
+
             // Test zoom = 0.1
             const screen1 = canvasToScreen(400, 300, rect, 800, 600, 0.1, 0, 0);
             const back1 = screenToCanvas(screen1.x, screen1.y, rect, 800, 600, 0.1, 0, 0);
@@ -321,7 +385,7 @@ describe('transforms', () => {
             expect(back1.y).not.toBeNaN();
             expect(back1.x).not.toBe(Infinity);
             expect(back1.y).not.toBe(Infinity);
-            
+
             // Test zoom = 10
             const screen2 = canvasToScreen(400, 300, rect, 800, 600, 10, 0, 0);
             const back2 = screenToCanvas(screen2.x, screen2.y, rect, 800, 600, 10, 0, 0);
@@ -351,9 +415,10 @@ describe('transforms', () => {
         it('should handle zero viewport dimensions gracefully', () => {
             const rect = createRect(0, 0, 0, 0);
             const result = screenToCanvas(0, 0, rect, 800, 600);
-            // Division by zero produces NaN - this is expected behavior
-            expect(result.x).toBeNaN();
-            expect(result.y).toBeNaN();
+            // With the correct formula (screenX - left - panX) / zoom,
+            // zero viewport size doesn't cause division by zero — result is (0, 0).
+            expect(result.x).toBe(0);
+            expect(result.y).toBe(0);
         });
 
         it('should handle fractional zoom values', () => {
@@ -396,6 +461,7 @@ describe('transforms', () => {
 
         it('should handle fractional zoom values', () => {
             const rect = createRect(0, 0, 800, 600);
+            // screenX = canvasX * zoom + panX + left = 400 * 0.25 + 0 + 0 = 100
             const result = canvasToScreen(400, 300, rect, 800, 600, 0.25, 0, 0);
             expect(result.x).toBeCloseTo(100, 1);
             expect(result.y).toBeCloseTo(75, 1);

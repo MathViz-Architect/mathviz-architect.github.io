@@ -35,7 +35,7 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
   }, [value]);
 
   const applyInput = useCallback((
-    type: 'digit' | 'operator' | 'function' | 'delete' | 'clear' | 'move' | 'pi',
+    type: 'digit' | 'operator' | 'function' | 'fraction' | 'delete' | 'clear' | 'move' | 'pi',
     inputValue?: string,
     direction?: 'left' | 'right'
   ) => {
@@ -78,6 +78,10 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
     } else if (key.variant === 'function') {
       applyInput('function', key.label);
     }
+  }, [applyInput]);
+
+  const handleInsertFraction = useCallback(() => {
+    applyInput('fraction');
   }, [applyInput]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,7 +176,7 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
 
     e.preventDefault();
     applyInput(
-      action.type as 'digit' | 'operator' | 'function' | 'delete' | 'clear' | 'move' | 'pi',
+      action.type as 'digit' | 'operator' | 'function' | 'fraction' | 'delete' | 'clear' | 'move' | 'pi',
       action.value,
       action.direction
     );
@@ -223,7 +227,7 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
 
       {isKeyboardVisible && !disabled && (
         <div className="mt-2">
-          <VirtualMathKeyboard onKeyPress={handleKeyPress} />
+          <VirtualMathKeyboard onKeyPress={handleKeyPress} onInsertFraction={handleInsertFraction} />
         </div>
       )}
     </div>

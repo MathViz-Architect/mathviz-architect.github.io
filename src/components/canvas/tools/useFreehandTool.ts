@@ -1,22 +1,18 @@
 // src/components/canvas/tools/useFreehandTool.ts
 //
-// Encapsulates all freehand drawing state and handlers.
-// Extracted from Canvas.tsx to reduce its size — logic is unchanged.
-//
-// Usage:
-//   const freehand = useFreehandTool({ penSettings, onAddObject, publishState });
-//   // In mousedown: freehand.onMouseDown(x, y)
-//   // In mousemove: freehand.onMouseMove(x, y)
-//   // In mouseup:   freehand.onMouseUp()
-//   // Overlay SVG:  freehand.overlay (null when not drawing)
+// Hardened freehand drawing tool.
+// All real-time logic runs off refs — never stale React state.
+// Supports mouse, touch, and stylus (pen) input uniformly.
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { AnyCanvasObject } from '@/lib/types';
 
 interface UseFreehandToolOptions {
     penSettings: { width: number; color: string };
     onAddObject: (obj: AnyCanvasObject) => void;
     publishState: () => void;
+    /** Current app mode — used to abort drawing on tool switch */
+    mode: string;
 }
 
 export interface FreehandOverlay {
@@ -25,23 +21,85 @@ export interface FreehandOverlay {
     width: number;
 }
 
-export function useFreehandTool({ penSettings, onAddObject, publishState }: UseFreehandToolOptions) {
+export function useFreehandTool({ penSettings, onAddObject, publishState, mode }: UseFreehandToolOptions) {
+    // isDrawingRef is the authoritative flag — never stale, safe in all callbacks
     const isDrawingRef = useRef(false);
+    // isDrawing state is only used for overlay rendering (UI concern)
     const [isDrawing, setIsDrawing] = useState(false);
-    const [points, setPoints] = useState<{ x: number; y: number }[]>([]);
-    const lastPointRef = useRef<{ x: number; y: number } | null>(null);
-    // Mirror of `points` in a ref so onMouseUp can read them synchronously
-    // without a stale closure — avoids side effects inside a state updater.
+    const [overlay, setOverlay] = useState<FreehandOverlay | null>(null);
+
     const pointsRef = useRef<{ x: number; y: number }[]>([]);
+    const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+    // Snapshot of penSettings at stroke start — avoids mid-stroke color/width changes
+    const penRef = useRef(penSettings);
+    penRef.current = penSettings;
+
+    // Abort drawing cleanly without creating an object (cancel / tool switch)
+    const abort = useCallback(() => {
+        if (!isDrawingRef.current) return;
+        console.log('[freehand] CANCEL / ABORT');
+        isDrawingRef.current = false;
+        setIsDrawing(false);
+        setOverlay(null);
+        pointsRef.current = [];
+        lastPointRef.current = null;
+    }, []);
+
+    // Finalize: commit stroke as object (or abort if no points)
+    const finalize = useCallback(() => {
+        if (!isDrawingRef.current) return;
+        console.log('[freehand] DRAW END, points:', pointsRef.current.length);
+        isDrawingRef.current = false;
+        setIsDrawing(false);
+        setOverlay(null);
+
+        const currentPoints = pointsRef.current;
+        pointsRef.current = [];
+        lastPointRef.current = null;
+
+        if (currentPoints.length < 1) return;
+
+        // Normalize tap (single point) → duplicate to form a valid 2-point segment
+        // strokeLinecap="round" on a zero-length path renders as a visible dot
+        const pts = currentPoints.length === 1
+            ? [currentPoints[0], { ...currentPoints[0] }]
+            : currentPoints;
+
+        const xs = pts.map(p => p.x);
+        const ys = pts.map(p => p.y);
+        const minX = Math.min(...xs), minY = Math.min(...ys);
+        const maxX = Math.max(...xs), maxY = Math.max(...ys);
+
+        const newPath: AnyCanvasObject = {
+            id: crypto.randomUUID(),
+            type: 'freehand',
+            x: minX,
+            y: minY,
+            width: Math.max(maxX - minX, 1),
+            height: Math.max(maxY - minY, 1),
+            rotation: 0,
+            opacity: 1,
+            visible: true,
+            locked: false,
+            data: { points: pts, color: penRef.current.color, width: penRef.current.width },
+        };
+        console.log('[freehand] CREATE OBJECT', pts.length, 'pts at', minX, minY);
+        onAddObject(newPath);
+        publishState();
+    }, [onAddObject, publishState]);
 
     const onMouseDown = useCallback((x: number, y: number) => {
+        // If somehow already drawing (e.g. missed cancel), finalize first
+        if (isDrawingRef.current) finalize();
+
+        console.log('[freehand] DRAW START at', x, y);
         const firstPoint = { x, y };
         isDrawingRef.current = true;
         setIsDrawing(true);
         pointsRef.current = [firstPoint];
-        setPoints([firstPoint]);
         lastPointRef.current = firstPoint;
-    }, []);
+        setOverlay({ points: [firstPoint], color: penRef.current.color, width: penRef.current.width });
+    }, [finalize]);
 
     const onMouseMove = useCallback((x: number, y: number) => {
         if (!isDrawingRef.current) return;
@@ -49,50 +107,24 @@ export function useFreehandTool({ penSettings, onAddObject, publishState }: UseF
         if (!last || Math.hypot(x - last.x, y - last.y) > 2) {
             const pt = { x, y };
             pointsRef.current = [...pointsRef.current, pt];
-            setPoints(pointsRef.current);
             lastPointRef.current = pt;
+            setOverlay({ points: pointsRef.current, color: penRef.current.color, width: penRef.current.width });
+            console.log('[freehand] MOVE, points:', pointsRef.current.length);
         }
     }, []);
 
-    const onMouseUp = useCallback(() => {
-        if (!isDrawingRef.current) return;
-        isDrawingRef.current = false;
-        setIsDrawing(false);
-        lastPointRef.current = null;
+    // onMouseUp = finalize (public alias)
+    const onMouseUp = finalize;
 
-        // Read current points from ref to avoid stale closure,
-        // then clear state. Side effects (onAddObject, publishState)
-        // are called outside the updater — updaters must be pure.
-        const currentPoints = pointsRef.current;
-        setPoints([]);
+    // onCancel = abort without creating object
+    const onCancel = abort;
 
-        if (currentPoints.length >= 2) {
-            const xs = currentPoints.map(p => p.x);
-            const ys = currentPoints.map(p => p.y);
-            const minX = Math.min(...xs), minY = Math.min(...ys);
-            const maxX = Math.max(...xs), maxY = Math.max(...ys);
-            const newPath: AnyCanvasObject = {
-                id: crypto.randomUUID(),
-                type: 'freehand',
-                x: minX,
-                y: minY,
-                width: Math.max(maxX - minX, 1),
-                height: Math.max(maxY - minY, 1),
-                rotation: 0,
-                opacity: 1,
-                visible: true,
-                locked: false,
-                data: { points: currentPoints, color: penSettings.color, width: penSettings.width },
-            };
-            onAddObject(newPath);
-            publishState();
+    // Abort drawing if tool is switched mid-stroke
+    useEffect(() => {
+        if (mode !== 'freehand' && isDrawingRef.current) {
+            abort();
         }
-    }, [isDrawing, penSettings, onAddObject, publishState]);
+    }, [mode, abort]);
 
-    // Overlay data for Canvas to render the in-progress stroke
-    const overlay: FreehandOverlay | null = isDrawing && points.length > 0
-        ? { points, color: penSettings.color, width: penSettings.width }
-        : null;
-
-    return { isDrawing, onMouseDown, onMouseMove, onMouseUp, overlay };
+    return { isDrawing, isDrawingRef, onMouseDown, onMouseMove, onMouseUp, onCancel, overlay };
 }

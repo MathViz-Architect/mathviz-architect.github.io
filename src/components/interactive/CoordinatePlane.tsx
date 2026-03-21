@@ -97,7 +97,7 @@ export const CoordinatePlane: React.FC = () => {
                 />
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                 <div className="flex-1 bg-gray-50 p-8 overflow-auto">
                     <svg
                         viewBox={`0 0 ${width} ${height}`}

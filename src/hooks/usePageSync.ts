@@ -4,51 +4,35 @@ import { BoardSettings } from '@/lib/types';
 
 interface UsePageSyncOptions {
   boardSettings: BoardSettings;
-  role: 'teacher' | 'student';
+  role: 'teacher' | 'student' | null;
+  /** The page ID the teacher is currently on (from Yjs). */
+  teacherPageId?: string;
 }
 
-export function usePageSync({ boardSettings, role }: UsePageSyncOptions) {
+export function usePageSync({ boardSettings, role, teacherPageId }: UsePageSyncOptions) {
   const { state, setActivePageId } = useEditorContext();
-  const lastSyncedPageRef = useRef<string | null>(null);
-  const isLocalChangeRef = useRef(false);
-
-  const trackLocalChange = useCallback((pageId: string) => {
-    lastSyncedPageRef.current = pageId;
-    isLocalChangeRef.current = true;
-    
-    setTimeout(() => {
-      isLocalChangeRef.current = false;
-    }, 100);
-  }, []);
+  const appliedPageRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (role !== 'student') {
-      return;
-    }
+    if (role !== 'student') return;
+    if (boardSettings.mode !== 'view') return;
+    if (!teacherPageId) return;
 
-    const shouldFollow = boardSettings.mode === 'view';
-    if (!shouldFollow) {
-      return;
-    }
-
+    // Only act when the teacher is on a different page than the student,
+    // and we haven't already applied this exact page switch.
     const currentPageId = state.activePageId;
-    
-    if (currentPageId && currentPageId !== lastSyncedPageRef.current && !isLocalChangeRef.current) {
-      console.log('[PageSync] Following teacher to page:', currentPageId);
-      lastSyncedPageRef.current = currentPageId;
-      // Force update outside Yjs transaction to ensure React re-renders
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          console.log('[PageSync] Force updating React state for page:', currentPageId);
-          setActivePageId(currentPageId);
-        }, 0);
-      });
+    if (teacherPageId !== currentPageId && teacherPageId !== appliedPageRef.current) {
+      console.log('[PageSync] Following teacher to page:', teacherPageId);
+      appliedPageRef.current = teacherPageId;
+      setActivePageId(teacherPageId);
     }
-  }, [state.activePageId, boardSettings.mode, role, setActivePageId]);
+  }, [teacherPageId, state.activePageId, boardSettings.mode, role, setActivePageId]);
 
-  useEffect(() => {
-    lastSyncedPageRef.current = state.activePageId;
-  }, [state.activePageId]);
+  // trackLocalChange lets callers signal that a page change was initiated locally
+  // so we don't echo it back.
+  const trackLocalChange = useCallback((pageId: string) => {
+    appliedPageRef.current = pageId;
+  }, []);
 
   return { trackLocalChange };
 }

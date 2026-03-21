@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
     AddObjectCommand,
     DeleteObjectCommand,
@@ -7,30 +7,45 @@ import {
     BatchCommand,
     ResizeObjectCommand,
 } from './commands';
+import type { AnyCanvasObject } from './types';
 
-const createMockObject = (id: string) => ({ id, type: 'rectangle' as const, x: 0, y: 0, width: 10, height: 10 });
+function createMockObject(id: string): AnyCanvasObject {
+    return {
+        id,
+        type: 'rectangle',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: { fill: '#fff', stroke: '#000', strokeWidth: 1, cornerRadius: 0 },
+    };
+}
 
 describe('Commands', () => {
     describe('AddObjectCommand', () => {
         it('should add object on execute', () => {
-            const objects: any[] = [createMockObject('1')];
+            const objects: AnyCanvasObject[] = [createMockObject('1')];
             const newObj = createMockObject('2');
             const setObjects = vi.fn();
-            
+
             const cmd = new AddObjectCommand(objects, newObj, setObjects);
             cmd.execute();
-            
+
             expect(setObjects).toHaveBeenCalledWith([objects[0], newObj]);
         });
 
         it('should remove object on undo', () => {
-            const objects: any[] = [createMockObject('1')];
+            const objects: AnyCanvasObject[] = [createMockObject('1')];
             const newObj = createMockObject('2');
             const setObjects = vi.fn();
-            
+
             const cmd = new AddObjectCommand(objects, newObj, setObjects);
             cmd.undo();
-            
+
             expect(setObjects).toHaveBeenCalledWith([objects[0]]);
         });
 
@@ -42,22 +57,22 @@ describe('Commands', () => {
 
     describe('DeleteObjectCommand', () => {
         it('should remove object on execute', () => {
-            const objects: any[] = [createMockObject('1'), createMockObject('2')];
+            const objects: AnyCanvasObject[] = [createMockObject('1'), createMockObject('2')];
             const setObjects = vi.fn();
-            
+
             const cmd = new DeleteObjectCommand(objects, '1', setObjects);
             cmd.execute();
-            
+
             expect(setObjects).toHaveBeenCalledWith([objects[1]]);
         });
 
         it('should restore object on undo', () => {
-            const objects: any[] = [createMockObject('1'), createMockObject('2')];
+            const objects: AnyCanvasObject[] = [createMockObject('1'), createMockObject('2')];
             const setObjects = vi.fn();
-            
+
             const cmd = new DeleteObjectCommand(objects, '1', setObjects);
             cmd.undo();
-            
+
             expect(setObjects).toHaveBeenCalledWith(objects);
         });
 
@@ -69,49 +84,49 @@ describe('Commands', () => {
 
     describe('UpdateObjectCommand', () => {
         it('should update object on execute', () => {
-            const objects: any[] = [createMockObject('1'), createMockObject('2')];
+            const objects: AnyCanvasObject[] = [createMockObject('1'), createMockObject('2')];
             const setObjects = vi.fn();
-            
+
             const cmd = new UpdateObjectCommand(objects, '1', { x: 100 }, setObjects);
             cmd.execute();
-            
-            const calledObjects = setObjects.mock.calls[0][0];
-            expect(calledObjects.find((o: any) => o.id === '1')?.x).toBe(100);
+
+            const calledObjects: AnyCanvasObject[] = setObjects.mock.calls[0][0];
+            expect(calledObjects.find(o => o.id === '1')?.x).toBe(100);
         });
 
         it('should restore previous state on undo', () => {
-            const objects: any[] = [createMockObject('1')];
+            const objects: AnyCanvasObject[] = [createMockObject('1')];
             const setObjects = vi.fn();
-            
+
             const cmd = new UpdateObjectCommand(objects, '1', { x: 100 }, setObjects);
             cmd.execute();
             cmd.undo();
-            
-            const calledObjects = setObjects.mock.calls[1][0];
-            expect(calledObjects.find((o: any) => o.id === '1')?.x).toBe(0);
+
+            const calledObjects: AnyCanvasObject[] = setObjects.mock.calls[1][0];
+            expect(calledObjects.find(o => o.id === '1')?.x).toBe(0);
         });
     });
 
     describe('MoveObjectsCommand', () => {
         it('should set next objects on execute', () => {
-            const prev: any[] = [createMockObject('1')];
-            const next: any[] = [createMockObject('1'), createMockObject('2')];
+            const prev: AnyCanvasObject[] = [createMockObject('1')];
+            const next: AnyCanvasObject[] = [createMockObject('1'), createMockObject('2')];
             const setObjects = vi.fn();
-            
+
             const cmd = new MoveObjectsCommand(prev, next, setObjects);
             cmd.execute();
-            
+
             expect(setObjects).toHaveBeenCalledWith(next);
         });
 
         it('should restore previous objects on undo', () => {
-            const prev: any[] = [createMockObject('1')];
-            const next: any[] = [createMockObject('1'), createMockObject('2')];
+            const prev: AnyCanvasObject[] = [createMockObject('1')];
+            const next: AnyCanvasObject[] = [createMockObject('1'), createMockObject('2')];
             const setObjects = vi.fn();
-            
+
             const cmd = new MoveObjectsCommand(prev, next, setObjects);
             cmd.undo();
-            
+
             expect(setObjects).toHaveBeenCalledWith(prev);
         });
     });
@@ -121,10 +136,10 @@ describe('Commands', () => {
             const setObjects = vi.fn();
             const cmd1 = new AddObjectCommand([], createMockObject('1'), setObjects);
             const cmd2 = new AddObjectCommand([], createMockObject('2'), setObjects);
-            
+
             const batch = new BatchCommand([cmd1, cmd2], 'Add 2 objects');
             batch.execute();
-            
+
             expect(setObjects).toHaveBeenCalledTimes(2);
         });
 
@@ -132,10 +147,10 @@ describe('Commands', () => {
             const setObjects = vi.fn();
             const cmd1 = new AddObjectCommand([], createMockObject('1'), setObjects);
             const cmd2 = new AddObjectCommand([], createMockObject('2'), setObjects);
-            
+
             const batch = new BatchCommand([cmd1, cmd2], 'Add 2 objects');
             batch.undo();
-            
+
             expect(setObjects).toHaveBeenCalledTimes(2);
         });
 
@@ -147,25 +162,25 @@ describe('Commands', () => {
 
     describe('ResizeObjectCommand', () => {
         it('should apply new bounds on execute', () => {
-            const objects: any[] = [createMockObject('1')];
+            const objects: AnyCanvasObject[] = [createMockObject('1')];
             const setObjects = vi.fn();
-            
+
             const cmd = new ResizeObjectCommand(objects, '1', { x: 10, y: 20, width: 100, height: 200 }, setObjects);
             cmd.execute();
-            
-            const calledObjects = setObjects.mock.calls[0][0];
+
+            const calledObjects: AnyCanvasObject[] = setObjects.mock.calls[0][0];
             expect(calledObjects[0]).toEqual({ ...createMockObject('1'), x: 10, y: 20, width: 100, height: 200 });
         });
 
         it('should restore previous bounds on undo', () => {
-            const objects: any[] = [createMockObject('1')];
+            const objects: AnyCanvasObject[] = [createMockObject('1')];
             const setObjects = vi.fn();
-            
+
             const cmd = new ResizeObjectCommand(objects, '1', { x: 10, y: 20, width: 100, height: 200 }, setObjects);
             cmd.execute();
             cmd.undo();
-            
-            const calledObjects = setObjects.mock.calls[1][0];
+
+            const calledObjects: AnyCanvasObject[] = setObjects.mock.calls[1][0];
             expect(calledObjects[0]).toEqual(createMockObject('1'));
         });
     });

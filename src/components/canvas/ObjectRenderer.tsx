@@ -14,7 +14,7 @@
  *   - editingTextSize  – measured size of the textarea
  *   - canvasWidth      – canvas pixel width (for maxWidth clamp)
  *   - textareaRef
- *   - onMouseDown      – (e, objectId) => void
+ *   - onPointerDown     – (e, objectId) => void
  *   - onTextDoubleClick– (e, objectId) => void
  *   - onEditingTextChange – (value: string) => void
  *   - onTextEditComplete  – () => void
@@ -63,14 +63,14 @@ interface ObjectRendererProps {
   editingTextSize: { width: number; height: number } | null;
   canvasWidth: number;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
-  onMouseDown: (e: React.MouseEvent, objectId: string) => void;
+  onPointerDown: (e: React.PointerEvent, objectId: string) => void;
   onTextDoubleClick: (e: React.MouseEvent, objectId: string) => void;
   onEditingTextChange: (value: string) => void;
   onTextEditComplete: () => void;
   onTextEditCancel: () => void;
   onAutoResize: () => void;
   zoom: number;
-  onImageResizeStart?: (handle: ResizeHandle, e: React.MouseEvent) => void;
+  onImageResizeStart?: (handle: ResizeHandle, e: React.PointerEvent) => void;
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
   editingTextSize,
   canvasWidth,
   textareaRef,
-  onMouseDown,
+  onPointerDown,
   onTextDoubleClick,
   onEditingTextChange,
   onTextEditComplete,
@@ -96,7 +96,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
 }) => {
   const opacity = obj.visible ? obj.opacity : 0.3;
   const cursor = obj.locked ? 'not-allowed' : 'move';
-  const md = (e: React.MouseEvent) => onMouseDown(e, obj.id);
+  const md = (e: React.PointerEvent) => onPointerDown(e, obj.id);
 
   // Apply visual drag offset without mutating context
   const dx = (isSelected && dragDelta) ? dragDelta.dx : 0;
@@ -108,7 +108,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const d = obj.data as { fill: string; stroke: string; strokeWidth: number; cornerRadius: number };
       const x = obj.x + dx; const y = obj.y + dy;
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <rect
             x={x} y={y} width={obj.width} height={obj.height}
             rx={d?.cornerRadius || 0} ry={d?.cornerRadius || 0}
@@ -128,7 +128,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const cy = obj.y + obj.height / 2 + dy;
       const rx = obj.width / 2; const ry = obj.height / 2;
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <ellipse cx={cx} cy={cy} rx={rx} ry={ry}
             fill={d?.fill || '#10B981'} stroke={d?.stroke || '#047857'}
             strokeWidth={d?.strokeWidth || 2} opacity={opacity} />
@@ -144,7 +144,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const cx = x + obj.width / 2; const cy = y + obj.height / 2;
       const pts = `${x + obj.width / 2},${y} ${x + obj.width},${y + obj.height} ${x},${y + obj.height}`;
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <polygon points={pts}
             fill={d?.fill || '#F59E0B'} stroke={d?.stroke || '#D97706'}
             strokeWidth={d?.strokeWidth || 2} opacity={opacity}
@@ -160,7 +160,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const x = obj.x + dx; const y = obj.y + dy;
       const pts = d.points.map(p => `${x + p.x * obj.width},${y + p.y * obj.height}`).join(' ');
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <polygon points={pts}
             fill={d?.fill || '#F59E0B'} stroke={d?.stroke || '#D97706'}
             strokeWidth={d?.strokeWidth || 2} opacity={opacity} />
@@ -221,7 +221,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       }
 
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           {isInvalid
             ? <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={12} fill="#EF4444">Неверные стороны</text>
             : shapeEl}
@@ -243,7 +243,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
 
       const describeArc = (cxA: number, cyA: number, start: number, end: number) => {
         const sx = cxA + radius * Math.cos(start); const sy = cyA + radius * Math.sin(start);
-        const ex = cxA + radius * Math.cos(end);   const ey = cyA + radius * Math.sin(end);
+        const ex = cxA + radius * Math.cos(end); const ey = cyA + radius * Math.sin(end);
         const large = end - start > Math.PI ? 1 : 0;
         return large
           ? `M ${cxA} ${cyA} L ${sx} ${sy} A ${radius} ${radius} 0 1 1 ${ex} ${ey} Z`
@@ -270,7 +270,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       }
 
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           {circles}
           {isSelected && circles.map((_, i) => {
             const row = Math.floor(i / maxCirclesPerRow); const col = i % maxCirclesPerRow;
@@ -291,7 +291,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
 
       return (
         <g key={obj.id}
-          onMouseDown={(e) => !isEditing && onMouseDown(e, obj.id)}
+          onPointerDown={(e) => !isEditing && onPointerDown(e, obj.id)}
           onDoubleClick={(e) => onTextDoubleClick(e, obj.id)}
           style={{ cursor: obj.locked ? 'not-allowed' : isEditing ? 'text' : 'move' }}
         >
@@ -339,14 +339,14 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
     case 'arrow': {
       const d = obj.data as { stroke: string; strokeWidth: number; arrowHead: string };
       const x1 = obj.x + dx; const y1 = obj.y + dy;
-      const x2 = x1 + obj.width;  const y2 = y1 + obj.height;
+      const x2 = x1 + obj.width; const y2 = y1 + obj.height;
       const cx = x1 + obj.width / 2; const cy = y1 + obj.height / 2;
       const hl = 15;
       const angle = calculateArrowAngle(x1, y1, x2, y2);
       const ep = calculateArrowHeadPoints(x2, y2, angle, hl, 'forward');
       const sp = calculateArrowHeadPoints(x1, y1, angle, hl, 'backward');
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }} transform={`rotate(${obj.rotation} ${cx} ${cy})`}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }} transform={`rotate(${obj.rotation} ${cx} ${cy})`}>
           <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={d?.stroke || '#374151'} strokeWidth={d?.strokeWidth || 2} opacity={opacity} />
           {(d?.arrowHead === 'end' || d?.arrowHead === 'both') && <polygon points={`${x2},${y2} ${ep.point1X},${ep.point1Y} ${ep.point2X},${ep.point2Y}`} fill={d?.stroke || '#374151'} opacity={opacity} />}
           {d?.arrowHead === 'both' && <polygon points={`${x1},${y1} ${sp.point1X},${sp.point1Y} ${sp.point2X},${sp.point2Y}`} fill={d?.stroke || '#374151'} opacity={opacity} />}
@@ -365,7 +365,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const ep = calculateArrowHeadPoints(lx2, ly2, angle, hl, 'forward');
       const sp = calculateArrowHeadPoints(lx1, ly1, angle, hl, 'backward');
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <line x1={lx1} y1={ly1} x2={lx2} y2={ly2} stroke={d.color || '#374151'} strokeWidth={d.strokeWidth || 2} strokeLinecap="round" opacity={opacity} />
           {d.arrowEnd && <polygon points={`${lx2},${ly2} ${ep.point1X},${ep.point1Y} ${ep.point2X},${ep.point2Y}`} fill={d.color || '#374151'} opacity={opacity} />}
           {d.arrowStart && <polygon points={`${lx1},${ly1} ${sp.point1X},${sp.point1Y} ${sp.point2X},${sp.point2Y}`} fill={d.color || '#374151'} opacity={opacity} />}
@@ -386,7 +386,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
         const bw = cw / (items.length * 2); const bs = bw;
         const maxV = Math.max(...items.map(i => i.value), 100);
         return (
-          <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+          <g key={obj.id} onPointerDown={md} style={{ cursor }}>
             <rect x={ox} y={oy} width={obj.width} height={obj.height} fill="white" stroke="#E5E7EB" strokeWidth={1} opacity={opacity} />
             <text x={ox + obj.width / 2} y={oy + 15} textAnchor="middle" fontSize={12} fontWeight="bold" fill="#374151">{d?.title || 'Диаграмма'}</text>
             {[0, 25, 50, 75, 100].map(m => {
@@ -411,12 +411,12 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
         const r = Math.min(obj.width, obj.height) / 2 - 10;
         let cur = -Math.PI / 2;
         return (
-          <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+          <g key={obj.id} onPointerDown={md} style={{ cursor }}>
             <circle cx={cx} cy={cy} r={r + 5} fill="white" stroke="#E5E7EB" strokeWidth={1} opacity={opacity} />
             {items.map((item, i) => {
               const sa = (item.value / total) * 2 * Math.PI; const ea = cur + sa;
               const x1 = cx + r * Math.cos(cur); const y1 = cy + r * Math.sin(cur);
-              const x2 = cx + r * Math.cos(ea);  const y2 = cy + r * Math.sin(ea);
+              const x2 = cx + r * Math.cos(ea); const y2 = cy + r * Math.sin(ea);
               const large = sa > Math.PI ? 1 : 0;
               const pd = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
               cur = ea;
@@ -428,7 +428,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       }
 
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <rect x={ox} y={oy} width={obj.width} height={obj.height} fill="#E5E7EB" stroke="#9CA3AF" strokeWidth={1} opacity={opacity} />
           <text x={ox + obj.width / 2} y={oy + obj.height / 2} textAnchor="middle" dominantBaseline="middle" fontSize={12} fill="#6B7280">chart</text>
           {isSelected && <rect x={ox - 2} y={oy - 2} width={obj.width + 4} height={obj.height + 4} {...SEL} />}
@@ -443,7 +443,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const cy = obj.y + obj.height / 2 + dy;
       const r = d?.radius ?? 5;
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <circle cx={cx} cy={cy} r={r} fill={d?.color || '#1D4ED8'} opacity={opacity} />
           {d?.label && (
             <text x={cx + r + 4} y={cy - r} fontSize={13} fontWeight="bold" fontFamily="sans-serif"
@@ -465,11 +465,11 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       if (!ptA || !ptB) return null;
 
       // For segments we read point positions (geopoints handle their own dragDelta)
-      const ax = ptA.x + ptA.width / 2;  const ay = ptA.y + ptA.height / 2;
-      const bx = ptB.x + ptB.width / 2;  const by = ptB.y + ptB.height / 2;
+      const ax = ptA.x + ptA.width / 2; const ay = ptA.y + ptA.height / 2;
+      const bx = ptB.x + ptB.width / 2; const by = ptB.y + ptB.height / 2;
 
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <line x1={ax} y1={ay} x2={bx} y2={by} stroke="transparent" strokeWidth={12} />
           <line x1={ax} y1={ay} x2={bx} y2={by} stroke={d?.color || '#374151'} strokeWidth={d?.strokeWidth || 2} opacity={opacity} strokeLinecap="round" />
           {isSelected && <line x1={ax} y1={ay} x2={bx} y2={by} stroke="#F59E0B" strokeWidth={(d?.strokeWidth || 2) + 4} strokeLinecap="round" opacity={0.4} />}
@@ -505,7 +505,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const sweepFlag = cross > 0 ? 1 : 0;
 
       const sx = bx + R * Math.cos(startAngle); const sy = by + R * Math.sin(startAngle);
-      const ex = bx + R * Math.cos(endAngle);   const ey = by + R * Math.sin(endAngle);
+      const ex = bx + R * Math.cos(endAngle); const ey = by + R * Math.sin(endAngle);
       const arcPath = `M ${sx} ${sy} A ${R} ${R} 0 0 ${sweepFlag} ${ex} ${ey}`;
 
       const midAngle = startAngle + (cross > 0 ? 1 : -1) * Math.acos(cosA) / 2;
@@ -517,7 +517,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const ptCLabel = (ptC.data as { label?: string }).label || 'C';
 
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }} opacity={opacity}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }} opacity={opacity}>
           <path d={arcPath} fill="none" stroke={d.color || '#7C3AED'} strokeWidth={1.5} strokeLinecap="round" />
           <path d={`M ${bx} ${by} L ${sx} ${sy} A ${R} ${R} 0 0 ${sweepFlag} ${ex} ${ey} Z`} fill={d.color || '#7C3AED'} fillOpacity={0.1} stroke="none" />
           {d.showLabel && <text x={labelX} y={labelY} fontSize={11} fill={d.color || '#7C3AED'} fontFamily="sans-serif" textAnchor="middle" dominantBaseline="middle">{`∠${ptALabel}${ptBLabel}${ptCLabel} = ${angleDeg}°`}</text>}
@@ -533,10 +533,34 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const path = buildSmoothPath(d.points);
       if (!path) return null;
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <path d={path} stroke="transparent" strokeWidth={Math.max((d.width || 2) * 3, 10)} fill="none" />
           <path d={path} stroke={d.color || '#374151'} strokeWidth={d.width || 2} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={opacity} />
           {isSelected && <path d={path} stroke="#F59E0B" strokeWidth={(d.width || 2) + 4} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.4} />}
+        </g>
+      );
+    }
+
+    // ── highlighter ──────────────────────────────────────────────────────────
+    case 'highlighter': {
+      const d = obj.data as { points: { x: number; y: number }[]; color: string; width: number };
+      const path = buildSmoothPath(d.points);
+      if (!path) return null;
+      const hlOpacity = obj.visible ? 0.4 : 0.3;
+      return (
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
+          <path d={path} stroke="transparent" strokeWidth={Math.max((d.width ?? 28) * 3, 10)} fill="none" />
+          <path
+            d={path}
+            stroke={d.color || '#FBBF24'}
+            strokeWidth={d.width ?? 28}
+            opacity={hlOpacity}
+            style={{ mixBlendMode: 'multiply' }}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {isSelected && <path d={path} stroke="#F59E0B" strokeWidth={(d.width ?? 28) + 4} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.4} strokeDasharray="5,5" />}
         </g>
       );
     }
@@ -547,20 +571,20 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
       const ox = obj.x + dx;
       const oy = obj.y + dy;
       const [imageError, setImageError] = React.useState(false);
-      
+
       const handleError = () => {
         console.warn('[ObjectRenderer] Image failed to load:', d.url);
         setImageError(true);
       };
-      
+
       if (imageError) {
         // Fallback placeholder when image fails to load (CORS, 404, etc.)
         const cx = obj.x + obj.width / 2;
         const cy = obj.y + obj.height / 2;
         return (
-          <g 
-            key={obj.id} 
-            onMouseDown={md} 
+          <g
+            key={obj.id}
+            onPointerDown={md}
             style={{ cursor }}
             transform={obj.rotation ? `rotate(${obj.rotation} ${cx} ${cy})` : undefined}
           >
@@ -608,11 +632,11 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
           </g>
         );
       }
-      
+
       return (
-        <g 
-          key={obj.id} 
-          onMouseDown={md} 
+        <g
+          key={obj.id}
+          onPointerDown={md}
           style={{ cursor }}
           transform={obj.rotation ? `rotate(${obj.rotation} ${obj.x + obj.width / 2} ${obj.y + obj.height / 2})` : undefined}
         >
@@ -646,7 +670,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
     default: {
       const ox = obj.x + dx; const oy = obj.y + dy;
       return (
-        <g key={obj.id} onMouseDown={md} style={{ cursor }}>
+        <g key={obj.id} onPointerDown={md} style={{ cursor }}>
           <rect x={ox} y={oy} width={obj.width} height={obj.height} fill="#E5E7EB" stroke="#9CA3AF" strokeWidth={1} opacity={opacity} />
           <text x={ox + obj.width / 2} y={oy + obj.height / 2} textAnchor="middle" dominantBaseline="middle" fontSize={12} fill="#6B7280">{obj.type}</text>
           {isSelected && <rect x={ox - 2} y={oy - 2} width={obj.width + 4} height={obj.height + 4} {...SEL} />}
@@ -660,46 +684,46 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
 function propsAreEqual(prev: ObjectRendererProps, next: ObjectRendererProps): boolean {
   // Core object data - compare by id first (quick check)
   if (prev.obj.id !== next.obj.id) return false;
-  
+
   // Check if object itself changed (deep compare would be expensive, but necessary)
   if (prev.obj.x !== next.obj.x ||
-      prev.obj.y !== next.obj.y ||
-      prev.obj.width !== next.obj.width ||
-      prev.obj.height !== next.obj.height ||
-      prev.obj.rotation !== next.obj.rotation ||
-      prev.obj.opacity !== next.obj.opacity ||
-      prev.obj.visible !== next.obj.visible ||
-      prev.obj.locked !== next.obj.locked ||
-      JSON.stringify(prev.obj.data) !== JSON.stringify(next.obj.data)) {
+    prev.obj.y !== next.obj.y ||
+    prev.obj.width !== next.obj.width ||
+    prev.obj.height !== next.obj.height ||
+    prev.obj.rotation !== next.obj.rotation ||
+    prev.obj.opacity !== next.obj.opacity ||
+    prev.obj.visible !== next.obj.visible ||
+    prev.obj.locked !== next.obj.locked ||
+    JSON.stringify(prev.obj.data) !== JSON.stringify(next.obj.data)) {
     return false;
   }
-  
+
   // Selection state
   if (prev.isSelected !== next.isSelected) return false;
-  
+
   // Drag delta (only matters for selected objects)
   if (prev.isSelected && next.isSelected) {
     if ((prev.dragDelta?.dx ?? 0) !== (next.dragDelta?.dx ?? 0) ||
-        (prev.dragDelta?.dy ?? 0) !== (next.dragDelta?.dy ?? 0)) {
+      (prev.dragDelta?.dy ?? 0) !== (next.dragDelta?.dy ?? 0)) {
       return false;
     }
   }
-  
+
   // Zoom (for resize handles)
   if (prev.zoom !== next.zoom) return false;
-  
+
   // Text editing - only re-render if this specific object is being edited
   if (prev.editingTextId !== next.editingTextId) {
     // If the editing object changed, we need to re-render both the old and new
     return false;
   }
   if (prev.editingTextId === prev.obj.id && prev.editingText !== next.editingText) return false;
-  if (prev.editingTextId === prev.obj.id && 
-      JSON.stringify(prev.editingTextSize) !== JSON.stringify(next.editingTextSize)) return false;
-  
+  if (prev.editingTextId === prev.obj.id &&
+    JSON.stringify(prev.editingTextSize) !== JSON.stringify(next.editingTextSize)) return false;
+
   // Canvas width (rarely changes)
   if (prev.canvasWidth !== next.canvasWidth) return false;
-  
+
   // For geosegment/geoangle - only re-render if referenced points changed
   if (prev.obj.type === 'geosegment' || prev.obj.type === 'geoangle') {
     const prevData = prev.obj.data as { pointAId?: string; pointBId?: string; pointCId?: string };
@@ -717,10 +741,10 @@ function propsAreEqual(prev: ObjectRendererProps, next: ObjectRendererProps): bo
       }
     }
   }
-  
+
   // Reference equality for callbacks - if they're the same functions, skip
   // This assumes stable callback references from parent (useCallback)
-  
+
   return true;
 }
 

@@ -33,10 +33,19 @@ export const KEYBOARD_LAYOUT: KeyConfig[][] = [
     { display: '⌫', label: '⌫', action: 'delete', variant: 'action' },
     { display: 'C', label: 'C', action: 'clear', variant: 'action' },
   ],
+  [
+    { display: 'log', label: 'log()', variant: 'function' }, { display: 'ln', label: 'ln()', variant: 'function' },
+    { display: 'lg', label: 'lg()', variant: 'function' }, { display: '|x|', label: '|', variant: 'function' },
+    { display: 'sin⁻¹', label: 'arcsin()', variant: 'function' }, { display: 'cos⁻¹', label: 'arccos()', variant: 'function' },
+    { display: 'tan⁻¹', label: 'arctan()', variant: 'function' },
+    { display: '∪', label: ' \\cup ', variant: 'operator' }, { display: '∈', label: ' \\in ', variant: 'operator' },
+    { display: '∞', label: 'Infinity', variant: 'operator' },
+  ],
 ];
 
 interface VirtualMathKeyboardProps {
   onKeyPress: (key: KeyConfig) => void;
+  onInsertFraction?: () => void;
   className?: string;
 }
 
@@ -47,16 +56,20 @@ const variantStyles: Record<KeyVariant, string> = {
   action: 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200',
 };
 
-export const VirtualMathKeyboard: React.FC<VirtualMathKeyboardProps> = ({ onKeyPress, className = '' }) => {
+export const VirtualMathKeyboard: React.FC<VirtualMathKeyboardProps> = ({ onKeyPress, onInsertFraction, className = '' }) => {
   const handleKeyPress = useCallback((key: KeyConfig) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(5);
     }
+    if (key.isFraction && onInsertFraction) {
+      onInsertFraction();
+      return;
+    }
     onKeyPress(key);
-  }, [onKeyPress]);
+  }, [onKeyPress, onInsertFraction]);
 
   return (
-    <div className={`bg-white rounded-xl shadow-lg border border-slate-200 p-2 sm:p-3 ${className} z-50`}>
+    <div className={`bg-white rounded-xl shadow-lg border border-slate-200 p-1.5 sm:p-3 ${className} z-50`}>
       <div className="flex flex-col gap-1.5">
         {KEYBOARD_LAYOUT.map((row, rowIndex) => (
           <div key={rowIndex} className="flex justify-center gap-1 flex-wrap">
@@ -66,7 +79,7 @@ export const VirtualMathKeyboard: React.FC<VirtualMathKeyboardProps> = ({ onKeyP
                 type="button"
                 onClick={() => handleKeyPress(key)}
                 onMouseDown={(e) => e.preventDefault()}
-                className={`min-w-[40px] sm:min-w-[44px] h-10 sm:h-11 px-2 sm:px-3 rounded-lg border transition-all duration-100 active:scale-95 flex items-center justify-center text-xs sm:text-sm font-medium select-none ${variantStyles[key.variant]}`}
+                className={`min-w-[34px] sm:min-w-[44px] h-8 sm:h-11 px-1.5 sm:px-3 rounded-lg border transition-all duration-100 active:scale-95 flex items-center justify-center text-[11px] sm:text-sm font-medium select-none ${variantStyles[key.variant]}`}
               >
                 {key.display || key.label}
               </button>

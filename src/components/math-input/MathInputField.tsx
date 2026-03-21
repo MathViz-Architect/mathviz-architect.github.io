@@ -1,22 +1,18 @@
 import React, { useDeferredValue, useMemo } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { 
-  useMathInputLogic, 
-  normalizeMathExpression, 
-  validateExpression 
-} from './useMathInputLogic';
+import { useMathInputLogic } from './useMathInputLogic';
+import { normalizeMathExpression } from '../../lib/math/normalization';
 import { MathKeyboard } from './MathKeyboard';
 
 // --- KaTeX Preview Component ---
 
 interface KatexPreviewProps {
   expression: string;
-  isValid: boolean;
   placeholder: string;
 }
 
-const KatexPreview: React.FC<KatexPreviewProps> = React.memo(({ expression, isValid, placeholder }) => {
+const KatexPreview: React.FC<KatexPreviewProps> = React.memo(({ expression, placeholder }) => {
   const deferredExpression = useDeferredValue(expression);
 
   const html = useMemo(() => {
@@ -31,11 +27,9 @@ const KatexPreview: React.FC<KatexPreviewProps> = React.memo(({ expression, isVa
     });
   }, [deferredExpression, placeholder]);
 
-  const borderColor = isValid ? 'border-gray-300' : 'border-red-500';
-
   return (
     <div
-      className={`p-4 rounded-t-lg border-2 ${borderColor} bg-white min-h-[60px] flex items-center justify-center transition-colors`}
+      className={`p-4 rounded-t-lg border-2 border-gray-300 bg-white min-h-[60px] flex items-center justify-center transition-colors`}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -65,8 +59,6 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
     onChange: onChange,
   });
 
-  const isValid = useMemo(() => validateExpression(expression), [expression]);
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -76,7 +68,7 @@ export const MathInputField: React.FC<MathInputFieldProps> = ({
 
   return (
     <div className="w-full max-w-lg mx-auto font-sans">
-      <KatexPreview expression={expression} isValid={isValid} placeholder={placeholder} />
+      <KatexPreview expression={expression} placeholder={placeholder} />
       <div className="relative">
         <input
           ref={inputRef}

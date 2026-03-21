@@ -396,3 +396,174 @@ describe('generateProblem — validation', () => {
         expect(() => generateProblem(template, 1, 1)).toThrow();
     });
 });
+
+// ─── Math normalization at generator boundary ─────────────────────────────────
+
+describe('generateProblem — math normalization', () => {
+    /**
+     * Template that produces '+ -3' when b is negative.
+     * After normalization: '+ -3' → '- 3' (or '− 3').
+     */
+    it('normalizes "+ -N" to "- N" inside math blocks', () => {
+        const template = makeTemplate({
+            difficulties: {
+                1: {
+                    // b is always -3 (expression param)
+                    template: 'Simplify $x + {b}$',
+                    parameters: {
+                        b: { type: 'int', min: -3, max: -3 },
+                    },
+                    answer_formula: 'b',
+                    answer_type: 'number',
+                },
+            },
+        });
+        const p = generateProblem(template, 1, 1);
+        // Must not contain raw '+ -'
+        expect(p.question).not.toMatch(/\+\s*-/);
+        // Must contain the normalized form
+        expect(p.question).toMatch(/[-−]\s*3/);
+    });
+
+    it('normalizes "1x" to "x" inside math blocks', () => {
+        const template = makeTemplate({
+            difficulties: {
+                1: {
+                    // a is always 1
+                    template: 'Solve ${a}x = {c}$',
+                    parameters: {
+                        a: { type: 'int', min: 1, max: 1 },
+                        c: { type: 'int', min: 5, max: 5 },
+                    },
+                    answer_formula: 'c / a',
+                    answer_type: 'number',
+                },
+            },
+        });
+        const p = generateProblem(template, 1, 1);
+        expect(p.question).not.toContain('1x');
+        expect(p.question).toContain('x');
+    });
+
+    it('normalizes "+ 0" away inside math blocks', () => {
+        const template = makeTemplate({
+            difficulties: {
+                1: {
+                    // b is always 0
+                    template: 'Simplify $x + {b}$',
+                    parameters: {
+                        b: { type: 'int', min: 0, max: 0 },
+                    },
+                    answer_formula: 'b',
+                    answer_type: 'number',
+                },
+            },
+        });
+        const p = generateProblem(template, 1, 1);
+        expect(p.question).not.toMatch(/\+\s*0/);
+    });
+
+    it('does NOT normalize plain text outside math blocks', () => {
+        const template = makeTemplate({
+            difficulties: {
+                1: {
+                    // Plain text contains "1x" — must not be touched
+                    template: 'Note: 1x means x. Solve $x + {b} = {c}$',
+                    parameters: {
+                        b: { type: 'int', min: 2, max: 2 },
+                        c: { type: 'int', min: 5, max: 5 },
+                    },
+                    answer_formula: 'c - b',
+                    answer_type: 'number',
+                },
+            },
+        });
+        const p = generateProblem(template, 1, 1);
+        // Plain text "1x" before the $ block must survive
+        expect(p.question).toContain('1x means x');
+    });
+
+    it('normalizes math in solution steps', () => {
+        const template = makeTemplate({
+            difficulties: {
+                1: {
+                    template: 'Solve ${a}x = {c}$',
+                    parameters: {
+                        a: { type: 'int', min: 1, max: 1 },
+                        c: { type: 'int', min: 4, max: 4 },
+                    },
+                    answer_formula: 'c / a',
+                    answer_type: 'number',
+                    solution: [
+                        { explanation: 'Coefficient is ${a}$', result: '${a}x$' },
+                    ],
+                },
+            },
+        });
+        const p = generateProblem(template, 1, 1);
+        // '1x' inside math block in result should be normalized to 'x'
+        expect(p.solution![0].result).not.toContain('1x');
+    });
+
+    it('normalizes math in hints array', () => {
+        const template = makeTemplate({
+            difficulties: {
+                1: {
+                    template: 'Solve ${a}x = {c}$',
+                    parameters: {
+                        a: { type: 'int', min: 1, max: 1 },
+                        c: { type: 'int', min: 6, max: 6 },
+                    },
+                    answer_formula: 'c / a',
+                    answer_type: 'number',
+                    hints: ['Divide by ${a}$', 'Result: $x + 0$'],
+                },
+            },
+        });
+        const p = generateProblem(template, 1, 1);
+        // '+ 0' in second hint should be removed
+        expect(p.hints![1]).not.toMatch(/\+\s*0/);
+    });
+});
+
+// ─── normalizeMathFragments unit tests ────────────────────────────────────────
+
+import { normalizeMathFragments } from '../engine/variantGenerator';
+
+describe('normalizeMathFragments', () => {
+    it('normalizes content inside $...$', () => {
+        expect(normalizeMathFragments('Solve $1x + 0$')).toBe('Solve $x$');
+    });
+
+    it('normalizes content inside $$...$$', () => {
+        expect(normalizeMathFragments('$$1x + 0$$')).toBe('$$x$$');
+    });
+
+    it('leaves plain text untouched', () => {
+        expect(normalizeMathFragments('Note: 1x means x')).toBe('Note: 1x means x');
+    });
+
+    it('handles mixed plain text and math', () => {
+        const result = normalizeMathFragments('Find $1x$ where x > 0');
+        expect(result).toContain('$x$');
+        expect(result).toContain('where x > 0');
+    });
+
+    it('normalizes + - to minus', () => {
+        expect(normalizeMathFragments('$x + -3$')).not.toMatch(/\+\s*-/);
+    });
+
+    it('handles empty string', () => {
+        expect(normalizeMathFragments('')).toBe('');
+    });
+
+    it('handles string with no math blocks', () => {
+        expect(normalizeMathFragments('plain text only')).toBe('plain text only');
+    });
+
+    it('handles multiple math blocks in one string', () => {
+        const result = normalizeMathFragments('$1x$ and $y + 0$');
+        expect(result).toContain('$x$');
+        expect(result).not.toMatch(/\+\s*0/);
+    });
+});

@@ -134,10 +134,30 @@ export class ResizeObjectCommand implements Command {
 
     private applyState(bounds: { x: number; y: number; width: number; height: number }) {
         this.setObjects(
-            this.objects.map(o => o.id === this.id 
-                ? { ...o, ...bounds } 
+            this.objects.map(o => o.id === this.id
+                ? { ...o, ...bounds }
                 : o
             )
         );
+    }
+}
+
+export class ClearCanvasCommand implements Command {
+    description = 'Очистить холст';
+    private previousObjects: AnyCanvasObject[];
+
+    constructor(
+        private objects: AnyCanvasObject[],
+        private setObjects: (objects: AnyCanvasObject[]) => void
+    ) {
+        this.previousObjects = [...objects];
+    }
+
+    execute() {
+        this.setObjects([]);
+    }
+
+    undo() {
+        this.setObjects(this.previousObjects);
     }
 }

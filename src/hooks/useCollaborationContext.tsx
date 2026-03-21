@@ -1,5 +1,5 @@
 // src/hooks/useCollaborationContext.tsx
-import React, { createContext, useContext, useCallback, ReactNode, useMemo, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, ReactNode, useMemo, useRef, useEffect, useState } from 'react';
 import { useEditorContext } from '@/contexts/EditorContext';
 import { useRoom, RoomState as UseRoomState } from '@/hooks/useRoom';
 import { useYjsSync, YjsCanvasState } from '@/hooks/useYjsSync';
@@ -51,12 +51,13 @@ function CollaborationStateBridge({ children }: { children: ReactNode }) {
   );
 
   // Callback для удалённых смен страницы (наблюдение Yjs напрямую).
+  const [teacherPageId, setTeacherPageId] = useState<string | undefined>(undefined);
   const handleActivePageIdChange = useCallback(
     (pageId: string) => {
       console.log('[collab] remote page change received:', pageId);
-      editor.setActivePageId(pageId);
+      setTeacherPageId(pageId);
     },
-    [editor],
+    [],
   );
 
   const { boardSettings, updateBoardSettings, publishCanvasChange, getProvider } = useYjsSync(
@@ -73,9 +74,9 @@ function CollaborationStateBridge({ children }: { children: ReactNode }) {
     () =>
       roomState.isConnected
         ? {
-            name: user?.user_metadata?.full_name ?? user?.email ?? 'Участник',
-            color: user?.user_metadata?.avatar_color ?? '#3B82F6',
-          }
+          name: user?.user_metadata?.full_name ?? user?.email ?? 'Участник',
+          color: user?.user_metadata?.avatar_color ?? '#3B82F6',
+        }
         : null,
     [roomState.isConnected, user],
   );
@@ -88,15 +89,15 @@ function CollaborationStateBridge({ children }: { children: ReactNode }) {
     const { role } = roomState;
     const { mode, activeStudentId } = boardSettings;
     switch (mode) {
-      case 'view':          return role === 'teacher';
+      case 'view': return role === 'teacher';
       case 'collaboration': return true;
-      case 'student_turn':  return role === 'teacher' || user?.id === activeStudentId;
-      default:              return false;
+      case 'student_turn': return role === 'teacher' || user?.id === activeStudentId;
+      default: return false;
     }
   }, [roomState, boardSettings, user]);
 
   // Page sync: students follow teacher in view mode
-  usePageSync({ boardSettings, role: roomState.role });
+  usePageSync({ boardSettings, role: roomState.role, teacherPageId });
 
   // publishLocalChange reads isConnected from ref - never stale.
   // publishCanvasChange is stable (created via useCallback with [] deps in useYjsSync).
@@ -126,7 +127,7 @@ function CollaborationStateBridge({ children }: { children: ReactNode }) {
     leaveRoom,
     closeRoom,
     copyRoomLink,
-    updateBoardSettings: updateBoardSettings ?? (() => {}),
+    updateBoardSettings: updateBoardSettings ?? (() => { }),
     publishLocalChange,
     updateCursor,
   };

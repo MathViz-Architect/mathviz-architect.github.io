@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Grid3X3, Eye, EyeOff, Lock, Unlock, Monitor, LogIn, User, Share2, Copy, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, Grid3X3, Eye, EyeOff, Lock, Unlock, Monitor, LogIn, User, Share2, Copy, X, Menu, Trash2 } from 'lucide-react';
 import { useEditorContext } from '@/contexts/EditorContext';
 import { useCollaborationContext } from '@/hooks/useCollaborationContext';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -25,9 +25,11 @@ export const TopBar: React.FC<TopBarProps> = ({ zenMode, onToggleZenMode, onAuth
     selectedObjects,
     handleToggleVisibility,
     handleToggleLock,
+    clearBoard,
+    getCanvasSnapshot,
   } = useEditorContext();
 
-  const { roomState, user, createRoom, leaveRoom, closeRoom, copyRoomLink } = useCollaborationContext();
+  const { roomState, user, createRoom, leaveRoom, closeRoom, copyRoomLink, publishLocalChange } = useCollaborationContext();
 
   const projectName = state.projectName;
   const hasSelection = selectedObjects.length > 0;
@@ -38,6 +40,7 @@ export const TopBar: React.FC<TopBarProps> = ({ zenMode, onToggleZenMode, onAuth
   const [showRoomPopover, setShowRoomPopover] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -79,7 +82,8 @@ export const TopBar: React.FC<TopBarProps> = ({ zenMode, onToggleZenMode, onAuth
   };
 
   return (
-    <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+    <div className="relative h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+      {/* Left: project name */}
       <div className="flex items-center gap-2">
         {editing ? (
           <input
@@ -97,7 +101,8 @@ export const TopBar: React.FC<TopBarProps> = ({ zenMode, onToggleZenMode, onAuth
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* Center: zoom + grid — hidden on mobile, shown md+ */}
+      <div className="hidden md:flex items-center gap-2">
         <button onClick={handleZoomOut} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Уменьшить"><ZoomOut size={18} /></button>
         <button onClick={handleZoomReset} className="px-2 py-1 rounded hover:bg-gray-100 text-sm text-gray-600 min-w-[60px]" title="Сбросить масштаб">{Math.round(zoom * 100)}%</button>
         <button onClick={handleZoomIn} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Увеличить"><ZoomIn size={18} /></button>
@@ -110,17 +115,37 @@ export const TopBar: React.FC<TopBarProps> = ({ zenMode, onToggleZenMode, onAuth
         )}
       </div>
 
+      {/* Right: actions */}
       <div className="flex items-center gap-2">
-        <button onClick={onToggleZenMode} className={`p-1.5 rounded transition-colors ${zenMode ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-100 text-gray-600'}`} title="Zen Mode — скрыть панели (Z)"><Monitor size={18} /></button>
+        {/* Zen mode — always visible */}
+        <button onClick={onToggleZenMode} className={`p-1.5 rounded transition-colors ${zenMode ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-100 text-gray-600'}`} title="Zen Mode (Z)"><Monitor size={18} /></button>
+
+        {/* Clear board — teacher only */}
+        {roomState.role === 'teacher' && (
+          <button
+            onClick={() => { clearBoard(); publishLocalChange(getCanvasSnapshot()); }}
+            className="p-1.5 rounded hover:bg-red-50 text-red-500"
+            title="Очистить холст"
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
+
+        {/* Selection actions — hidden on mobile */}
+        <div className="hidden md:flex items-center gap-2">
+          <div className="w-px h-6 bg-gray-200 mx-1" />
+          {hasSelection ? (
+            <>
+              <button onClick={handleToggleVisibility} className={`p-1.5 rounded hover:bg-gray-100 ${firstSelected?.visible ? 'text-gray-600' : 'text-gray-400'}`} title={firstSelected?.visible ? 'Скрыть' : 'Показать'}>{firstSelected?.visible ? <Eye size={18} /> : <EyeOff size={18} />}</button>
+              <button onClick={handleToggleLock} className={`p-1.5 rounded hover:bg-gray-100 ${firstSelected?.locked ? 'text-indigo-600' : 'text-gray-600'}`} title={firstSelected?.locked ? 'Разблокировать' : 'Заблокировать'}>{firstSelected?.locked ? <Lock size={18} /> : <Unlock size={18} />}</button>
+              <span className="text-sm text-gray-500">Выбрано: {selectedObjects.length}</span>
+            </>
+          ) : (<span className="text-sm text-gray-400">Выберите объект</span>)}
+        </div>
+
         <div className="w-px h-6 bg-gray-200 mx-1" />
-        {hasSelection ? (
-          <>
-            <button onClick={handleToggleVisibility} className={`p-1.5 rounded hover:bg-gray-100 ${firstSelected?.visible ? 'text-gray-600' : 'text-gray-400'}`} title={firstSelected?.visible ? 'Скрыть' : 'Показать'}>{firstSelected?.visible ? <Eye size={18} /> : <EyeOff size={18} />}</button>
-            <button onClick={handleToggleLock} className={`p-1.5 rounded hover:bg-gray-100 ${firstSelected?.locked ? 'text-indigo-600' : 'text-gray-600'}`} title={firstSelected?.locked ? 'Разблокировать' : 'Заблокировать'}>{firstSelected?.locked ? <Lock size={18} /> : <Unlock size={18} />}</button>
-            <span className="text-sm text-gray-500">Выбрано: {selectedObjects.length}</span>
-          </>
-        ) : (<span className="text-sm text-gray-400">Выберите объект</span>)}
-        <div className="w-px h-6 bg-gray-200 mx-1" />
+
+        {/* Share */}
         <div className="relative" ref={popoverRef}>
           <button onClick={handleShareClick} disabled={isCreating} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium transition-colors ${roomState.isConnected ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'text-indigo-600 hover:bg-indigo-50'}`} title={roomState.isConnected ? 'Комната активна' : 'Поделиться холстом'}>
             <Share2 size={16} /><span className="hidden sm:block">{isCreating ? 'Создаём...' : roomState.isConnected ? 'Комната' : 'Поделиться'}</span>
@@ -136,14 +161,44 @@ export const TopBar: React.FC<TopBarProps> = ({ zenMode, onToggleZenMode, onAuth
             </div>
           )}
         </div>
+
         <div className="w-px h-6 bg-gray-200 mx-1" />
+
+        {/* Auth */}
         {user ? (<div className="flex items-center gap-1.5" title={user.email ?? ''}><User size={16} className="text-indigo-600" /><span className="text-sm text-gray-600 max-w-[120px] truncate hidden sm:block">{user.email}</span></div>
         ) : (
-          <button onClick={onAuthClick} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors" title="Войти для синхронизации прогресса">
+          <button onClick={onAuthClick} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors" title="Войти">
             <LogIn size={16} /><span className="hidden sm:block">Войти</span>
           </button>
         )}
+
+        {/* Mobile hamburger — shows zoom/grid in a dropdown */}
+        <button
+          className="md:hidden p-1.5 rounded hover:bg-gray-100 text-gray-600 ml-1"
+          onClick={() => setMobileMenuOpen(o => !o)}
+          title="Меню"
+        >
+          <Menu size={18} />
+        </button>
       </div>
+
+      {/* Mobile dropdown menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden absolute top-12 left-0 right-0 bg-white border-b border-gray-200 shadow-md z-50 px-4 py-3 flex flex-wrap gap-2 items-center">
+          <button onClick={handleZoomOut} className="p-1.5 rounded hover:bg-gray-100 text-gray-600"><ZoomOut size={18} /></button>
+          <button onClick={handleZoomReset} className="px-2 py-1 rounded hover:bg-gray-100 text-sm text-gray-600 min-w-[52px]">{Math.round(zoom * 100)}%</button>
+          <button onClick={handleZoomIn} className="p-1.5 rounded hover:bg-gray-100 text-gray-600"><ZoomIn size={18} /></button>
+          <div className="w-px h-6 bg-gray-200 mx-1" />
+          <button onClick={handleToggleGrid} className={`p-1.5 rounded ${showGrid ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-100 text-gray-600'}`}><Grid3X3 size={18} /></button>
+          {hasSelection && (
+            <>
+              <div className="w-px h-6 bg-gray-200 mx-1" />
+              <button onClick={handleToggleVisibility} className={`p-1.5 rounded hover:bg-gray-100 ${firstSelected?.visible ? 'text-gray-600' : 'text-gray-400'}`}>{firstSelected?.visible ? <Eye size={18} /> : <EyeOff size={18} />}</button>
+              <button onClick={handleToggleLock} className={`p-1.5 rounded hover:bg-gray-100 ${firstSelected?.locked ? 'text-indigo-600' : 'text-gray-600'}`}>{firstSelected?.locked ? <Lock size={18} /> : <Unlock size={18} />}</button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };
