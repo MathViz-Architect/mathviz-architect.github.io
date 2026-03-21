@@ -586,6 +586,9 @@ video {
 .inset-0 {
   inset: 0px;
 }
+.bottom-0 {
+  bottom: 0px;
+}
 .bottom-4 {
   bottom: 1rem;
 }
@@ -624,6 +627,9 @@ video {
 }
 .top-10 {
   top: 2.5rem;
+}
+.top-12 {
+  top: 3rem;
 }
 .top-3 {
   top: 0.75rem;
@@ -771,6 +777,9 @@ video {
 .h-0\.5 {
   height: 0.125rem;
 }
+.h-1 {
+  height: 0.25rem;
+}
 .h-1\.5 {
   height: 0.375rem;
 }
@@ -819,8 +828,14 @@ video {
 .max-h-24 {
   max-height: 6rem;
 }
+.max-h-64 {
+  max-height: 16rem;
+}
 .max-h-96 {
   max-height: 24rem;
+}
+.max-h-\[40vh\] {
+  max-height: 40vh;
 }
 .max-h-\[90vh\] {
   max-height: 90vh;
@@ -897,8 +912,11 @@ video {
 .min-w-\[130px\] {
   min-width: 130px;
 }
-.min-w-\[40px\] {
-  min-width: 40px;
+.min-w-\[34px\] {
+  min-width: 34px;
+}
+.min-w-\[52px\] {
+  min-width: 52px;
 }
 .min-w-\[60px\] {
   min-width: 60px;
@@ -1102,6 +1120,9 @@ video {
 .overflow-x-hidden {
   overflow-x: hidden;
 }
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1301,6 +1322,9 @@ video {
 .bg-background {
   background-color: hsl(var(--background));
 }
+.bg-black\/20 {
+  background-color: rgb(0 0 0 / 0.2);
+}
 .bg-black\/40 {
   background-color: rgb(0 0 0 / 0.4);
 }
@@ -1348,6 +1372,10 @@ video {
 .bg-gray-200 {
   --tw-bg-opacity: 1;
   background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
+}
+.bg-gray-300 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(209 213 219 / var(--tw-bg-opacity, 1));
 }
 .bg-gray-400 {
   --tw-bg-opacity: 1;
@@ -1710,6 +1738,12 @@ video {
   padding-top: 1.75rem;
   padding-bottom: 1.75rem;
 }
+.pb-1 {
+  padding-bottom: 0.25rem;
+}
+.pb-2 {
+  padding-bottom: 0.5rem;
+}
 .pb-4 {
   padding-bottom: 1rem;
 }
@@ -1749,6 +1783,9 @@ video {
 }
 .text-\[10px\] {
   font-size: 10px;
+}
+.text-\[11px\] {
+  font-size: 11px;
 }
 .text-base {
   font-size: 1rem;
@@ -2857,6 +2894,34 @@ img {
 }
 
 @media (min-width: 768px) {
+
+  .md\:flex {
+    display: flex;
+  }
+
+  .md\:hidden {
+    display: none;
+  }
+
+  .md\:max-h-none {
+    max-height: none;
+  }
+
+  .md\:w-96 {
+    width: 24rem;
+  }
+
+  .md\:flex-row {
+    flex-direction: row;
+  }
+
+  .md\:border-l {
+    border-left-width: 1px;
+  }
+
+  .md\:border-t-0 {
+    border-top-width: 0px;
+  }
 
   .md\:text-2xl {
     font-size: 1.5rem;
