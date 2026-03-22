@@ -18,25 +18,6 @@ var __privateWrapper = (obj, member, setter, getter) => ({
   }
 });
 var _provider, _providerCalled, _a, _focused, _cleanup, _setup, _b, _online, _cleanup2, _setup2, _c, _gcTimeout, _d, _initialState, _revertState, _cache, _client, _retryer, _defaultOptions, _abortSignalConsumed, _Query_instances, dispatch_fn, _e, _client2, _observers, _mutationCache, _retryer2, _Mutation_instances, dispatch_fn2, _f, _mutations, _scopes, _mutationId, _g, _queries, _h, _queryCache, _mutationCache2, _defaultOptions2, _queryDefaults, _mutationDefaults, _mountCount, _unsubscribeFocus, _unsubscribeOnline, _i;
-function _mergeNamespaces(n, m) {
-  for (var i = 0; i < m.length; i++) {
-    const e2 = m[i];
-    if (typeof e2 !== "string" && !Array.isArray(e2)) {
-      for (const k in e2) {
-        if (k !== "default" && !(k in n)) {
-          const d = Object.getOwnPropertyDescriptor(e2, k);
-          if (d) {
-            Object.defineProperty(n, k, d.get ? d : {
-              enumerable: true,
-              get: () => e2[k]
-            });
-          }
-        }
-      }
-    }
-  }
-  return Object.freeze(Object.defineProperty(n, Symbol.toStringTag, { value: "Module" }));
-}
 (function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) {
@@ -418,10 +399,6 @@ function requireJsxRuntime() {
 var jsxRuntimeExports = requireJsxRuntime();
 var reactExports = requireReact();
 const React = /* @__PURE__ */ getDefaultExportFromCjs(reactExports);
-const React$1 = /* @__PURE__ */ _mergeNamespaces({
-  __proto__: null,
-  default: React
-}, [reactExports]);
 var client = {};
 var reactDom = { exports: {} };
 var reactDom_production_min = {};
@@ -7193,7 +7170,7 @@ function systemSetTimeoutZero(callback) {
   setTimeout(callback, 0);
 }
 var isServer = typeof window === "undefined" || "Deno" in globalThis;
-function noop$3() {
+function noop$2() {
 }
 function functionalUpdate(updater, input) {
   return typeof updater === "function" ? updater(input) : updater;
@@ -7845,7 +7822,7 @@ var Query = (_e = class extends Removable {
     var _a2, _b2;
     const promise = (_a2 = __privateGet(this, _retryer)) == null ? void 0 : _a2.promise;
     (_b2 = __privateGet(this, _retryer)) == null ? void 0 : _b2.cancel(options);
-    return promise ? promise.then(noop$3).catch(noop$3) : Promise.resolve();
+    return promise ? promise.then(noop$2).catch(noop$2) : Promise.resolve();
   }
   destroy() {
     super.destroy();
@@ -8687,7 +8664,7 @@ var MutationCache = (_g = class extends Subscribable {
     const pausedMutations = this.getAll().filter((x) => x.state.isPaused);
     return notifyManager.batch(
       () => Promise.all(
-        pausedMutations.map((mutation) => mutation.continue().catch(noop$3))
+        pausedMutations.map((mutation) => mutation.continue().catch(noop$2))
       )
     );
   }
@@ -8917,7 +8894,7 @@ var QueryClient = (_i = class {
     const promises = notifyManager.batch(
       () => __privateGet(this, _queryCache).findAll(filters).map((query) => query.cancel(defaultedCancelOptions))
     );
-    return Promise.all(promises).then(noop$3).catch(noop$3);
+    return Promise.all(promises).then(noop$2).catch(noop$2);
   }
   invalidateQueries(filters, options = {}) {
     return notifyManager.batch(() => {
@@ -8945,12 +8922,12 @@ var QueryClient = (_i = class {
       () => __privateGet(this, _queryCache).findAll(filters).filter((query) => !query.isDisabled() && !query.isStatic()).map((query) => {
         let promise = query.fetch(void 0, fetchOptions);
         if (!fetchOptions.throwOnError) {
-          promise = promise.catch(noop$3);
+          promise = promise.catch(noop$2);
         }
         return query.state.fetchStatus === "paused" ? Promise.resolve() : promise;
       })
     );
-    return Promise.all(promises).then(noop$3);
+    return Promise.all(promises).then(noop$2);
   }
   fetchQuery(options) {
     const defaultedOptions = this.defaultQueryOptions(options);
@@ -8963,14 +8940,14 @@ var QueryClient = (_i = class {
     ) ? query.fetch(defaultedOptions) : Promise.resolve(query.state.data);
   }
   prefetchQuery(options) {
-    return this.fetchQuery(options).then(noop$3).catch(noop$3);
+    return this.fetchQuery(options).then(noop$2).catch(noop$2);
   }
   fetchInfiniteQuery(options) {
     options.behavior = infiniteQueryBehavior(options.pages);
     return this.fetchQuery(options);
   }
   prefetchInfiniteQuery(options) {
-    return this.fetchInfiniteQuery(options).then(noop$3).catch(noop$3);
+    return this.fetchInfiniteQuery(options).then(noop$2).catch(noop$2);
   }
   ensureInfiniteQueryData(options) {
     options.behavior = infiniteQueryBehavior(options.pages);
@@ -9171,16 +9148,6 @@ function useZenMode() {
   }, [zenMode]);
   return { zenMode, toggleZenMode: toggleWithFullscreen };
 }
-var __assign = function() {
-  __assign = Object.assign || function __assign2(t) {
-    for (var s, i = 1, n = arguments.length; i < n; i++) {
-      s = arguments[i];
-      for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
-    }
-    return t;
-  };
-  return __assign.apply(this, arguments);
-};
 function __rest(s, e2) {
   var t = {};
   for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e2.indexOf(p) < 0)
@@ -9218,15 +9185,6 @@ function __awaiter(thisArg, _arguments, P2, generator) {
     }
     step((generator = generator.apply(thisArg, _arguments || [])).next());
   });
-}
-function __spreadArray(to2, from2, pack) {
-  if (pack || arguments.length === 2) for (var i = 0, l = from2.length, ar; i < l; i++) {
-    if (ar || !(i in from2)) {
-      if (!ar) ar = Array.prototype.slice.call(from2, 0, i);
-      ar[i] = from2[i];
-    }
-  }
-  return to2.concat(ar || Array.prototype.slice.call(from2));
 }
 typeof SuppressedError === "function" ? SuppressedError : function(error, suppressed, message) {
   var e2 = new Error(message);
@@ -12168,7 +12126,7 @@ const convertColumn = (columnName, columns, record, skipTypes) => {
   if (colType && !skipTypes.includes(colType)) {
     return convertCell(colType, value);
   }
-  return noop$2(value);
+  return noop$1(value);
 };
 const convertCell = (type, value) => {
   if (type.charAt(0) === "_") {
@@ -12211,12 +12169,12 @@ const convertCell = (type, value) => {
     // To allow users to cast it based on Timezone
     case PostgresTypes.tsrange:
     case PostgresTypes.tstzrange:
-      return noop$2(value);
+      return noop$1(value);
     default:
-      return noop$2(value);
+      return noop$1(value);
   }
 };
-const noop$2 = (value) => {
+const noop$1 = (value) => {
   return value;
 };
 const toBoolean = (value) => {
@@ -13205,7 +13163,7 @@ class RealtimeChannel {
     return records;
   }
 }
-const noop$1 = () => {
+const noop = () => {
 };
 const CONNECTION_TIMEOUTS = {
   HEARTBEAT_INTERVAL: 25e3,
@@ -13265,11 +13223,11 @@ class RealtimeClient {
     this.heartbeatIntervalMs = CONNECTION_TIMEOUTS.HEARTBEAT_INTERVAL;
     this.heartbeatTimer = void 0;
     this.pendingHeartbeatRef = null;
-    this.heartbeatCallback = noop$1;
+    this.heartbeatCallback = noop;
     this.ref = 0;
     this.reconnectTimer = null;
     this.vsn = DEFAULT_VSN;
-    this.logger = noop$1;
+    this.logger = noop;
     this.conn = null;
     this.sendBuffer = [];
     this.serializer = new Serializer();
@@ -13935,7 +13893,7 @@ Option 2: Install and provide the "ws" package:
     this.heartbeatIntervalMs = (_c2 = options === null || options === void 0 ? void 0 : options.heartbeatIntervalMs) !== null && _c2 !== void 0 ? _c2 : CONNECTION_TIMEOUTS.HEARTBEAT_INTERVAL;
     this.worker = (_d2 = options === null || options === void 0 ? void 0 : options.worker) !== null && _d2 !== void 0 ? _d2 : false;
     this.accessToken = (_e2 = options === null || options === void 0 ? void 0 : options.accessToken) !== null && _e2 !== void 0 ? _e2 : null;
-    this.heartbeatCallback = (_f2 = options === null || options === void 0 ? void 0 : options.heartbeatCallback) !== null && _f2 !== void 0 ? _f2 : noop$1;
+    this.heartbeatCallback = (_f2 = options === null || options === void 0 ? void 0 : options.heartbeatCallback) !== null && _f2 !== void 0 ? _f2 : noop;
     this.vsn = (_g2 = options === null || options === void 0 ? void 0 : options.vsn) !== null && _g2 !== void 0 ? _g2 : DEFAULT_VSN;
     if (options === null || options === void 0 ? void 0 : options.params)
       this.params = options.params;
@@ -22506,12 +22464,12 @@ function useAppState() {
     historyRef.current.execute(command);
   }, []);
   const setObjectsFn = reactExports.useCallback(() => setObjects, [setObjects]);
-  const addObject = reactExports.useCallback((object) => {
+  const addObject = reactExports.useCallback((object, skipSelection = false) => {
     const command = new AddObjectCommand(objectsRef.current, object, setObjects);
     historyRef.current.execute(command);
     setState((prev) => ({
       ...prev,
-      selectedObjectIds: [object.id]
+      selectedObjectIds: skipSelection ? prev.selectedObjectIds : [object.id]
     }));
   }, [setObjects]);
   const removeObject = reactExports.useCallback((id2) => {
@@ -23080,16 +23038,6 @@ const createLucideIcon = (iconName, iconNode) => {
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const ArrowDown = createLucideIcon("ArrowDown", [
-  ["path", { d: "M12 5v14", key: "s699le" }],
-  ["path", { d: "m19 12-7 7-7-7", key: "1idqje" }]
-]);
-/**
- * @license lucide-react v0.364.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
 const ArrowRight = createLucideIcon("ArrowRight", [
   ["path", { d: "M5 12h14", key: "1ays0h" }],
   ["path", { d: "m12 5 7 7-7 7", key: "xquz4c" }]
@@ -23105,16 +23053,6 @@ const ArrowUpDown = createLucideIcon("ArrowUpDown", [
   ["path", { d: "M17 20V4", key: "1ejh1v" }],
   ["path", { d: "m3 8 4-4 4 4", key: "11wl7u" }],
   ["path", { d: "M7 4v16", key: "1glfcx" }]
-]);
-/**
- * @license lucide-react v0.364.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const ArrowUp = createLucideIcon("ArrowUp", [
-  ["path", { d: "m5 12 7-7 7 7", key: "hav0vg" }],
-  ["path", { d: "M12 19V5", key: "x0mq9r" }]
 ]);
 /**
  * @license lucide-react v0.364.0 - ISC
@@ -23163,6 +23101,15 @@ const Brain = createLucideIcon("Brain", [
  */
 const ChevronDown = createLucideIcon("ChevronDown", [
   ["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]
+]);
+/**
+ * @license lucide-react v0.364.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const ChevronRight = createLucideIcon("ChevronRight", [
+  ["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]
 ]);
 /**
  * @license lucide-react v0.364.0 - ISC
@@ -23652,20 +23599,6 @@ const Move3d = createLucideIcon("Move3d", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const Move = createLucideIcon("Move", [
-  ["polyline", { points: "5 9 2 12 5 15", key: "1r5uj5" }],
-  ["polyline", { points: "9 5 12 2 15 5", key: "5v383o" }],
-  ["polyline", { points: "15 19 12 22 9 19", key: "g7qi8m" }],
-  ["polyline", { points: "19 9 22 12 19 15", key: "tpp73q" }],
-  ["line", { x1: "2", x2: "22", y1: "12", y2: "12", key: "1dnqot" }],
-  ["line", { x1: "12", x2: "12", y1: "2", y2: "22", key: "7eqyqh" }]
-]);
-/**
- * @license lucide-react v0.364.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
 const Pause = createLucideIcon("Pause", [
   ["rect", { x: "14", y: "4", width: "4", height: "16", rx: "1", key: "zuxfzm" }],
   ["rect", { x: "6", y: "4", width: "4", height: "16", rx: "1", key: "1okwgv" }]
@@ -23689,21 +23622,6 @@ const PenLine = createLucideIcon("PenLine", [
 const Pencil = createLucideIcon("Pencil", [
   ["path", { d: "M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z", key: "5qss01" }],
   ["path", { d: "m15 5 4 4", key: "1mk7zo" }]
-]);
-/**
- * @license lucide-react v0.364.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const Pentagon = createLucideIcon("Pentagon", [
-  [
-    "path",
-    {
-      d: "M3.5 8.7c-.7.5-1 1.4-.7 2.2l2.8 8.7c.3.8 1 1.4 1.9 1.4h9.1c.9 0 1.6-.6 1.9-1.4l2.8-8.7c.3-.8 0-1.7-.7-2.2l-7.4-5.3a2.1 2.1 0 0 0-2.4 0Z",
-      key: "hsj90r"
-    }
-  ]
 ]);
 /**
  * @license lucide-react v0.364.0 - ISC
@@ -23743,16 +23661,6 @@ const Redo2 = createLucideIcon("Redo2", [
 const RotateCcw = createLucideIcon("RotateCcw", [
   ["path", { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", key: "1357e3" }],
   ["path", { d: "M3 3v5h5", key: "1xhq8a" }]
-]);
-/**
- * @license lucide-react v0.364.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const RotateCw = createLucideIcon("RotateCw", [
-  ["path", { d: "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8", key: "1p45f6" }],
-  ["path", { d: "M21 3v5h-5", key: "1q7to0" }]
 ]);
 /**
  * @license lucide-react v0.364.0 - ISC
@@ -23977,10 +23885,20 @@ function EditorProvider({
     width: 3,
     color: "#374151"
   });
+  const [highlighterSettings, setHighlighterSettingsState] = reactExports.useState({
+    width: 28,
+    color: "#FAFF00"
+  });
   const [shapeType, setShapeType] = reactExports.useState("rectangle");
   const autosaveTimerRef = reactExports.useRef(null);
   const setPenSettings = reactExports.useCallback((settings) => {
     setPenSettingsState((prev) => ({
+      ...prev,
+      ...settings
+    }));
+  }, []);
+  const setHighlighterSettings = reactExports.useCallback((settings) => {
+    setHighlighterSettingsState((prev) => ({
       ...prev,
       ...settings
     }));
@@ -23992,8 +23910,8 @@ function EditorProvider({
   const handleZoomReset = reactExports.useCallback(() => setZoom(1), []);
   const handleToggleGrid = reactExports.useCallback(() => setShowGrid((g) => !g), []);
   const handleToggleGridWeight = reactExports.useCallback(() => setGridWeight((w) => w === "thin" ? "bold" : "thin"), []);
-  const handleAddObject = reactExports.useCallback((obj) => {
-    appState.addObject(obj);
+  const handleAddObject = reactExports.useCallback((obj, skipSelection = false) => {
+    appState.addObject(obj, skipSelection);
   }, [appState]);
   const handleDeleteObject = reactExports.useCallback((id2) => {
     appState.removeObject(id2);
@@ -24144,17 +24062,31 @@ function EditorProvider({
     setInteractiveModuleId,
     penSettings,
     setPenSettings,
+    highlighterSettings,
+    setHighlighterSettings,
     shapeType,
     setShapeType,
     loadRemoteState,
     setActivePageId: appState.setActivePageId
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/contexts/EditorContext.tsx:242:4", "data-matrix-name": "EditorContext.Provider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/contexts/EditorContext.tsx", "data-component-line": "242", "data-component-file": "EditorContext.tsx", "data-component-name": "EditorContext.Provider", "data-component-content": "%7B%22value%22%3A%7B%22zoom%22%3A%22%5Bvar%3Azoom%5D%22%2C%22setZoom%22%3A%22%5Bvar%3AsetZoom%5D%22%2C%22showGrid%22%3A%22%5Bvar%3AshowGrid%5D%22%2C%22gridWeight%22%3A%22%5Bvar%3AgridWeight%5D%22%2C%22handleZoomIn%22%3A%22%5Bvar%3AhandleZoomIn%5D%22%2C%22handleZoomOut%22%3A%22%5Bvar%3AhandleZoomOut%5D%22%2C%22handleZoomReset%22%3A%22%5Bvar%3AhandleZoomReset%5D%22%2C%22handleToggleGrid%22%3A%22%5Bvar%3AhandleToggleGrid%5D%22%2C%22handleToggleGridWeight%22%3A%22%5Bvar%3AhandleToggleGridWeight%5D%22%2C%22handleAddObject%22%3A%22%5Bvar%3AhandleAddObject%5D%22%2C%22handleDeleteObject%22%3A%22%5Bvar%3AhandleDeleteObject%5D%22%2C%22handleSelectTemplate%22%3A%22%5Bvar%3AhandleSelectTemplate%5D%22%2C%22handleToggleVisibility%22%3A%22%5Bvar%3AhandleToggleVisibility%5D%22%2C%22handleToggleLock%22%3A%22%5Bvar%3AhandleToggleLock%5D%22%2C%22saveProjectToStorage%22%3A%22%5Bvar%3AsaveProjectToStorage%5D%22%2C%22getSavedProjects%22%3A%22%5Bvar%3AgetSavedProjects%5D%22%2C%22loadProjectFromStorage%22%3A%22%5Bvar%3AloadProjectFromStorage%5D%22%2C%22deleteProjectFromStorage%22%3A%22%5Bvar%3AdeleteProjectFromStorage%5D%22%2C%22interactiveModuleId%22%3A%22%5Bvar%3AinteractiveModuleId%5D%22%2C%22setInteractiveModuleId%22%3A%22%5Bvar%3AsetInteractiveModuleId%5D%22%2C%22penSettings%22%3A%22%5Bvar%3ApenSettings%5D%22%2C%22setPenSettings%22%3A%22%5Bvar%3AsetPenSettings%5D%22%2C%22shapeType%22%3A%22%5Bvar%3AshapeType%5D%22%2C%22setShapeType%22%3A%22%5Bvar%3AsetShapeType%5D%22%2C%22loadRemoteState%22%3A%22%5Bvar%3AloadRemoteState%5D%22%2C%22setActivePageId%22%3A%22%5BMemberExpression%5D%22%7D%7D", children });
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/contexts/EditorContext.tsx:249:4", "data-matrix-name": "EditorContext.Provider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/contexts/EditorContext.tsx", "data-component-line": "249", "data-component-file": "EditorContext.tsx", "data-component-name": "EditorContext.Provider", "data-component-content": "%7B%22value%22%3A%7B%22zoom%22%3A%22%5Bvar%3Azoom%5D%22%2C%22setZoom%22%3A%22%5Bvar%3AsetZoom%5D%22%2C%22showGrid%22%3A%22%5Bvar%3AshowGrid%5D%22%2C%22gridWeight%22%3A%22%5Bvar%3AgridWeight%5D%22%2C%22handleZoomIn%22%3A%22%5Bvar%3AhandleZoomIn%5D%22%2C%22handleZoomOut%22%3A%22%5Bvar%3AhandleZoomOut%5D%22%2C%22handleZoomReset%22%3A%22%5Bvar%3AhandleZoomReset%5D%22%2C%22handleToggleGrid%22%3A%22%5Bvar%3AhandleToggleGrid%5D%22%2C%22handleToggleGridWeight%22%3A%22%5Bvar%3AhandleToggleGridWeight%5D%22%2C%22handleAddObject%22%3A%22%5Bvar%3AhandleAddObject%5D%22%2C%22handleDeleteObject%22%3A%22%5Bvar%3AhandleDeleteObject%5D%22%2C%22handleSelectTemplate%22%3A%22%5Bvar%3AhandleSelectTemplate%5D%22%2C%22handleToggleVisibility%22%3A%22%5Bvar%3AhandleToggleVisibility%5D%22%2C%22handleToggleLock%22%3A%22%5Bvar%3AhandleToggleLock%5D%22%2C%22saveProjectToStorage%22%3A%22%5Bvar%3AsaveProjectToStorage%5D%22%2C%22getSavedProjects%22%3A%22%5Bvar%3AgetSavedProjects%5D%22%2C%22loadProjectFromStorage%22%3A%22%5Bvar%3AloadProjectFromStorage%5D%22%2C%22deleteProjectFromStorage%22%3A%22%5Bvar%3AdeleteProjectFromStorage%5D%22%2C%22interactiveModuleId%22%3A%22%5Bvar%3AinteractiveModuleId%5D%22%2C%22setInteractiveModuleId%22%3A%22%5Bvar%3AsetInteractiveModuleId%5D%22%2C%22penSettings%22%3A%22%5Bvar%3ApenSettings%5D%22%2C%22setPenSettings%22%3A%22%5Bvar%3AsetPenSettings%5D%22%2C%22highlighterSettings%22%3A%22%5Bvar%3AhighlighterSettings%5D%22%2C%22setHighlighterSettings%22%3A%22%5Bvar%3AsetHighlighterSettings%5D%22%2C%22shapeType%22%3A%22%5Bvar%3AshapeType%5D%22%2C%22setShapeType%22%3A%22%5Bvar%3AsetShapeType%5D%22%2C%22loadRemoteState%22%3A%22%5Bvar%3AloadRemoteState%5D%22%2C%22setActivePageId%22%3A%22%5BMemberExpression%5D%22%7D%7D", children });
 }
 function useEditorContext() {
   const ctx = reactExports.useContext(EditorContext);
   if (!ctx) throw new Error("useEditorContext must be used within EditorProvider");
   return ctx;
 }
+const TrapezoidIcon = ({
+  size: size2 = 24,
+  className
+}) => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: size2, height: size2, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, className, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:14:2", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "14", "data-component-file": "ToolSidebar.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22%5BIdentifier%5D%22%2C%22height%22%3A%22%5BIdentifier%5D%22%2C%22viewBox%22%3A%220%200%2024%2024%22%2C%22fill%22%3A%22none%22%2C%22stroke%22%3A%22currentColor%22%2C%22strokeWidth%22%3A2%2C%22className%22%3A%22%5BIdentifier%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: "4,18 20,18 17,6 7,6", vectorEffect: "non-scaling-stroke" }) });
+const RhombusIcon = ({
+  size: size2 = 24,
+  className
+}) => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: size2, height: size2, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, className, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:20:2", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "20", "data-component-file": "ToolSidebar.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22%5BIdentifier%5D%22%2C%22height%22%3A%22%5BIdentifier%5D%22%2C%22viewBox%22%3A%220%200%2024%2024%22%2C%22fill%22%3A%22none%22%2C%22stroke%22%3A%22currentColor%22%2C%22strokeWidth%22%3A2%2C%22className%22%3A%22%5BIdentifier%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: "12,3 21,12 12,21 3,12", vectorEffect: "non-scaling-stroke" }) });
+const ParallelogramIcon = ({
+  size: size2 = 24,
+  className
+}) => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: size2, height: size2, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, className, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:26:2", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "26", "data-component-file": "ToolSidebar.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22%5BIdentifier%5D%22%2C%22height%22%3A%22%5BIdentifier%5D%22%2C%22viewBox%22%3A%220%200%2024%2024%22%2C%22fill%22%3A%22none%22%2C%22stroke%22%3A%22currentColor%22%2C%22strokeWidth%22%3A2%2C%22className%22%3A%22%5BIdentifier%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: "6,18 22,18 18,6 2,6", vectorEffect: "non-scaling-stroke" }) });
 const TOOL_GROUPS = [{
   id: "select",
   name: "Выбор",
@@ -24230,19 +24162,19 @@ const TOOL_GROUPS = [{
     icon: Triangle,
     mode: "shape"
   }, {
-    id: "shape-geo-circle",
-    name: "Окружность",
-    icon: Circle,
+    id: "shape-trapezoid",
+    name: "Трапеция",
+    icon: TrapezoidIcon,
     mode: "shape"
   }, {
-    id: "shape-geo-triangle",
-    name: "△ с параметрами",
-    icon: Triangle,
+    id: "shape-rhombus",
+    name: "Ромб",
+    icon: RhombusIcon,
     mode: "shape"
   }, {
-    id: "shape-geo-quad",
-    name: "□ с параметрами",
-    icon: Pentagon,
+    id: "shape-parallelogram",
+    name: "Паралл-мм",
+    icon: ParallelogramIcon,
     mode: "shape"
   }]
 }, {
@@ -24326,7 +24258,8 @@ const ToolSidebar = ({
     canRedo,
     clearCanvas,
     selectedObjects,
-    setShapeType
+    setShapeType,
+    shapeType
   } = useEditorContext();
   const mode2 = state.mode;
   const canUndoAction = canUndo();
@@ -24337,22 +24270,14 @@ const ToolSidebar = ({
     "shape-rect": "rectangle",
     "shape-circle": "circle",
     "shape-triangle": "triangle",
-    "shape-geo-circle": "geoshape-circle",
-    "shape-geo-triangle": "geoshape-triangle",
-    "shape-geo-quad": "geoshape-quad"
+    "shape-trapezoid": "trapezoid",
+    "shape-rhombus": "rhombus",
+    "shape-parallelogram": "parallelogram"
   };
+  const isActiveShape = (tool) => mode2 === "shape" && shapeToolToType[tool.id] === shapeType;
   const [openGroupId, setOpenGroupId] = reactExports.useState(null);
-  const sidebarRef = reactExports.useRef(null);
-  reactExports.useEffect(() => {
-    const handler = (e2) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(e2.target)) {
-        setOpenGroupId(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
   const activeGroupId = ((_a2 = TOOL_GROUPS.find((g) => g.tools.some((t) => t.mode === mode2))) == null ? void 0 : _a2.id) ?? null;
+  const isExpanded = openGroupId !== null;
   const handleGroupClick = (group) => {
     if (group.tools.length === 1) {
       setMode(group.tools[0].mode);
@@ -24364,39 +24289,47 @@ const ToolSidebar = ({
   const handleToolClick = (tool) => {
     if (tool.id in shapeToolToType) setShapeType(shapeToolToType[tool.id]);
     setMode(tool.mode);
-    setOpenGroupId(null);
   };
-  const wrapperClasses = `w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-2 relative transition-opacity ${disabled ? "opacity-50 pointer-events-none" : ""}`;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: sidebarRef, className: wrapperClasses, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:88:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "88", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BIdentifier%5D%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1 mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:89:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "89", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20gap-1%20mb-4%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onNew, className: "p-2 rounded-lg hover:bg-gray-100 text-gray-600", title: "Новый проект", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:90:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "90", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22p-2%20rounded-lg%20hover%3Abg-gray-100%20text-gray-600%22%2C%22title%22%3A%22%D0%9D%D0%BE%D0%B2%D1%8B%D0%B9%20%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(FilePlus, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:90:112", "data-matrix-name": "FilePlus", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "90", "data-component-file": "ToolSidebar.tsx", "data-component-name": "FilePlus", "data-component-content": "%7B%22size%22%3A20%7D" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onOpen, className: "p-2 rounded-lg hover:bg-gray-100 text-gray-600", title: "Открыть проект", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:91:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "91", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22p-2%20rounded-lg%20hover%3Abg-gray-100%20text-gray-600%22%2C%22title%22%3A%22%D0%9E%D1%82%D0%BA%D1%80%D1%8B%D1%82%D1%8C%20%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(FolderOpen, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:91:115", "data-matrix-name": "FolderOpen", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "91", "data-component-file": "ToolSidebar.tsx", "data-component-name": "FolderOpen", "data-component-content": "%7B%22size%22%3A20%7D" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onSave, className: `p-2 rounded-lg text-gray-600 ${isDirty2 ? "text-amber-600 hover:bg-amber-50" : "hover:bg-gray-100"}`, title: "Сохранить проект", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:92:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "92", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22title%22%3A%22%D0%A1%D0%BE%D1%85%D1%80%D0%B0%D0%BD%D0%B8%D1%82%D1%8C%20%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Save, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:92:171", "data-matrix-name": "Save", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "92", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Save", "data-component-content": "%7B%22size%22%3A20%7D" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onExport, className: "p-2 rounded-lg hover:bg-gray-100 text-gray-600", title: "Экспорт", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:93:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "93", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22p-2%20rounded-lg%20hover%3Abg-gray-100%20text-gray-600%22%2C%22title%22%3A%22%D0%AD%D0%BA%D1%81%D0%BF%D0%BE%D1%80%D1%82%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Download, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:93:110", "data-matrix-name": "Download", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "93", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Download", "data-component-content": "%7B%22size%22%3A20%7D" }) })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-white border-r border-gray-200 flex flex-col py-4 gap-2 transition-all duration-200 relative ${isExpanded ? "w-44" : "w-16"} ${disabled ? "opacity-50 pointer-events-none" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:104:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "104", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex gap-1 mb-2 px-2 ${isExpanded ? "flex-row flex-wrap justify-start" : "flex-col items-center"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:108:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "108", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onNew, className: "p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0", title: "Новый проект", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:109:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "109", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22p-2%20rounded-lg%20hover%3Abg-gray-100%20text-gray-600%20shrink-0%22%2C%22title%22%3A%22%D0%9D%D0%BE%D0%B2%D1%8B%D0%B9%20%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(FilePlus, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:109:121", "data-matrix-name": "FilePlus", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "109", "data-component-file": "ToolSidebar.tsx", "data-component-name": "FilePlus", "data-component-content": "%7B%22size%22%3A20%7D" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onOpen, className: "p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0", title: "Открыть проект", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:110:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "110", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22p-2%20rounded-lg%20hover%3Abg-gray-100%20text-gray-600%20shrink-0%22%2C%22title%22%3A%22%D0%9E%D1%82%D0%BA%D1%80%D1%8B%D1%82%D1%8C%20%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(FolderOpen, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:110:124", "data-matrix-name": "FolderOpen", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "110", "data-component-file": "ToolSidebar.tsx", "data-component-name": "FolderOpen", "data-component-content": "%7B%22size%22%3A20%7D" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onSave, className: `p-2 rounded-lg text-gray-600 shrink-0 ${isDirty2 ? "text-amber-600 hover:bg-amber-50" : "hover:bg-gray-100"}`, title: "Сохранить проект", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:111:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "111", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22title%22%3A%22%D0%A1%D0%BE%D1%85%D1%80%D0%B0%D0%BD%D0%B8%D1%82%D1%8C%20%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Save, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:111:180", "data-matrix-name": "Save", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "111", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Save", "data-component-content": "%7B%22size%22%3A20%7D" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onExport, className: "p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0", title: "Экспорт", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:112:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "112", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22p-2%20rounded-lg%20hover%3Abg-gray-100%20text-gray-600%20shrink-0%22%2C%22title%22%3A%22%D0%AD%D0%BA%D1%81%D0%BF%D0%BE%D1%80%D1%82%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Download, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:112:119", "data-matrix-name": "Download", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "112", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Download", "data-component-content": "%7B%22size%22%3A20%7D" }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-10 h-px bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:95:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "95", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-10%20h-px%20bg-gray-200%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1 mb-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:96:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "96", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20gap-1%20mb-4%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: undo, disabled: !canUndoAction, className: `p-2 rounded-lg ${canUndoAction ? "hover:bg-gray-100 text-gray-600" : "text-gray-300 cursor-not-allowed"}`, title: "Отменить", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:97:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "97", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BUnaryExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22title%22%3A%22%D0%9E%D1%82%D0%BC%D0%B5%D0%BD%D0%B8%D1%82%D1%8C%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Undo2, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:97:193", "data-matrix-name": "Undo2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "97", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Undo2", "data-component-content": "%7B%22size%22%3A20%7D" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: redo, disabled: !canRedoAction, className: `p-2 rounded-lg ${canRedoAction ? "hover:bg-gray-100 text-gray-600" : "text-gray-300 cursor-not-allowed"}`, title: "Вернуть", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:98:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "98", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BUnaryExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22title%22%3A%22%D0%92%D0%B5%D1%80%D0%BD%D1%83%D1%82%D1%8C%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Redo2, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:98:192", "data-matrix-name": "Redo2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "98", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Redo2", "data-component-content": "%7B%22size%22%3A20%7D" }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-3 h-px bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:115:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "115", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mx-3%20h-px%20bg-gray-200%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex gap-1 px-2 ${isExpanded ? "flex-row" : "flex-col items-center"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:118:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "118", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: undo, disabled: !canUndoAction, className: `p-2 rounded-lg shrink-0 ${canUndoAction ? "hover:bg-gray-100 text-gray-600" : "text-gray-300 cursor-not-allowed"}`, title: "Отменить", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:119:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "119", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BUnaryExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22title%22%3A%22%D0%9E%D1%82%D0%BC%D0%B5%D0%BD%D0%B8%D1%82%D1%8C%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Undo2, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:119:202", "data-matrix-name": "Undo2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "119", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Undo2", "data-component-content": "%7B%22size%22%3A20%7D" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: redo, disabled: !canRedoAction, className: `p-2 rounded-lg shrink-0 ${canRedoAction ? "hover:bg-gray-100 text-gray-600" : "text-gray-300 cursor-not-allowed"}`, title: "Вернуть", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:120:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "120", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BUnaryExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22title%22%3A%22%D0%92%D0%B5%D1%80%D0%BD%D1%83%D1%82%D1%8C%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Redo2, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:120:201", "data-matrix-name": "Redo2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "120", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Redo2", "data-component-content": "%7B%22size%22%3A20%7D" }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-10 h-px bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:100:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "100", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-10%20h-px%20bg-gray-200%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:101:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "101", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20gap-1%22%7D", children: TOOL_GROUPS.map((group) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-3 h-px bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:123:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "123", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mx-3%20h-px%20bg-gray-200%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1 px-2 flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:126:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "126", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20gap-1%20px-2%20flex-1%22%7D", children: TOOL_GROUPS.map((group) => {
       var _a3;
       if (group.id === "projects" && window.electronAPI) return null;
       const isGroupActive = activeGroupId === group.id;
+      const isOpen = openGroupId === group.id;
       const accent2 = group.accent;
-      const btnClass = `p-2 rounded-lg transition-all ${isGroupActive ? accent2 ? accentActive[accent2] : "bg-indigo-100 text-indigo-600" : accent2 ? accentInactive[accent2] : "text-gray-600 hover:bg-gray-100"}`;
-      const ActiveIcon = isGroupActive && group.tools.length > 1 ? ((_a3 = group.tools.find((t) => t.mode === mode2)) == null ? void 0 : _a3.icon) ?? group.icon : group.icon;
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:109:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "109", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22relative%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleGroupClick(group), className: btnClass, title: group.name, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:110:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "110", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BIdentifier%5D%22%2C%22title%22%3A%22%5BMemberExpression%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ActiveIcon, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:110:102", "data-matrix-name": "ActiveIcon", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "110", "data-component-file": "ToolSidebar.tsx", "data-component-name": "ActiveIcon", "data-component-content": "%7B%22size%22%3A20%7D" }) }),
-        openGroupId === group.id && group.tools.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-full top-0 ml-2 bg-white border border-gray-200 rounded-xl shadow-lg p-2 flex flex-col gap-1 z-50 min-w-[130px]", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:112:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "112", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20left-full%20top-0%20ml-2%20bg-white%20border%20border-gray-200%20rounded-xl%20shadow-lg%20p-2%20flex%20flex-col%20gap-1%20z-50%20min-w-%5B130px%5D%22%7D", children: group.tools.map((tool) => /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => handleToolClick(tool), className: `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${mode2 === tool.mode ? "bg-indigo-100 text-indigo-600 font-medium" : "text-gray-600 hover:bg-gray-100"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:114:20", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "114", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(tool.icon, { size: 16 }),
-          tool.name
-        ] }, tool.id)) })
+      const hasChildren = group.tools.length > 1;
+      const btnClass = `p-2 rounded-lg transition-all flex items-center gap-2 w-full ${isGroupActive ? accent2 ? accentActive[accent2] : "bg-indigo-100 text-indigo-600" : accent2 ? accentInactive[accent2] : "text-gray-600 hover:bg-gray-100"}`;
+      const ActiveIcon = isGroupActive && hasChildren ? ((_a3 = group.tools.find((t) => t.mode === mode2)) == null ? void 0 : _a3.icon) ?? group.icon : group.icon;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:146:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "146", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => handleGroupClick(group), className: btnClass, title: group.name, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:148:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "148", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BIdentifier%5D%22%2C%22title%22%3A%22%5BMemberExpression%5D%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ActiveIcon, { size: 20, className: "shrink-0", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:149:16", "data-matrix-name": "ActiveIcon", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "149", "data-component-file": "ToolSidebar.tsx", "data-component-name": "ActiveIcon", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22shrink-0%22%7D" }),
+          isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium truncate flex-1 text-left", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:152:20", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "152", "data-component-file": "ToolSidebar.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-medium%20truncate%20flex-1%20text-left%22%7D", children: group.name }),
+            hasChildren && /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronRight, { size: 14, className: `shrink-0 transition-transform duration-150 ${isOpen ? "rotate-90" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:154:22", "data-matrix-name": "ChevronRight", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "154", "data-component-file": "ToolSidebar.tsx", "data-component-name": "ChevronRight", "data-component-content": "%7B%22size%22%3A14%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D" })
+          ] })
+        ] }),
+        isOpen && hasChildren && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 ml-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:162:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "162", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-1%20ml-2%22%7D", children: group.id === "shapes" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-1 p-1 bg-gray-50 rounded-lg", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:164:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "164", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22grid%20grid-cols-3%20gap-1%20p-1%20bg-gray-50%20rounded-lg%22%7D", children: group.tools.map((tool) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleToolClick(tool), title: tool.name, className: `p-2 rounded-md flex items-center justify-center transition-all ${isActiveShape(tool) ? "bg-indigo-100 text-indigo-600 ring-2 ring-indigo-400" : "text-gray-600 hover:bg-gray-200"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:166:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "166", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22title%22%3A%22%5BMemberExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(tool.icon, { size: 16 }) }, tool.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-0.5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:181:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "181", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20gap-0.5%22%7D", children: group.tools.map((tool) => /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => handleToolClick(tool), className: `flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all w-full ${mode2 === tool.mode ? "bg-indigo-100 text-indigo-600 font-medium" : "text-gray-600 hover:bg-gray-100"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:183:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "183", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(tool.icon, { size: 15, className: "shrink-0" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:193:26", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "193", "data-component-file": "ToolSidebar.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22truncate%22%7D", children: tool.name })
+        ] }, tool.id)) }) })
       ] }, group.id);
     }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:124:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "124", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: clearCanvas, className: "p-2 rounded-lg hover:bg-red-50 text-red-500", title: hasSelection ? "Удалить выбранное" : "Очистить холст", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:125:6", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "125", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22p-2%20rounded-lg%20hover%3Abg-red-50%20text-red-500%22%2C%22title%22%3A%22%5BConditionalExpression%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { size: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:125:154", "data-matrix-name": "Trash2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "125", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Trash2", "data-component-content": "%7B%22size%22%3A20%7D" }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 mt-auto", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:206:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "206", "data-component-file": "ToolSidebar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22px-2%20mt-auto%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: clearCanvas, className: "p-2 rounded-lg hover:bg-red-50 text-red-500 w-full flex items-center gap-2", title: hasSelection ? "Удалить выбранное" : "Очистить холст", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:207:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "207", "data-component-file": "ToolSidebar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22p-2%20rounded-lg%20hover%3Abg-red-50%20text-red-500%20w-full%20flex%20items-center%20gap-2%22%2C%22title%22%3A%22%5BConditionalExpression%5D%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { size: 20, className: "shrink-0", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:212:10", "data-matrix-name": "Trash2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "212", "data-component-file": "ToolSidebar.tsx", "data-component-name": "Trash2", "data-component-content": "%7B%22size%22%3A20%2C%22className%22%3A%22shrink-0%22%7D" }),
+      isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs truncate", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx:213:25", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/ToolSidebar.tsx", "data-component-line": "213", "data-component-file": "ToolSidebar.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20truncate%22%7D", children: hasSelection ? "Удалить" : "Очистить" })
+    ] }) })
   ] });
 };
 function useAuth() {
@@ -24578,11 +24511,11 @@ const copy = (m) => {
   return r;
 };
 const setIfUndefined = (map2, key, createT) => {
-  let set2 = map2.get(key);
-  if (set2 === void 0) {
-    map2.set(key, set2 = createT());
+  let set = map2.get(key);
+  if (set === void 0) {
+    map2.set(key, set = createT());
   }
-  return set2;
+  return set;
 };
 const map$2 = (m, f) => {
   const res = [];
@@ -26573,7 +26506,7 @@ const readAndApplyDeleteSet = (decoder, transaction, store) => {
     const client2 = readVarUint(decoder.restDecoder);
     const numberOfDeletes = readVarUint(decoder.restDecoder);
     const structs = store.clients.get(client2) || [];
-    const state = getState$1(store, client2);
+    const state = getState(store, client2);
     for (let i2 = 0; i2 < numberOfDeletes; i2++) {
       const clock = decoder.readDsClock();
       const clockEnd = clock + decoder.readDsLen();
@@ -27385,7 +27318,7 @@ const writeStructs = (encoder, structs, client2, clock) => {
 const writeClientsStructs = (encoder, store, _sm) => {
   const sm = /* @__PURE__ */ new Map();
   _sm.forEach((clock, client2) => {
-    if (getState$1(store, client2) > clock) {
+    if (getState(store, client2) > clock) {
       sm.set(client2, clock);
     }
   });
@@ -27520,7 +27453,7 @@ const integrateStructs = (transaction, store, clientsStructRefs) => {
   };
   while (true) {
     if (stackHead.constructor !== Skip) {
-      const localClock = setIfUndefined(state, stackHead.id.client, () => getState$1(store, stackHead.id.client));
+      const localClock = setIfUndefined(state, stackHead.id.client, () => getState(store, stackHead.id.client));
       const offset = localClock - stackHead.id.clock;
       if (offset < 0) {
         stack.push(stackHead);
@@ -27538,7 +27471,7 @@ const integrateStructs = (transaction, store, clientsStructRefs) => {
             updateMissingSv(
               /** @type {number} */
               missing,
-              getState$1(store, missing)
+              getState(store, missing)
             );
             addStackToRestSS();
           } else {
@@ -27586,7 +27519,7 @@ const readUpdateV2 = (decoder, ydoc, transactionOrigin, structDecoder = new Upda
   const pending = store.pendingStructs;
   if (pending) {
     for (const [client2, clock] of pending.missing) {
-      if (clock < getState$1(store, client2)) {
+      if (clock < getState(store, client2)) {
         retry = true;
         break;
       }
@@ -27725,7 +27658,7 @@ const splitSnapshotAffectedStructs = (transaction, snapshot) => {
   const store = transaction.doc.store;
   if (!meta.has(snapshot)) {
     snapshot.sv.forEach((clock, client2) => {
-      if (clock < getState$1(store, client2)) {
+      if (clock < getState(store, client2)) {
         getItemCleanStart(transaction, createID(client2, clock));
       }
     });
@@ -27749,7 +27682,7 @@ const getStateVector = (store) => {
   });
   return sm;
 };
-const getState$1 = (store, client2) => {
+const getState = (store, client2) => {
   const structs = store.clients.get(client2);
   if (structs === void 0) {
     return 0;
@@ -28953,7 +28886,7 @@ const typeListInsertGenericsAfter = (transaction, parent, referenceItem, content
   let jsonContent = [];
   const packJsonContent = () => {
     if (jsonContent.length > 0) {
-      left = new Item(createID(ownClientId, getState$1(store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentAny(jsonContent));
+      left = new Item(createID(ownClientId, getState(store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentAny(jsonContent));
       left.integrate(transaction, 0);
       jsonContent = [];
     }
@@ -28975,14 +28908,14 @@ const typeListInsertGenericsAfter = (transaction, parent, referenceItem, content
           switch (c.constructor) {
             case Uint8Array:
             case ArrayBuffer:
-              left = new Item(createID(ownClientId, getState$1(store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentBinary(new Uint8Array(
+              left = new Item(createID(ownClientId, getState(store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentBinary(new Uint8Array(
                 /** @type {Uint8Array} */
                 c
               )));
               left.integrate(transaction, 0);
               break;
             case Doc:
-              left = new Item(createID(ownClientId, getState$1(store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentDoc(
+              left = new Item(createID(ownClientId, getState(store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentDoc(
                 /** @type {Doc} */
                 c
               ));
@@ -28990,7 +28923,7 @@ const typeListInsertGenericsAfter = (transaction, parent, referenceItem, content
               break;
             default:
               if (c instanceof AbstractType) {
-                left = new Item(createID(ownClientId, getState$1(store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentType(c));
+                left = new Item(createID(ownClientId, getState(store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentType(c));
                 left.integrate(transaction, 0);
               } else {
                 throw new Error("Unexpected content type in insert operation");
@@ -29135,7 +29068,7 @@ const typeMapSet = (transaction, parent, key, value) => {
         }
     }
   }
-  new Item(createID(ownClientId, getState$1(doc2.store, ownClientId)), left, left && left.lastId, null, null, parent, key, content).integrate(transaction, 0);
+  new Item(createID(ownClientId, getState(doc2.store, ownClientId)), left, left && left.lastId, null, null, parent, key, content).integrate(transaction, 0);
 };
 const typeMapGet = (parent, key) => {
   parent.doc ?? warnPrematureAccess();
@@ -29742,7 +29675,7 @@ const insertNegatedAttributes = (transaction, parent, currPos, negatedAttributes
   negatedAttributes.forEach((val, key) => {
     const left = currPos.left;
     const right = currPos.right;
-    const nextFormat = new Item(createID(ownClientId, getState$1(doc2.store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentFormat(key, val));
+    const nextFormat = new Item(createID(ownClientId, getState(doc2.store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentFormat(key, val));
     nextFormat.integrate(transaction, 0);
     currPos.right = nextFormat;
     currPos.forward();
@@ -29784,7 +29717,7 @@ const insertAttributes = (transaction, parent, currPos, attributes) => {
     if (!equalAttrs(currentVal, val)) {
       negatedAttributes.set(key, currentVal);
       const { left, right } = currPos;
-      currPos.right = new Item(createID(ownClientId, getState$1(doc2.store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentFormat(key, val));
+      currPos.right = new Item(createID(ownClientId, getState(doc2.store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, new ContentFormat(key, val));
       currPos.right.integrate(transaction, 0);
       currPos.forward();
     }
@@ -29809,7 +29742,7 @@ const insertText = (transaction, parent, currPos, text2, attributes) => {
   if (parent._searchMarker) {
     updateMarkerChanges(parent._searchMarker, currPos.index, content.getLength());
   }
-  right = new Item(createID(ownClientId, getState$1(doc2.store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, content);
+  right = new Item(createID(ownClientId, getState(doc2.store, ownClientId)), left, left && left.lastId, right, right && right.id, parent, null, content);
   right.integrate(transaction, 0);
   currPos.right = right;
   currPos.index = index2;
@@ -29860,7 +29793,7 @@ const formatText = (transaction, parent, currPos, length2, attributes) => {
     for (; length2 > 0; length2--) {
       newlines += "\n";
     }
-    currPos.right = new Item(createID(ownClientId, getState$1(doc2.store, ownClientId)), currPos.left, currPos.left && currPos.left.lastId, currPos.right, currPos.right && currPos.right.id, parent, null, new ContentString(newlines));
+    currPos.right = new Item(createID(ownClientId, getState(doc2.store, ownClientId)), currPos.left, currPos.left && currPos.left.lastId, currPos.right, currPos.right && currPos.right.id, parent, null, new ContentString(newlines));
     currPos.right.integrate(transaction, 0);
     currPos.forward();
   }
@@ -32470,13 +32403,13 @@ class Item extends AbstractStruct {
    * @return {null | number}
    */
   getMissing(transaction, store) {
-    if (this.origin && this.origin.client !== this.id.client && this.origin.clock >= getState$1(store, this.origin.client)) {
+    if (this.origin && this.origin.client !== this.id.client && this.origin.clock >= getState(store, this.origin.client)) {
       return this.origin.client;
     }
-    if (this.rightOrigin && this.rightOrigin.client !== this.id.client && this.rightOrigin.clock >= getState$1(store, this.rightOrigin.client)) {
+    if (this.rightOrigin && this.rightOrigin.client !== this.id.client && this.rightOrigin.clock >= getState(store, this.rightOrigin.client)) {
       return this.rightOrigin.client;
     }
-    if (this.parent && this.parent.constructor === ID && this.id.client !== this.parent.client && this.parent.clock >= getState$1(store, this.parent.client)) {
+    if (this.parent && this.parent.constructor === ID && this.id.client !== this.parent.client && this.parent.clock >= getState(store, this.parent.client)) {
       return this.parent.client;
     }
     if (this.origin) {
@@ -33701,6 +33634,71 @@ const SmartShapeToolbar = ({
         }]
       };
     }
+    if (obj.type === "triangle") {
+      const base = obj.width, h = obj.height;
+      const area = Math.round(0.5 * base * h);
+      const leg = Math.round(Math.sqrt((base / 2) ** 2 + h ** 2));
+      const P2 = Math.round(base + leg * 2);
+      return {
+        kind: "triangle",
+        rows: [{
+          label: "a",
+          value: Math.round(base),
+          key: "width"
+        }, {
+          label: "h",
+          value: Math.round(h),
+          key: "height"
+        }],
+        info: [{
+          label: "P≈",
+          value: `${P2} px`
+        }, {
+          label: "S",
+          value: `${area} px²`
+        }]
+      };
+    }
+    if (obj.type === "polygon") {
+      const shapeKind = obj.data.shapeType ?? "polygon";
+      const w = obj.width, h = obj.height;
+      const pts = obj.data.points ?? [];
+      let area = 0, perim = 0;
+      if (pts.length >= 3) {
+        const abs2 = pts.map((p) => ({
+          x: p.x * w,
+          y: p.y * h
+        }));
+        for (let i = 0; i < abs2.length; i++) {
+          const j = (i + 1) % abs2.length;
+          area += abs2[i].x * abs2[j].y - abs2[j].x * abs2[i].y;
+          const dx = abs2[j].x - abs2[i].x, dy = abs2[j].y - abs2[i].y;
+          perim += Math.sqrt(dx * dx + dy * dy);
+        }
+        area = Math.abs(area) / 2;
+      }
+      const label = shapeKind === "trapezoid" ? "Трапеция" : shapeKind === "rhombus" ? "Ромб" : shapeKind === "parallelogram" ? "Параллелограмм" : "Многоугольник";
+      return {
+        kind: "polygon",
+        label,
+        rows: [{
+          label: "Ш",
+          value: Math.round(w),
+          key: "width"
+        }, {
+          label: "В",
+          value: Math.round(h),
+          key: "height"
+        }],
+        info: [{
+          label: "P",
+          value: `${Math.round(perim)} px`
+        }, {
+          label: "S",
+          value: `${Math.round(area)} px²`
+        }]
+      };
+    }
     if (obj.type === "geoshape") {
       const d = obj.data;
       if (d.shapeKind === "circle") {
@@ -33842,20 +33840,20 @@ const SmartShapeToolbar = ({
     left: toolbarX,
     top: toolbarY,
     transform: "translate(-50%, -100%)"
-  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:69:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "69", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20z-40%20pointer-events-auto%22%2C%22style%22%3A%7B%22left%22%3A%22%5Bvar%3AtoolbarX%5D%22%2C%22top%22%3A%22%5Bvar%3AtoolbarY%5D%22%2C%22transform%22%3A%22translate(-50%25%2C%20-100%25)%22%7D%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 text-white rounded-xl shadow-xl px-3 py-2 flex items-center gap-3 text-xs whitespace-nowrap", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:70:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "70", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-gray-900%20text-white%20rounded-xl%20shadow-xl%20px-3%20py-2%20flex%20items-center%20gap-3%20text-xs%20whitespace-nowrap%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:71:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "71", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: stats.rows.map((row2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:73:12", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "73", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-1%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:74:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "74", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-gray-400%22%7D", children: [
+  }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:94:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "94", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20z-40%20pointer-events-auto%22%2C%22style%22%3A%7B%22left%22%3A%22%5Bvar%3AtoolbarX%5D%22%2C%22top%22%3A%22%5Bvar%3AtoolbarY%5D%22%2C%22transform%22%3A%22translate(-50%25%2C%20-100%25)%22%7D%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 text-white rounded-xl shadow-xl px-3 py-2 flex items-center gap-3 text-xs whitespace-nowrap", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:95:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "95", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22bg-gray-900%20text-white%20rounded-xl%20shadow-xl%20px-3%20py-2%20flex%20items-center%20gap-3%20text-xs%20whitespace-nowrap%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:96:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "96", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: stats.rows.map((row2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:98:12", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "98", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-1%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:99:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "99", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-gray-400%22%7D", children: [
           row2.label,
           ":"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", defaultValue: row2.value, onBlur: (e2) => handleDataChange(row2.key, e2.target.value), onKeyDown: (e2) => {
           if (e2.key === "Enter") handleDataChange(row2.key, e2.target.value);
-        }, className: "w-14 bg-gray-800 text-white rounded px-1.5 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-indigo-400", min: 1, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:75:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "75", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22defaultValue%22%3A%22%5BMemberExpression%5D%22%2C%22onBlur%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-14%20bg-gray-800%20text-white%20rounded%20px-1.5%20py-0.5%20text-xs%20text-center%20focus%3Aoutline-none%20focus%3Aring-1%20focus%3Aring-indigo-400%22%2C%22min%22%3A1%7D" }, `${obj.id}-${row2.key}-${row2.value}`)
+        }, className: "w-14 bg-gray-800 text-white rounded px-1.5 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-indigo-400", min: 1, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:100:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "100", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22defaultValue%22%3A%22%5BMemberExpression%5D%22%2C%22onBlur%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onKeyDown%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-14%20bg-gray-800%20text-white%20rounded%20px-1.5%20py-0.5%20text-xs%20text-center%20focus%3Aoutline-none%20focus%3Aring-1%20focus%3Aring-indigo-400%22%2C%22min%22%3A1%7D" }, `${obj.id}-${row2.key}-${row2.value}`)
       ] }, row2.key)) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-4 bg-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:79:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "79", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-px%20h-4%20bg-gray-600%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 text-gray-300", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:80:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "80", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20text-gray-300%22%7D", children: stats.info.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:81:37", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "81", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "span", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:81:60", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "81", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-gray-500%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-4 bg-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:104:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "104", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-px%20h-4%20bg-gray-600%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 text-gray-300", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:105:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "105", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20text-gray-300%22%7D", children: stats.info.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:106:37", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "106", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "span", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:106:60", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "106", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-gray-500%22%7D", children: [
           item.label,
           ":"
         ] }),
@@ -33863,18 +33861,18 @@ const SmartShapeToolbar = ({
         item.value
       ] }, item.label)) }),
       "warning" in stats && stats.warning && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-4 bg-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:83:51", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "83", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-px%20h-4%20bg-gray-600%22%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-amber-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:83:91", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "83", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-amber-400%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-4 bg-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:108:51", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "108", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-px%20h-4%20bg-gray-600%22%7D" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-amber-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:108:91", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "108", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-amber-400%22%7D", children: [
           "⚠ ",
           stats.warning
         ] })
       ] }),
       stats.kind === "geo-triangle" && !("warning" in stats && stats.warning) && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-4 bg-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:84:87", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "84", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-px%20h-4%20bg-gray-600%22%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCycleTriangleType, className: "px-2 py-0.5 rounded bg-indigo-700 hover:bg-indigo-600 text-white text-xs transition-colors", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:84:127", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "84", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22px-2%20py-0.5%20rounded%20bg-indigo-700%20hover%3Abg-indigo-600%20text-white%20text-xs%20transition-colors%22%7D", children: "↻ тип" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-4 bg-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:109:87", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "109", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-px%20h-4%20bg-gray-600%22%7D" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCycleTriangleType, className: "px-2 py-0.5 rounded bg-indigo-700 hover:bg-indigo-600 text-white text-xs transition-colors", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:109:127", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "109", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22px-2%20py-0.5%20rounded%20bg-indigo-700%20hover%3Abg-indigo-600%20text-white%20text-xs%20transition-colors%22%7D", children: "↻ тип" })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:86:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "86", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-center%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2 h-2 bg-gray-900 rotate-45 -mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:86:43", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "86", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-2%20h-2%20bg-gray-900%20rotate-45%20-mt-1%22%7D" }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:111:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "111", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-center%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2 h-2 bg-gray-900 rotate-45 -mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx:111:43", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/SmartShapeToolbar.tsx", "data-component-line": "111", "data-component-file": "SmartShapeToolbar.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-2%20h-2%20bg-gray-900%20rotate-45%20-mt-1%22%7D" }) })
   ] });
 };
 const pointToSegmentDistance = (px, py, x1, y1, x2, y2) => {
@@ -34613,7 +34611,7 @@ const ObjectRendererComponent = ({
         cursor
       }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: path2, stroke: "transparent", strokeWidth: Math.max((d.width ?? 28) * 3, 10), fill: "none" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: path2, stroke: d.color || "#FBBF24", strokeWidth: d.width ?? 28, opacity: hlOpacity, style: {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: path2, stroke: d.color || "#FAFF00", strokeWidth: d.width ?? 28, opacity: hlOpacity, style: {
           mixBlendMode: "multiply"
         }, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" }),
         isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: path2, stroke: "#F59E0B", strokeWidth: (d.width ?? 28) + 4, fill: "none", strokeLinecap: "round", strokeLinejoin: "round", opacity: 0.4, strokeDasharray: "5,5" })
@@ -34819,7 +34817,7 @@ function useFreehandTool({ penSettings, onAddObject, publishState, mode: mode2 }
       data: { points: pts, color: penRef.current.color, width: penRef.current.width }
     };
     console.log("[freehand] CREATE OBJECT", pts.length, "pts at", minX, minY);
-    onAddObject(newPath);
+    onAddObject(newPath, true);
     publishState();
   }, [onAddObject, publishState]);
   const onMouseDown = reactExports.useCallback((x, y) => {
@@ -34898,7 +34896,7 @@ function useHighlighterTool({ penSettings, onAddObject, publishState, mode: mode
       data: { points: pts, color: penRef.current.color, width: penRef.current.width }
     };
     console.log("[highlighter] CREATE OBJECT", pts.length, "pts at", minX, minY);
-    onAddObject(newPath);
+    onAddObject(newPath, true);
     publishState();
   }, [onAddObject, publishState]);
   const onMouseDown = reactExports.useCallback((x, y) => {
@@ -34957,6 +34955,263 @@ function useViewportCulling(objects, zoom, panOffset, viewportWidth, viewportHei
     });
   }, [objects, zoom, panOffset, viewportWidth, viewportHeight]);
 }
+function createShapeObject(shapeType, sx, sy, w, h) {
+  const id2 = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  switch (shapeType) {
+    case "circle":
+      return {
+        id: id2,
+        type: "circle",
+        x: sx,
+        y: sy,
+        width: w,
+        height: w,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          fill: "transparent",
+          stroke: "#374151",
+          strokeWidth: 2
+        }
+      };
+    case "triangle":
+      return {
+        id: id2,
+        type: "triangle",
+        x: sx,
+        y: sy,
+        width: w,
+        height: h,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          fill: "transparent",
+          stroke: "#374151",
+          strokeWidth: 2
+        }
+      };
+    case "polygon": {
+      const points = [{
+        x: 0.5,
+        y: 0
+      }, {
+        x: 1,
+        y: 0.38
+      }, {
+        x: 0.81,
+        y: 1
+      }, {
+        x: 0.19,
+        y: 1
+      }, {
+        x: 0,
+        y: 0.38
+      }];
+      return {
+        id: id2,
+        type: "polygon",
+        x: sx,
+        y: sy,
+        width: w,
+        height: h,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          points,
+          fill: "transparent",
+          stroke: "#374151",
+          strokeWidth: 2
+        }
+      };
+    }
+    case "trapezoid": {
+      const points = [{
+        x: 0.2,
+        y: 0
+      }, {
+        x: 0.8,
+        y: 0
+      }, {
+        x: 1,
+        y: 1
+      }, {
+        x: 0,
+        y: 1
+      }];
+      return {
+        id: id2,
+        type: "polygon",
+        x: sx,
+        y: sy,
+        width: w,
+        height: h,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          points,
+          fill: "transparent",
+          stroke: "#374151",
+          strokeWidth: 2
+        }
+      };
+    }
+    case "rhombus": {
+      const points = [{
+        x: 0.5,
+        y: 0
+      }, {
+        x: 1,
+        y: 0.5
+      }, {
+        x: 0.5,
+        y: 1
+      }, {
+        x: 0,
+        y: 0.5
+      }];
+      return {
+        id: id2,
+        type: "polygon",
+        x: sx,
+        y: sy,
+        width: w,
+        height: h,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          points,
+          fill: "transparent",
+          stroke: "#374151",
+          strokeWidth: 2
+        }
+      };
+    }
+    case "parallelogram": {
+      const points = [{
+        x: 0.25,
+        y: 0
+      }, {
+        x: 1,
+        y: 0
+      }, {
+        x: 0.75,
+        y: 1
+      }, {
+        x: 0,
+        y: 1
+      }];
+      return {
+        id: id2,
+        type: "polygon",
+        x: sx,
+        y: sy,
+        width: w,
+        height: h,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          points,
+          fill: "transparent",
+          stroke: "#374151",
+          strokeWidth: 2
+        }
+      };
+    }
+    case "geoshape-circle":
+      return {
+        id: id2,
+        type: "geoshape",
+        x: sx,
+        y: sy,
+        width: w,
+        height: w,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          shapeKind: "circle",
+          radius: Math.round(w / 2),
+          stroke: "#374151",
+          strokeWidth: 2
+        }
+      };
+    case "geoshape-triangle":
+      return {
+        id: id2,
+        type: "geoshape",
+        x: sx,
+        y: sy,
+        width: w,
+        height: h,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          shapeKind: "triangle",
+          sideA: Math.round(w),
+          sideB: Math.round(w),
+          sideC: Math.round(w),
+          stroke: "#374151",
+          strokeWidth: 2
+        }
+      };
+    case "geoshape-quad":
+      return {
+        id: id2,
+        type: "geoshape",
+        x: sx,
+        y: sy,
+        width: w,
+        height: h,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          shapeKind: "quadrilateral",
+          sideAB: Math.round(w),
+          sideBC: Math.round(h),
+          sideCD: Math.round(w),
+          sideDA: Math.round(h),
+          stroke: "#374151",
+          strokeWidth: 2
+        }
+      };
+    default:
+      return {
+        id: id2,
+        type: "rectangle",
+        x: sx,
+        y: sy,
+        width: w,
+        height: h,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        data: {
+          fill: "transparent",
+          stroke: "#374151",
+          strokeWidth: 2,
+          cornerRadius: 0
+        }
+      };
+  }
+}
 const Canvas = () => {
   const CANVAS_WIDTH = 2e3;
   const CANVAS_HEIGHT = 2e3;
@@ -34978,7 +35233,8 @@ const Canvas = () => {
     moveObjects: onMoveObjects,
     penSettings,
     shapeType,
-    getCanvasSnapshot
+    getCanvasSnapshot,
+    highlighterSettings
   } = useEditorContext();
   const {
     roomState,
@@ -35001,7 +35257,7 @@ const Canvas = () => {
     mode: mode2
   });
   const highlighter = useHighlighterTool({
-    penSettings,
+    penSettings: highlighterSettings,
     onAddObject,
     publishState,
     mode: mode2
@@ -35476,6 +35732,7 @@ const Canvas = () => {
   };
   const handleCanvasPointerDown = (e2) => {
     var _a2;
+    console.log("[Pointer Debug]", e2.pointerType, e2.button, e2.pressure);
     if (e2.button === 1 || isSpacePressed && e2.buttons > 0 && e2.button === 0) {
       setIsPanning(true);
       setPanStart({
@@ -35487,7 +35744,7 @@ const Canvas = () => {
       return;
     }
     if (isSpacePressed) return;
-    const isDrawingInput = e2.pointerType === "pen" || e2.pointerType === "touch" || e2.pointerType === "mouse" && e2.button === 0;
+    const isDrawingInput = e2.pointerType === "pen" || e2.pointerType === "touch" || e2.pointerType === "mouse" && e2.button === 0 || e2.pointerType === "mouse" && e2.button === -1;
     if (!isDrawingInput) return;
     if (!canEdit) return;
     console.log("[canvas] DOWN", e2.pointerType, "pressure:", e2.pressure);
@@ -35845,169 +36102,7 @@ const Canvas = () => {
       setShapeDrawStart(null);
       setShapeDrawEnd(null);
       if (w > 5 && h > 5) {
-        const id2 = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        let newShape;
-        switch (shapeType) {
-          case "circle":
-            newShape = {
-              id: id2,
-              type: "circle",
-              x: sx,
-              y: sy,
-              width: w,
-              height: w,
-              rotation: 0,
-              opacity: 1,
-              visible: true,
-              locked: false,
-              data: {
-                fill: "#10B981",
-                stroke: "#047857",
-                strokeWidth: 2
-              }
-            };
-            break;
-          case "triangle":
-            newShape = {
-              id: id2,
-              type: "triangle",
-              x: sx,
-              y: sy,
-              width: w,
-              height: h,
-              rotation: 0,
-              opacity: 1,
-              visible: true,
-              locked: false,
-              data: {
-                fill: "#F59E0B",
-                stroke: "#D97706",
-                strokeWidth: 2
-              }
-            };
-            break;
-          case "polygon": {
-            const points = [{
-              x: 0.5,
-              y: 0
-            }, {
-              x: 1,
-              y: 0.38
-            }, {
-              x: 0.81,
-              y: 1
-            }, {
-              x: 0.19,
-              y: 1
-            }, {
-              x: 0,
-              y: 0.38
-            }];
-            newShape = {
-              id: id2,
-              type: "polygon",
-              x: sx,
-              y: sy,
-              width: w,
-              height: h,
-              rotation: 0,
-              opacity: 1,
-              visible: true,
-              locked: false,
-              data: {
-                points,
-                fill: "#F59E0B",
-                stroke: "#D97706",
-                strokeWidth: 2
-              }
-            };
-            break;
-          }
-          case "geoshape-circle":
-            newShape = {
-              id: id2,
-              type: "geoshape",
-              x: sx,
-              y: sy,
-              width: w,
-              height: w,
-              rotation: 0,
-              opacity: 1,
-              visible: true,
-              locked: false,
-              data: {
-                shapeKind: "circle",
-                radius: Math.round(w / 2),
-                stroke: "#374151",
-                strokeWidth: 2
-              }
-            };
-            break;
-          case "geoshape-triangle":
-            newShape = {
-              id: id2,
-              type: "geoshape",
-              x: sx,
-              y: sy,
-              width: w,
-              height: h,
-              rotation: 0,
-              opacity: 1,
-              visible: true,
-              locked: false,
-              data: {
-                shapeKind: "triangle",
-                sideA: Math.round(w),
-                sideB: Math.round(w),
-                sideC: Math.round(w),
-                stroke: "#374151",
-                strokeWidth: 2
-              }
-            };
-            break;
-          case "geoshape-quad":
-            newShape = {
-              id: id2,
-              type: "geoshape",
-              x: sx,
-              y: sy,
-              width: w,
-              height: h,
-              rotation: 0,
-              opacity: 1,
-              visible: true,
-              locked: false,
-              data: {
-                shapeKind: "quadrilateral",
-                sideAB: Math.round(w),
-                sideBC: Math.round(h),
-                sideCD: Math.round(w),
-                sideDA: Math.round(h),
-                stroke: "#374151",
-                strokeWidth: 2
-              }
-            };
-            break;
-          default:
-            newShape = {
-              id: id2,
-              type: "rectangle",
-              x: sx,
-              y: sy,
-              width: w,
-              height: h,
-              rotation: 0,
-              opacity: 1,
-              visible: true,
-              locked: false,
-              data: {
-                fill: "#4F46E5",
-                stroke: "#312E81",
-                strokeWidth: 2,
-                cornerRadius: 0
-              }
-            };
-        }
+        const newShape = createShapeObject(shapeType, sx, sy, w, h);
         onAddObject(newShape);
         onSelectObject(newShape.id);
       }
@@ -36157,8 +36252,8 @@ const Canvas = () => {
           width: 100,
           height: 60,
           data: {
-            fill: "#4F46E5",
-            stroke: "#312E81",
+            fill: "transparent",
+            stroke: "#374151",
             strokeWidth: 2,
             cornerRadius: 0
           }
@@ -36185,9 +36280,9 @@ const Canvas = () => {
     for (let y = 0; y <= CANVAS_HEIGHT; y += gridSize) lines.push(/* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: 0, y1: y, x2: CANVAS_WIDTH, y2: y, stroke: strokeColor, strokeWidth }, `h-${y}`));
     return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: lines });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 bg-gray-100 overflow-hidden relative", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:645:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "645", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%20relative%22%7D", children: [
-    !canEdit && roomState.isConnected && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 left-0 right-0 z-20 bg-yellow-100 border-b border-yellow-300 text-yellow-800 text-sm text-center py-2 animate-pulse select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:647:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "647", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20top-0%20left-0%20right-0%20z-20%20bg-yellow-100%20border-b%20border-yellow-300%20text-yellow-800%20text-sm%20text-center%20py-2%20animate-pulse%20select-none%22%7D", children: "👀 Режим просмотра. Объясняет учитель." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-3 right-3 z-10", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:652:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "652", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20top-3%20right-3%20z-10%22%7D", children: roomState.isConnected && roomState.roomId && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-green-100 text-green-700 border border-green-300 rounded-full px-2 py-0.5 select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:653:54", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "653", "data-component-file": "Canvas.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20bg-green-100%20text-green-700%20border%20border-green-300%20rounded-full%20px-2%20py-0.5%20select-none%22%7D", children: "Комната активна" }) }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 bg-gray-100 overflow-hidden relative", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:672:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "672", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20bg-gray-100%20overflow-hidden%20relative%22%7D", children: [
+    !canEdit && roomState.isConnected && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 left-0 right-0 z-20 bg-yellow-100 border-b border-yellow-300 text-yellow-800 text-sm text-center py-2 animate-pulse select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:674:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "674", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20top-0%20left-0%20right-0%20z-20%20bg-yellow-100%20border-b%20border-yellow-300%20text-yellow-800%20text-sm%20text-center%20py-2%20animate-pulse%20select-none%22%7D", children: "👀 Режим просмотра. Объясняет учитель." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-3 right-3 z-10", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:679:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "679", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20top-3%20right-3%20z-10%22%7D", children: roomState.isConnected && roomState.roomId && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-green-100 text-green-700 border border-green-300 rounded-full px-2 py-0.5 select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:680:54", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "680", "data-component-file": "Canvas.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20bg-green-100%20text-green-700%20border%20border-green-300%20rounded-full%20px-2%20py-0.5%20select-none%22%7D", children: "Комната активна" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: canvasRef, className: `canvas-viewport w-full h-full overflow-hidden select-none ${!canEdit ? "pointer-events-none" : ""}`, onClick: handleCanvasClick, onDoubleClick: handleCanvasDoubleClick, onPointerDown: handleCanvasPointerDown, onPointerMove: handleCanvasPointerMove, onPointerUp: handleCanvasPointerUp, onPointerCancel: handleCanvasPointerCancel, onWheel: handleWheel, onPointerLeave: () => {
       updateCursor(null);
       setSnapTarget(null);
@@ -36216,10 +36311,10 @@ const Canvas = () => {
     }, style: {
       touchAction: "none",
       cursor: isPanning ? "grabbing" : isSpacePressed ? "grab" : isResizing && resizeHandle ? getHandleCursor(resizeHandle) : ["arrow", "line", "eraser", "draw", "fraction", "chart", "geopoint", "geosegment", "geoangle", "freehand", "highlighter", "shape"].includes(mode2) ? "crosshair" : "default"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:656:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "656", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22onDoubleClick%22%3A%22%5BIdentifier%5D%22%2C%22onPointerDown%22%3A%22%5BIdentifier%5D%22%2C%22onPointerMove%22%3A%22%5BIdentifier%5D%22%2C%22onPointerUp%22%3A%22%5BIdentifier%5D%22%2C%22onPointerCancel%22%3A%22%5BIdentifier%5D%22%2C%22onWheel%22%3A%22%5BIdentifier%5D%22%2C%22onPointerLeave%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22style%22%3A%7B%22touchAction%22%3A%22none%22%2C%22cursor%22%3A%22%5BConditionalExpression%5D%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "canvas-world", style: {
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:683:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "683", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22onDoubleClick%22%3A%22%5BIdentifier%5D%22%2C%22onPointerDown%22%3A%22%5BIdentifier%5D%22%2C%22onPointerMove%22%3A%22%5BIdentifier%5D%22%2C%22onPointerUp%22%3A%22%5BIdentifier%5D%22%2C%22onPointerCancel%22%3A%22%5BIdentifier%5D%22%2C%22onWheel%22%3A%22%5BIdentifier%5D%22%2C%22onPointerLeave%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22style%22%3A%7B%22touchAction%22%3A%22none%22%2C%22cursor%22%3A%22%5BConditionalExpression%5D%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "canvas-world", style: {
       transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
       transformOrigin: "0 0"
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:666:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "666", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22canvas-world%22%2C%22style%22%3A%7B%22transform%22%3A%22%5BTemplateLiteral%5D%22%2C%22transformOrigin%22%3A%220%200%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { ref: svgRef, "data-canvas-svg": true, width: CANVAS_WIDTH, height: CANVAS_HEIGHT, viewBox: `0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`, style: {
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:693:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "693", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22canvas-world%22%2C%22style%22%3A%7B%22transform%22%3A%22%5BTemplateLiteral%5D%22%2C%22transformOrigin%22%3A%220%200%22%7D%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { ref: svgRef, "data-canvas-svg": true, width: CANVAS_WIDTH, height: CANVAS_HEIGHT, viewBox: `0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`, style: {
       backgroundColor: "#FFFFFF",
       filter: "drop-shadow(0 0 10px rgba(0,0,0,0.15))"
     }, onPointerDown: (e2) => {
@@ -36247,13 +36342,13 @@ const Canvas = () => {
         });
         e2.stopPropagation();
       }
-    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:673:10", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "673", "data-component-file": "Canvas.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22%5BIdentifier%5D%22%2C%22height%22%3A%22%5BIdentifier%5D%22%2C%22viewBox%22%3A%22%5BTemplateLiteral%5D%22%2C%22style%22%3A%7B%22backgroundColor%22%3A%22%23FFFFFF%22%2C%22filter%22%3A%22drop-shadow(0%200%2010px%20rgba(0%2C0%2C0%2C0.15))%22%7D%2C%22onPointerDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: [
+    }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:700:10", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "700", "data-component-file": "Canvas.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22%5BIdentifier%5D%22%2C%22height%22%3A%22%5BIdentifier%5D%22%2C%22viewBox%22%3A%22%5BTemplateLiteral%5D%22%2C%22style%22%3A%7B%22backgroundColor%22%3A%22%23FFFFFF%22%2C%22filter%22%3A%22drop-shadow(0%200%2010px%20rgba(0%2C0%2C0%2C0.15))%22%7D%2C%22onPointerDown%22%3A%22%5BArrowFunctionExpression%5D%22%7D", children: [
       renderGrid(),
       visibleObjects.filter((o) => o.visible).map((obj) => /* @__PURE__ */ jsxRuntimeExports.jsx(ObjectRenderer, { obj, isSelected: selectedObjectIds.includes(obj.id), dragDelta: isDragging ? dragDelta : null, objects, editingTextId, editingText, editingTextSize, canvasWidth: canvasSize.width, textareaRef, onPointerDown: handleObjectPointerDown, onTextDoubleClick: handleTextDoubleClick, onEditingTextChange: setEditingText, onTextEditComplete: handleTextEditComplete, onTextEditCancel: () => {
         setEditingTextId(null);
         setEditingText("");
         setEditingTextSize(null);
-      }, onAutoResize: autoResizeTextarea, zoom, onImageResizeStart: handleImageResizeStart, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:680:67", "data-matrix-name": "ObjectRenderer", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "680", "data-component-file": "Canvas.tsx", "data-component-name": "ObjectRenderer", "data-component-content": "%7B%22obj%22%3A%22%5BIdentifier%5D%22%2C%22isSelected%22%3A%22%5BCallExpression%5D%22%2C%22dragDelta%22%3A%22%5BConditionalExpression%5D%22%2C%22objects%22%3A%22%5BIdentifier%5D%22%2C%22editingTextId%22%3A%22%5BIdentifier%5D%22%2C%22editingText%22%3A%22%5BIdentifier%5D%22%2C%22editingTextSize%22%3A%22%5BIdentifier%5D%22%2C%22canvasWidth%22%3A%22%5BMemberExpression%5D%22%2C%22textareaRef%22%3A%22%5BIdentifier%5D%22%2C%22onPointerDown%22%3A%22%5BIdentifier%5D%22%2C%22onTextDoubleClick%22%3A%22%5BIdentifier%5D%22%2C%22onEditingTextChange%22%3A%22%5BIdentifier%5D%22%2C%22onTextEditComplete%22%3A%22%5BIdentifier%5D%22%2C%22onTextEditCancel%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onAutoResize%22%3A%22%5BIdentifier%5D%22%2C%22zoom%22%3A%22%5BIdentifier%5D%22%2C%22onImageResizeStart%22%3A%22%5BIdentifier%5D%22%7D" }, obj.id)),
+      }, onAutoResize: autoResizeTextarea, zoom, onImageResizeStart: handleImageResizeStart, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:707:67", "data-matrix-name": "ObjectRenderer", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "707", "data-component-file": "Canvas.tsx", "data-component-name": "ObjectRenderer", "data-component-content": "%7B%22obj%22%3A%22%5BIdentifier%5D%22%2C%22isSelected%22%3A%22%5BCallExpression%5D%22%2C%22dragDelta%22%3A%22%5BConditionalExpression%5D%22%2C%22objects%22%3A%22%5BIdentifier%5D%22%2C%22editingTextId%22%3A%22%5BIdentifier%5D%22%2C%22editingText%22%3A%22%5BIdentifier%5D%22%2C%22editingTextSize%22%3A%22%5BIdentifier%5D%22%2C%22canvasWidth%22%3A%22%5BMemberExpression%5D%22%2C%22textareaRef%22%3A%22%5BIdentifier%5D%22%2C%22onPointerDown%22%3A%22%5BIdentifier%5D%22%2C%22onTextDoubleClick%22%3A%22%5BIdentifier%5D%22%2C%22onEditingTextChange%22%3A%22%5BIdentifier%5D%22%2C%22onTextEditComplete%22%3A%22%5BIdentifier%5D%22%2C%22onTextEditCancel%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onAutoResize%22%3A%22%5BIdentifier%5D%22%2C%22zoom%22%3A%22%5BIdentifier%5D%22%2C%22onImageResizeStart%22%3A%22%5BIdentifier%5D%22%7D" }, obj.id)),
       canEdit && isDrawingArrow && arrowStart && arrowEnd && calculateDistance(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y) > 5 && (() => {
         const angle = calculateArrowAngle(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y);
         const head2 = calculateArrowHeadPoints(arrowEnd.x, arrowEnd.y, angle, 15, "forward");
@@ -36279,6 +36374,18 @@ const Canvas = () => {
         if (shapeType === "triangle") return /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: `${x + w / 2},${y} ${x + w},${y + h} ${x},${y + h}`, ...p });
         if (shapeType === "polygon") {
           const pts = [[x + w * 0.5, y], [x + w, y + h * 0.38], [x + w * 0.81, y + h], [x + w * 0.19, y + h], [x, y + h * 0.38]].map(([px, py]) => `${px},${py}`).join(" ");
+          return /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: pts, ...p });
+        }
+        if (shapeType === "trapezoid") {
+          const pts = [[x + w * 0.2, y], [x + w * 0.8, y], [x + w, y + h], [x, y + h]].map(([px, py]) => `${px},${py}`).join(" ");
+          return /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: pts, ...p });
+        }
+        if (shapeType === "rhombus") {
+          const pts = [[x + w * 0.5, y], [x + w, y + h * 0.5], [x + w * 0.5, y + h], [x, y + h * 0.5]].map(([px, py]) => `${px},${py}`).join(" ");
+          return /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: pts, ...p });
+        }
+        if (shapeType === "parallelogram") {
+          const pts = [[x + w * 0.25, y], [x + w, y], [x + w * 0.75, y + h], [x, y + h]].map(([px, py]) => `${px},${py}`).join(" ");
           return /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: pts, ...p });
         }
         return /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x, y, width: w, height: h, ...p });
@@ -36315,3524 +36422,57 @@ const Canvas = () => {
         mixBlendMode: "multiply"
       } })
     ] }) }) }),
-    canEdit && mode2 === "geosegment" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:694:43", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "694", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20bottom-4%20left-1%2F2%20-translate-x-1%2F2%20bg-gray-800%20text-white%20text-xs%20px-3%20py-1.5%20rounded-full%20pointer-events-none%20select-none%22%7D", children: segmentStep === 0 ? "Выберите первую точку" : "Выберите вторую точку" }),
-    canEdit && mode2 === "geoangle" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-1/2 -translate-x-1/2 bg-purple-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:695:41", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "695", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20bottom-4%20left-1%2F2%20-translate-x-1%2F2%20bg-purple-800%20text-white%20text-xs%20px-3%20py-1.5%20rounded-full%20pointer-events-none%20select-none%22%7D", children: angleStep === 0 ? "Выберите первую точку (A)" : angleStep === 1 ? "Выберите вершину угла (B)" : "Выберите третью точку (C)" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SmartShapeToolbar, { disabled: !canEdit, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:696:6", "data-matrix-name": "SmartShapeToolbar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "696", "data-component-file": "Canvas.tsx", "data-component-name": "SmartShapeToolbar", "data-component-content": "%7B%22disabled%22%3A%22%5BUnaryExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(RemoteCursors, { zoom, offset: panOffset, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:697:6", "data-matrix-name": "RemoteCursors", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "697", "data-component-file": "Canvas.tsx", "data-component-name": "RemoteCursors", "data-component-content": "%7B%22zoom%22%3A%22%5BIdentifier%5D%22%2C%22offset%22%3A%22%5BIdentifier%5D%22%7D" })
+    canEdit && mode2 === "geosegment" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:721:43", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "721", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20bottom-4%20left-1%2F2%20-translate-x-1%2F2%20bg-gray-800%20text-white%20text-xs%20px-3%20py-1.5%20rounded-full%20pointer-events-none%20select-none%22%7D", children: segmentStep === 0 ? "Выберите первую точку" : "Выберите вторую точку" }),
+    canEdit && mode2 === "geoangle" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-1/2 -translate-x-1/2 bg-purple-800 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none select-none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:722:41", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "722", "data-component-file": "Canvas.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22absolute%20bottom-4%20left-1%2F2%20-translate-x-1%2F2%20bg-purple-800%20text-white%20text-xs%20px-3%20py-1.5%20rounded-full%20pointer-events-none%20select-none%22%7D", children: angleStep === 0 ? "Выберите первую точку (A)" : angleStep === 1 ? "Выберите вершину угла (B)" : "Выберите третью точку (C)" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(SmartShapeToolbar, { disabled: !canEdit, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:723:6", "data-matrix-name": "SmartShapeToolbar", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "723", "data-component-file": "Canvas.tsx", "data-component-name": "SmartShapeToolbar", "data-component-content": "%7B%22disabled%22%3A%22%5BUnaryExpression%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(RemoteCursors, { zoom, offset: panOffset, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx:724:6", "data-matrix-name": "RemoteCursors", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/Canvas.tsx", "data-component-line": "724", "data-component-file": "Canvas.tsx", "data-component-name": "RemoteCursors", "data-component-content": "%7B%22zoom%22%3A%22%5BIdentifier%5D%22%2C%22offset%22%3A%22%5BIdentifier%5D%22%7D" })
   ] });
 };
-const MOBILE_BREAKPOINT = 768;
-function useIsMobile() {
-  const [isMobile, setIsMobile] = reactExports.useState(
-    () => typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT
-  );
-  reactExports.useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const handler = (e2) => setIsMobile(e2.matches);
-    mq.addEventListener("change", handler);
-    setIsMobile(mq.matches);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return isMobile;
-}
-function composeEventHandlers(originalEventHandler, ourEventHandler, { checkForDefaultPrevented = true } = {}) {
-  return function handleEvent(event) {
-    originalEventHandler == null ? void 0 : originalEventHandler(event);
-    if (checkForDefaultPrevented === false || !event.defaultPrevented) {
-      return ourEventHandler == null ? void 0 : ourEventHandler(event);
-    }
-  };
-}
-function setRef$1(ref, value) {
-  if (typeof ref === "function") {
-    return ref(value);
-  } else if (ref !== null && ref !== void 0) {
-    ref.current = value;
-  }
-}
-function composeRefs$1(...refs) {
-  return (node) => {
-    let hasCleanup = false;
-    const cleanups = refs.map((ref) => {
-      const cleanup = setRef$1(ref, node);
-      if (!hasCleanup && typeof cleanup == "function") {
-        hasCleanup = true;
-      }
-      return cleanup;
-    });
-    if (hasCleanup) {
-      return () => {
-        for (let i = 0; i < cleanups.length; i++) {
-          const cleanup = cleanups[i];
-          if (typeof cleanup == "function") {
-            cleanup();
-          } else {
-            setRef$1(refs[i], null);
-          }
-        }
-      };
-    }
-  };
-}
-function useComposedRefs$1(...refs) {
-  return reactExports.useCallback(composeRefs$1(...refs), refs);
-}
-function createContext2(rootComponentName, defaultContext) {
-  const Context = reactExports.createContext(defaultContext);
-  const Provider = (props) => {
-    const { children, ...context } = props;
-    const value = reactExports.useMemo(() => context, Object.values(context));
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Context.Provider, { value, children });
-  };
-  Provider.displayName = rootComponentName + "Provider";
-  function useContext2(consumerName) {
-    const context = reactExports.useContext(Context);
-    if (context) return context;
-    if (defaultContext !== void 0) return defaultContext;
-    throw new Error(`\`${consumerName}\` must be used within \`${rootComponentName}\``);
-  }
-  return [Provider, useContext2];
-}
-function createContextScope(scopeName, createContextScopeDeps = []) {
-  let defaultContexts = [];
-  function createContext3(rootComponentName, defaultContext) {
-    const BaseContext = reactExports.createContext(defaultContext);
-    const index2 = defaultContexts.length;
-    defaultContexts = [...defaultContexts, defaultContext];
-    const Provider = (props) => {
-      var _a2;
-      const { scope, children, ...context } = props;
-      const Context = ((_a2 = scope == null ? void 0 : scope[scopeName]) == null ? void 0 : _a2[index2]) || BaseContext;
-      const value = reactExports.useMemo(() => context, Object.values(context));
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(Context.Provider, { value, children });
-    };
-    Provider.displayName = rootComponentName + "Provider";
-    function useContext2(consumerName, scope) {
-      var _a2;
-      const Context = ((_a2 = scope == null ? void 0 : scope[scopeName]) == null ? void 0 : _a2[index2]) || BaseContext;
-      const context = reactExports.useContext(Context);
-      if (context) return context;
-      if (defaultContext !== void 0) return defaultContext;
-      throw new Error(`\`${consumerName}\` must be used within \`${rootComponentName}\``);
-    }
-    return [Provider, useContext2];
-  }
-  const createScope = () => {
-    const scopeContexts = defaultContexts.map((defaultContext) => {
-      return reactExports.createContext(defaultContext);
-    });
-    return function useScope(scope) {
-      const contexts = (scope == null ? void 0 : scope[scopeName]) || scopeContexts;
-      return reactExports.useMemo(
-        () => ({ [`__scope${scopeName}`]: { ...scope, [scopeName]: contexts } }),
-        [scope, contexts]
-      );
-    };
-  };
-  createScope.scopeName = scopeName;
-  return [createContext3, composeContextScopes(createScope, ...createContextScopeDeps)];
-}
-function composeContextScopes(...scopes) {
-  const baseScope = scopes[0];
-  if (scopes.length === 1) return baseScope;
-  const createScope = () => {
-    const scopeHooks = scopes.map((createScope2) => ({
-      useScope: createScope2(),
-      scopeName: createScope2.scopeName
-    }));
-    return function useComposedScopes(overrideScopes) {
-      const nextScopes = scopeHooks.reduce((nextScopes2, { useScope, scopeName }) => {
-        const scopeProps = useScope(overrideScopes);
-        const currentScope = scopeProps[`__scope${scopeName}`];
-        return { ...nextScopes2, ...currentScope };
-      }, {});
-      return reactExports.useMemo(() => ({ [`__scope${baseScope.scopeName}`]: nextScopes }), [nextScopes]);
-    };
-  };
-  createScope.scopeName = baseScope.scopeName;
-  return createScope;
-}
-var useLayoutEffect2 = (globalThis == null ? void 0 : globalThis.document) ? reactExports.useLayoutEffect : () => {
+const TYPE_LABELS$1 = {
+  rectangle: "Rectangle",
+  circle: "Circle",
+  triangle: "Triangle",
+  polygon: "Polygon",
+  geoshape: "Geo Shape",
+  geopoint: "Point",
+  geosegment: "Segment",
+  geoangle: "Angle",
+  text: "Text",
+  arrow: "Arrow",
+  line: "Line",
+  chart: "Chart",
+  fraction: "Fraction",
+  image: "Image",
+  freehand: "Freehand"
 };
-var useReactId = React$1[" useId ".trim().toString()] || (() => void 0);
-var count$2 = 0;
-function useId(deterministicId) {
-  const [id2, setId] = reactExports.useState(useReactId());
-  useLayoutEffect2(() => {
-    setId((reactId) => reactId ?? String(count$2++));
-  }, [deterministicId]);
-  return deterministicId || (id2 ? `radix-${id2}` : "");
-}
-function useCallbackRef$2(callback) {
-  const callbackRef = reactExports.useRef(callback);
-  reactExports.useEffect(() => {
-    callbackRef.current = callback;
-  });
-  return reactExports.useMemo(() => (...args) => {
-    var _a2;
-    return (_a2 = callbackRef.current) == null ? void 0 : _a2.call(callbackRef, ...args);
-  }, []);
-}
-function useControllableState$1({
-  prop,
-  defaultProp,
-  onChange = () => {
-  }
-}) {
-  const [uncontrolledProp, setUncontrolledProp] = useUncontrolledState$1({ defaultProp, onChange });
-  const isControlled = prop !== void 0;
-  const value = isControlled ? prop : uncontrolledProp;
-  const handleChange = useCallbackRef$2(onChange);
-  const setValue = reactExports.useCallback(
-    (nextValue) => {
-      if (isControlled) {
-        const setter = nextValue;
-        const value2 = typeof nextValue === "function" ? setter(prop) : nextValue;
-        if (value2 !== prop) handleChange(value2);
-      } else {
-        setUncontrolledProp(nextValue);
-      }
-    },
-    [isControlled, prop, setUncontrolledProp, handleChange]
-  );
-  return [value, setValue];
-}
-function useUncontrolledState$1({
-  defaultProp,
-  onChange
-}) {
-  const uncontrolledState = reactExports.useState(defaultProp);
-  const [value] = uncontrolledState;
-  const prevValueRef = reactExports.useRef(value);
-  const handleChange = useCallbackRef$2(onChange);
-  reactExports.useEffect(() => {
-    if (prevValueRef.current !== value) {
-      handleChange(value);
-      prevValueRef.current = value;
-    }
-  }, [value, prevValueRef, handleChange]);
-  return uncontrolledState;
-}
-var reactDomExports = requireReactDom();
-const ReactDOM = /* @__PURE__ */ getDefaultExportFromCjs(reactDomExports);
-// @__NO_SIDE_EFFECTS__
-function createSlot(ownerName) {
-  const SlotClone = /* @__PURE__ */ createSlotClone(ownerName);
-  const Slot2 = reactExports.forwardRef((props, forwardedRef) => {
-    const { children, ...slotProps } = props;
-    const childrenArray = reactExports.Children.toArray(children);
-    const slottable = childrenArray.find(isSlottable);
-    if (slottable) {
-      const newElement = slottable.props.children;
-      const newChildren = childrenArray.map((child) => {
-        if (child === slottable) {
-          if (reactExports.Children.count(newElement) > 1) return reactExports.Children.only(null);
-          return reactExports.isValidElement(newElement) ? newElement.props.children : null;
-        } else {
-          return child;
-        }
-      });
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(SlotClone, { ...slotProps, ref: forwardedRef, children: reactExports.isValidElement(newElement) ? reactExports.cloneElement(newElement, void 0, newChildren) : null });
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(SlotClone, { ...slotProps, ref: forwardedRef, children });
-  });
-  Slot2.displayName = `${ownerName}.Slot`;
-  return Slot2;
-}
-// @__NO_SIDE_EFFECTS__
-function createSlotClone(ownerName) {
-  const SlotClone = reactExports.forwardRef((props, forwardedRef) => {
-    const { children, ...slotProps } = props;
-    if (reactExports.isValidElement(children)) {
-      const childrenRef = getElementRef$1(children);
-      const props2 = mergeProps(slotProps, children.props);
-      if (children.type !== reactExports.Fragment) {
-        props2.ref = forwardedRef ? composeRefs$1(forwardedRef, childrenRef) : childrenRef;
-      }
-      return reactExports.cloneElement(children, props2);
-    }
-    return reactExports.Children.count(children) > 1 ? reactExports.Children.only(null) : null;
-  });
-  SlotClone.displayName = `${ownerName}.SlotClone`;
-  return SlotClone;
-}
-var SLOTTABLE_IDENTIFIER = Symbol("radix.slottable");
-function isSlottable(child) {
-  return reactExports.isValidElement(child) && typeof child.type === "function" && "__radixId" in child.type && child.type.__radixId === SLOTTABLE_IDENTIFIER;
-}
-function mergeProps(slotProps, childProps) {
-  const overrideProps = { ...childProps };
-  for (const propName in childProps) {
-    const slotPropValue = slotProps[propName];
-    const childPropValue = childProps[propName];
-    const isHandler = /^on[A-Z]/.test(propName);
-    if (isHandler) {
-      if (slotPropValue && childPropValue) {
-        overrideProps[propName] = (...args) => {
-          childPropValue(...args);
-          slotPropValue(...args);
-        };
-      } else if (slotPropValue) {
-        overrideProps[propName] = slotPropValue;
-      }
-    } else if (propName === "style") {
-      overrideProps[propName] = { ...slotPropValue, ...childPropValue };
-    } else if (propName === "className") {
-      overrideProps[propName] = [slotPropValue, childPropValue].filter(Boolean).join(" ");
-    }
-  }
-  return { ...slotProps, ...overrideProps };
-}
-function getElementRef$1(element) {
-  var _a2, _b2;
-  let getter = (_a2 = Object.getOwnPropertyDescriptor(element.props, "ref")) == null ? void 0 : _a2.get;
-  let mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
-  if (mayWarn) {
-    return element.ref;
-  }
-  getter = (_b2 = Object.getOwnPropertyDescriptor(element, "ref")) == null ? void 0 : _b2.get;
-  mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
-  if (mayWarn) {
-    return element.props.ref;
-  }
-  return element.props.ref || element.ref;
-}
-var NODES = [
-  "a",
-  "button",
-  "div",
-  "form",
-  "h2",
-  "h3",
-  "img",
-  "input",
-  "label",
-  "li",
-  "nav",
-  "ol",
-  "p",
-  "span",
-  "svg",
-  "ul"
-];
-var Primitive = NODES.reduce((primitive, node) => {
-  const Slot2 = /* @__PURE__ */ createSlot(`Primitive.${node}`);
-  const Node2 = reactExports.forwardRef((props, forwardedRef) => {
-    const { asChild, ...primitiveProps } = props;
-    const Comp = asChild ? Slot2 : node;
-    if (typeof window !== "undefined") {
-      window[Symbol.for("radix-ui")] = true;
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Comp, { ...primitiveProps, ref: forwardedRef });
-  });
-  Node2.displayName = `Primitive.${node}`;
-  return { ...primitive, [node]: Node2 };
-}, {});
-function dispatchDiscreteCustomEvent(target, event) {
-  if (target) reactDomExports.flushSync(() => target.dispatchEvent(event));
-}
-function useEscapeKeydown(onEscapeKeyDownProp, ownerDocument = globalThis == null ? void 0 : globalThis.document) {
-  const onEscapeKeyDown = useCallbackRef$2(onEscapeKeyDownProp);
-  reactExports.useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        onEscapeKeyDown(event);
-      }
-    };
-    ownerDocument.addEventListener("keydown", handleKeyDown, { capture: true });
-    return () => ownerDocument.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [onEscapeKeyDown, ownerDocument]);
-}
-var DISMISSABLE_LAYER_NAME = "DismissableLayer";
-var CONTEXT_UPDATE = "dismissableLayer.update";
-var POINTER_DOWN_OUTSIDE = "dismissableLayer.pointerDownOutside";
-var FOCUS_OUTSIDE = "dismissableLayer.focusOutside";
-var originalBodyPointerEvents;
-var DismissableLayerContext = reactExports.createContext({
-  layers: /* @__PURE__ */ new Set(),
-  layersWithOutsidePointerEventsDisabled: /* @__PURE__ */ new Set(),
-  branches: /* @__PURE__ */ new Set()
-});
-var DismissableLayer = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const {
-      disableOutsidePointerEvents = false,
-      onEscapeKeyDown,
-      onPointerDownOutside,
-      onFocusOutside,
-      onInteractOutside,
-      onDismiss,
-      ...layerProps
-    } = props;
-    const context = reactExports.useContext(DismissableLayerContext);
-    const [node, setNode] = reactExports.useState(null);
-    const ownerDocument = (node == null ? void 0 : node.ownerDocument) ?? (globalThis == null ? void 0 : globalThis.document);
-    const [, force] = reactExports.useState({});
-    const composedRefs = useComposedRefs$1(forwardedRef, (node2) => setNode(node2));
-    const layers = Array.from(context.layers);
-    const [highestLayerWithOutsidePointerEventsDisabled] = [...context.layersWithOutsidePointerEventsDisabled].slice(-1);
-    const highestLayerWithOutsidePointerEventsDisabledIndex = layers.indexOf(highestLayerWithOutsidePointerEventsDisabled);
-    const index2 = node ? layers.indexOf(node) : -1;
-    const isBodyPointerEventsDisabled = context.layersWithOutsidePointerEventsDisabled.size > 0;
-    const isPointerEventsEnabled = index2 >= highestLayerWithOutsidePointerEventsDisabledIndex;
-    const pointerDownOutside = usePointerDownOutside((event) => {
-      const target = event.target;
-      const isPointerDownOnBranch = [...context.branches].some((branch) => branch.contains(target));
-      if (!isPointerEventsEnabled || isPointerDownOnBranch) return;
-      onPointerDownOutside == null ? void 0 : onPointerDownOutside(event);
-      onInteractOutside == null ? void 0 : onInteractOutside(event);
-      if (!event.defaultPrevented) onDismiss == null ? void 0 : onDismiss();
-    }, ownerDocument);
-    const focusOutside = useFocusOutside((event) => {
-      const target = event.target;
-      const isFocusInBranch = [...context.branches].some((branch) => branch.contains(target));
-      if (isFocusInBranch) return;
-      onFocusOutside == null ? void 0 : onFocusOutside(event);
-      onInteractOutside == null ? void 0 : onInteractOutside(event);
-      if (!event.defaultPrevented) onDismiss == null ? void 0 : onDismiss();
-    }, ownerDocument);
-    useEscapeKeydown((event) => {
-      const isHighestLayer = index2 === context.layers.size - 1;
-      if (!isHighestLayer) return;
-      onEscapeKeyDown == null ? void 0 : onEscapeKeyDown(event);
-      if (!event.defaultPrevented && onDismiss) {
-        event.preventDefault();
-        onDismiss();
-      }
-    }, ownerDocument);
-    reactExports.useEffect(() => {
-      if (!node) return;
-      if (disableOutsidePointerEvents) {
-        if (context.layersWithOutsidePointerEventsDisabled.size === 0) {
-          originalBodyPointerEvents = ownerDocument.body.style.pointerEvents;
-          ownerDocument.body.style.pointerEvents = "none";
-        }
-        context.layersWithOutsidePointerEventsDisabled.add(node);
-      }
-      context.layers.add(node);
-      dispatchUpdate();
-      return () => {
-        if (disableOutsidePointerEvents && context.layersWithOutsidePointerEventsDisabled.size === 1) {
-          ownerDocument.body.style.pointerEvents = originalBodyPointerEvents;
-        }
-      };
-    }, [node, ownerDocument, disableOutsidePointerEvents, context]);
-    reactExports.useEffect(() => {
-      return () => {
-        if (!node) return;
-        context.layers.delete(node);
-        context.layersWithOutsidePointerEventsDisabled.delete(node);
-        dispatchUpdate();
-      };
-    }, [node, context]);
-    reactExports.useEffect(() => {
-      const handleUpdate = () => force({});
-      document.addEventListener(CONTEXT_UPDATE, handleUpdate);
-      return () => document.removeEventListener(CONTEXT_UPDATE, handleUpdate);
-    }, []);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.div,
-      {
-        ...layerProps,
-        ref: composedRefs,
-        style: {
-          pointerEvents: isBodyPointerEventsDisabled ? isPointerEventsEnabled ? "auto" : "none" : void 0,
-          ...props.style
-        },
-        onFocusCapture: composeEventHandlers(props.onFocusCapture, focusOutside.onFocusCapture),
-        onBlurCapture: composeEventHandlers(props.onBlurCapture, focusOutside.onBlurCapture),
-        onPointerDownCapture: composeEventHandlers(
-          props.onPointerDownCapture,
-          pointerDownOutside.onPointerDownCapture
-        )
-      }
-    );
-  }
-);
-DismissableLayer.displayName = DISMISSABLE_LAYER_NAME;
-var BRANCH_NAME = "DismissableLayerBranch";
-var DismissableLayerBranch = reactExports.forwardRef((props, forwardedRef) => {
-  const context = reactExports.useContext(DismissableLayerContext);
-  const ref = reactExports.useRef(null);
-  const composedRefs = useComposedRefs$1(forwardedRef, ref);
-  reactExports.useEffect(() => {
-    const node = ref.current;
-    if (node) {
-      context.branches.add(node);
-      return () => {
-        context.branches.delete(node);
-      };
-    }
-  }, [context.branches]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.div, { ...props, ref: composedRefs });
-});
-DismissableLayerBranch.displayName = BRANCH_NAME;
-function usePointerDownOutside(onPointerDownOutside, ownerDocument = globalThis == null ? void 0 : globalThis.document) {
-  const handlePointerDownOutside = useCallbackRef$2(onPointerDownOutside);
-  const isPointerInsideReactTreeRef = reactExports.useRef(false);
-  const handleClickRef = reactExports.useRef(() => {
-  });
-  reactExports.useEffect(() => {
-    const handlePointerDown = (event) => {
-      if (event.target && !isPointerInsideReactTreeRef.current) {
-        let handleAndDispatchPointerDownOutsideEvent2 = function() {
-          handleAndDispatchCustomEvent(
-            POINTER_DOWN_OUTSIDE,
-            handlePointerDownOutside,
-            eventDetail,
-            { discrete: true }
-          );
-        };
-        const eventDetail = { originalEvent: event };
-        if (event.pointerType === "touch") {
-          ownerDocument.removeEventListener("click", handleClickRef.current);
-          handleClickRef.current = handleAndDispatchPointerDownOutsideEvent2;
-          ownerDocument.addEventListener("click", handleClickRef.current, { once: true });
-        } else {
-          handleAndDispatchPointerDownOutsideEvent2();
-        }
-      } else {
-        ownerDocument.removeEventListener("click", handleClickRef.current);
-      }
-      isPointerInsideReactTreeRef.current = false;
-    };
-    const timerId = window.setTimeout(() => {
-      ownerDocument.addEventListener("pointerdown", handlePointerDown);
-    }, 0);
-    return () => {
-      window.clearTimeout(timerId);
-      ownerDocument.removeEventListener("pointerdown", handlePointerDown);
-      ownerDocument.removeEventListener("click", handleClickRef.current);
-    };
-  }, [ownerDocument, handlePointerDownOutside]);
-  return {
-    // ensures we check React component tree (not just DOM tree)
-    onPointerDownCapture: () => isPointerInsideReactTreeRef.current = true
-  };
-}
-function useFocusOutside(onFocusOutside, ownerDocument = globalThis == null ? void 0 : globalThis.document) {
-  const handleFocusOutside = useCallbackRef$2(onFocusOutside);
-  const isFocusInsideReactTreeRef = reactExports.useRef(false);
-  reactExports.useEffect(() => {
-    const handleFocus = (event) => {
-      if (event.target && !isFocusInsideReactTreeRef.current) {
-        const eventDetail = { originalEvent: event };
-        handleAndDispatchCustomEvent(FOCUS_OUTSIDE, handleFocusOutside, eventDetail, {
-          discrete: false
-        });
-      }
-    };
-    ownerDocument.addEventListener("focusin", handleFocus);
-    return () => ownerDocument.removeEventListener("focusin", handleFocus);
-  }, [ownerDocument, handleFocusOutside]);
-  return {
-    onFocusCapture: () => isFocusInsideReactTreeRef.current = true,
-    onBlurCapture: () => isFocusInsideReactTreeRef.current = false
-  };
-}
-function dispatchUpdate() {
-  const event = new CustomEvent(CONTEXT_UPDATE);
-  document.dispatchEvent(event);
-}
-function handleAndDispatchCustomEvent(name2, handler, detail, { discrete }) {
-  const target = detail.originalEvent.target;
-  const event = new CustomEvent(name2, { bubbles: false, cancelable: true, detail });
-  if (handler) target.addEventListener(name2, handler, { once: true });
-  if (discrete) {
-    dispatchDiscreteCustomEvent(target, event);
-  } else {
-    target.dispatchEvent(event);
-  }
-}
-var AUTOFOCUS_ON_MOUNT = "focusScope.autoFocusOnMount";
-var AUTOFOCUS_ON_UNMOUNT = "focusScope.autoFocusOnUnmount";
-var EVENT_OPTIONS = { bubbles: false, cancelable: true };
-var FOCUS_SCOPE_NAME = "FocusScope";
-var FocusScope = reactExports.forwardRef((props, forwardedRef) => {
-  const {
-    loop = false,
-    trapped = false,
-    onMountAutoFocus: onMountAutoFocusProp,
-    onUnmountAutoFocus: onUnmountAutoFocusProp,
-    ...scopeProps
-  } = props;
-  const [container, setContainer] = reactExports.useState(null);
-  const onMountAutoFocus = useCallbackRef$2(onMountAutoFocusProp);
-  const onUnmountAutoFocus = useCallbackRef$2(onUnmountAutoFocusProp);
-  const lastFocusedElementRef = reactExports.useRef(null);
-  const composedRefs = useComposedRefs$1(forwardedRef, (node) => setContainer(node));
-  const focusScope = reactExports.useRef({
-    paused: false,
-    pause() {
-      this.paused = true;
-    },
-    resume() {
-      this.paused = false;
-    }
-  }).current;
-  reactExports.useEffect(() => {
-    if (trapped) {
-      let handleFocusIn2 = function(event) {
-        if (focusScope.paused || !container) return;
-        const target = event.target;
-        if (container.contains(target)) {
-          lastFocusedElementRef.current = target;
-        } else {
-          focus(lastFocusedElementRef.current, { select: true });
-        }
-      }, handleFocusOut2 = function(event) {
-        if (focusScope.paused || !container) return;
-        const relatedTarget = event.relatedTarget;
-        if (relatedTarget === null) return;
-        if (!container.contains(relatedTarget)) {
-          focus(lastFocusedElementRef.current, { select: true });
-        }
-      }, handleMutations2 = function(mutations) {
-        const focusedElement = document.activeElement;
-        if (focusedElement !== document.body) return;
-        for (const mutation of mutations) {
-          if (mutation.removedNodes.length > 0) focus(container);
-        }
-      };
-      document.addEventListener("focusin", handleFocusIn2);
-      document.addEventListener("focusout", handleFocusOut2);
-      const mutationObserver = new MutationObserver(handleMutations2);
-      if (container) mutationObserver.observe(container, { childList: true, subtree: true });
-      return () => {
-        document.removeEventListener("focusin", handleFocusIn2);
-        document.removeEventListener("focusout", handleFocusOut2);
-        mutationObserver.disconnect();
-      };
-    }
-  }, [trapped, container, focusScope.paused]);
-  reactExports.useEffect(() => {
-    if (container) {
-      focusScopesStack.add(focusScope);
-      const previouslyFocusedElement = document.activeElement;
-      const hasFocusedCandidate = container.contains(previouslyFocusedElement);
-      if (!hasFocusedCandidate) {
-        const mountEvent = new CustomEvent(AUTOFOCUS_ON_MOUNT, EVENT_OPTIONS);
-        container.addEventListener(AUTOFOCUS_ON_MOUNT, onMountAutoFocus);
-        container.dispatchEvent(mountEvent);
-        if (!mountEvent.defaultPrevented) {
-          focusFirst(removeLinks(getTabbableCandidates(container)), { select: true });
-          if (document.activeElement === previouslyFocusedElement) {
-            focus(container);
-          }
-        }
-      }
-      return () => {
-        container.removeEventListener(AUTOFOCUS_ON_MOUNT, onMountAutoFocus);
-        setTimeout(() => {
-          const unmountEvent = new CustomEvent(AUTOFOCUS_ON_UNMOUNT, EVENT_OPTIONS);
-          container.addEventListener(AUTOFOCUS_ON_UNMOUNT, onUnmountAutoFocus);
-          container.dispatchEvent(unmountEvent);
-          if (!unmountEvent.defaultPrevented) {
-            focus(previouslyFocusedElement ?? document.body, { select: true });
-          }
-          container.removeEventListener(AUTOFOCUS_ON_UNMOUNT, onUnmountAutoFocus);
-          focusScopesStack.remove(focusScope);
-        }, 0);
-      };
-    }
-  }, [container, onMountAutoFocus, onUnmountAutoFocus, focusScope]);
-  const handleKeyDown = reactExports.useCallback(
-    (event) => {
-      if (!loop && !trapped) return;
-      if (focusScope.paused) return;
-      const isTabKey = event.key === "Tab" && !event.altKey && !event.ctrlKey && !event.metaKey;
-      const focusedElement = document.activeElement;
-      if (isTabKey && focusedElement) {
-        const container2 = event.currentTarget;
-        const [first, last2] = getTabbableEdges(container2);
-        const hasTabbableElementsInside = first && last2;
-        if (!hasTabbableElementsInside) {
-          if (focusedElement === container2) event.preventDefault();
-        } else {
-          if (!event.shiftKey && focusedElement === last2) {
-            event.preventDefault();
-            if (loop) focus(first, { select: true });
-          } else if (event.shiftKey && focusedElement === first) {
-            event.preventDefault();
-            if (loop) focus(last2, { select: true });
-          }
-        }
-      }
-    },
-    [loop, trapped, focusScope.paused]
-  );
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.div, { tabIndex: -1, ...scopeProps, ref: composedRefs, onKeyDown: handleKeyDown });
-});
-FocusScope.displayName = FOCUS_SCOPE_NAME;
-function focusFirst(candidates, { select = false } = {}) {
-  const previouslyFocusedElement = document.activeElement;
-  for (const candidate of candidates) {
-    focus(candidate, { select });
-    if (document.activeElement !== previouslyFocusedElement) return;
-  }
-}
-function getTabbableEdges(container) {
-  const candidates = getTabbableCandidates(container);
-  const first = findVisible(candidates, container);
-  const last2 = findVisible(candidates.reverse(), container);
-  return [first, last2];
-}
-function getTabbableCandidates(container) {
-  const nodes = [];
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT, {
-    acceptNode: (node) => {
-      const isHiddenInput = node.tagName === "INPUT" && node.type === "hidden";
-      if (node.disabled || node.hidden || isHiddenInput) return NodeFilter.FILTER_SKIP;
-      return node.tabIndex >= 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-    }
-  });
-  while (walker.nextNode()) nodes.push(walker.currentNode);
-  return nodes;
-}
-function findVisible(elements, container) {
-  for (const element of elements) {
-    if (!isHidden(element, { upTo: container })) return element;
-  }
-}
-function isHidden(node, { upTo }) {
-  if (getComputedStyle(node).visibility === "hidden") return true;
-  while (node) {
-    if (upTo !== void 0 && node === upTo) return false;
-    if (getComputedStyle(node).display === "none") return true;
-    node = node.parentElement;
-  }
-  return false;
-}
-function isSelectableInput(element) {
-  return element instanceof HTMLInputElement && "select" in element;
-}
-function focus(element, { select = false } = {}) {
-  if (element && element.focus) {
-    const previouslyFocusedElement = document.activeElement;
-    element.focus({ preventScroll: true });
-    if (element !== previouslyFocusedElement && isSelectableInput(element) && select)
-      element.select();
-  }
-}
-var focusScopesStack = createFocusScopesStack();
-function createFocusScopesStack() {
-  let stack = [];
-  return {
-    add(focusScope) {
-      const activeFocusScope = stack[0];
-      if (focusScope !== activeFocusScope) {
-        activeFocusScope == null ? void 0 : activeFocusScope.pause();
-      }
-      stack = arrayRemove(stack, focusScope);
-      stack.unshift(focusScope);
-    },
-    remove(focusScope) {
-      var _a2;
-      stack = arrayRemove(stack, focusScope);
-      (_a2 = stack[0]) == null ? void 0 : _a2.resume();
-    }
-  };
-}
-function arrayRemove(array, item) {
-  const updatedArray = [...array];
-  const index2 = updatedArray.indexOf(item);
-  if (index2 !== -1) {
-    updatedArray.splice(index2, 1);
-  }
-  return updatedArray;
-}
-function removeLinks(items) {
-  return items.filter((item) => item.tagName !== "A");
-}
-var PORTAL_NAME$1 = "Portal";
-var Portal$2 = reactExports.forwardRef((props, forwardedRef) => {
-  var _a2;
-  const { container: containerProp, ...portalProps } = props;
-  const [mounted, setMounted] = reactExports.useState(false);
-  useLayoutEffect2(() => setMounted(true), []);
-  const container = containerProp || mounted && ((_a2 = globalThis == null ? void 0 : globalThis.document) == null ? void 0 : _a2.body);
-  return container ? ReactDOM.createPortal(/* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.div, { ...portalProps, ref: forwardedRef }), container) : null;
-});
-Portal$2.displayName = PORTAL_NAME$1;
-function useStateMachine(initialState2, machine) {
-  return reactExports.useReducer((state, event) => {
-    const nextState = machine[state][event];
-    return nextState ?? state;
-  }, initialState2);
-}
-var Presence = (props) => {
-  const { present, children } = props;
-  const presence = usePresence(present);
-  const child = typeof children === "function" ? children({ present: presence.isPresent }) : reactExports.Children.only(children);
-  const ref = useComposedRefs$1(presence.ref, getElementRef(child));
-  const forceMount = typeof children === "function";
-  return forceMount || presence.isPresent ? reactExports.cloneElement(child, { ref }) : null;
-};
-Presence.displayName = "Presence";
-function usePresence(present) {
-  const [node, setNode] = reactExports.useState();
-  const stylesRef = reactExports.useRef({});
-  const prevPresentRef = reactExports.useRef(present);
-  const prevAnimationNameRef = reactExports.useRef("none");
-  const initialState2 = present ? "mounted" : "unmounted";
-  const [state, send] = useStateMachine(initialState2, {
-    mounted: {
-      UNMOUNT: "unmounted",
-      ANIMATION_OUT: "unmountSuspended"
-    },
-    unmountSuspended: {
-      MOUNT: "mounted",
-      ANIMATION_END: "unmounted"
-    },
-    unmounted: {
-      MOUNT: "mounted"
-    }
-  });
-  reactExports.useEffect(() => {
-    const currentAnimationName = getAnimationName(stylesRef.current);
-    prevAnimationNameRef.current = state === "mounted" ? currentAnimationName : "none";
-  }, [state]);
-  useLayoutEffect2(() => {
-    const styles2 = stylesRef.current;
-    const wasPresent = prevPresentRef.current;
-    const hasPresentChanged = wasPresent !== present;
-    if (hasPresentChanged) {
-      const prevAnimationName = prevAnimationNameRef.current;
-      const currentAnimationName = getAnimationName(styles2);
-      if (present) {
-        send("MOUNT");
-      } else if (currentAnimationName === "none" || (styles2 == null ? void 0 : styles2.display) === "none") {
-        send("UNMOUNT");
-      } else {
-        const isAnimating = prevAnimationName !== currentAnimationName;
-        if (wasPresent && isAnimating) {
-          send("ANIMATION_OUT");
-        } else {
-          send("UNMOUNT");
-        }
-      }
-      prevPresentRef.current = present;
-    }
-  }, [present, send]);
-  useLayoutEffect2(() => {
-    if (node) {
-      let timeoutId;
-      const ownerWindow = node.ownerDocument.defaultView ?? window;
-      const handleAnimationEnd = (event) => {
-        const currentAnimationName = getAnimationName(stylesRef.current);
-        const isCurrentAnimation = currentAnimationName.includes(event.animationName);
-        if (event.target === node && isCurrentAnimation) {
-          send("ANIMATION_END");
-          if (!prevPresentRef.current) {
-            const currentFillMode = node.style.animationFillMode;
-            node.style.animationFillMode = "forwards";
-            timeoutId = ownerWindow.setTimeout(() => {
-              if (node.style.animationFillMode === "forwards") {
-                node.style.animationFillMode = currentFillMode;
-              }
-            });
-          }
-        }
-      };
-      const handleAnimationStart = (event) => {
-        if (event.target === node) {
-          prevAnimationNameRef.current = getAnimationName(stylesRef.current);
-        }
-      };
-      node.addEventListener("animationstart", handleAnimationStart);
-      node.addEventListener("animationcancel", handleAnimationEnd);
-      node.addEventListener("animationend", handleAnimationEnd);
-      return () => {
-        ownerWindow.clearTimeout(timeoutId);
-        node.removeEventListener("animationstart", handleAnimationStart);
-        node.removeEventListener("animationcancel", handleAnimationEnd);
-        node.removeEventListener("animationend", handleAnimationEnd);
-      };
-    } else {
-      send("ANIMATION_END");
-    }
-  }, [node, send]);
-  return {
-    isPresent: ["mounted", "unmountSuspended"].includes(state),
-    ref: reactExports.useCallback((node2) => {
-      if (node2) stylesRef.current = getComputedStyle(node2);
-      setNode(node2);
-    }, [])
-  };
-}
-function getAnimationName(styles2) {
-  return (styles2 == null ? void 0 : styles2.animationName) || "none";
-}
-function getElementRef(element) {
-  var _a2, _b2;
-  let getter = (_a2 = Object.getOwnPropertyDescriptor(element.props, "ref")) == null ? void 0 : _a2.get;
-  let mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
-  if (mayWarn) {
-    return element.ref;
-  }
-  getter = (_b2 = Object.getOwnPropertyDescriptor(element, "ref")) == null ? void 0 : _b2.get;
-  mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
-  if (mayWarn) {
-    return element.props.ref;
-  }
-  return element.props.ref || element.ref;
-}
-var count$1 = 0;
-function useFocusGuards() {
-  reactExports.useEffect(() => {
-    const edgeGuards = document.querySelectorAll("[data-radix-focus-guard]");
-    document.body.insertAdjacentElement("afterbegin", edgeGuards[0] ?? createFocusGuard());
-    document.body.insertAdjacentElement("beforeend", edgeGuards[1] ?? createFocusGuard());
-    count$1++;
-    return () => {
-      if (count$1 === 1) {
-        document.querySelectorAll("[data-radix-focus-guard]").forEach((node) => node.remove());
-      }
-      count$1--;
-    };
-  }, []);
-}
-function createFocusGuard() {
-  const element = document.createElement("span");
-  element.setAttribute("data-radix-focus-guard", "");
-  element.tabIndex = 0;
-  element.style.outline = "none";
-  element.style.opacity = "0";
-  element.style.position = "fixed";
-  element.style.pointerEvents = "none";
-  return element;
-}
-var zeroRightClassName = "right-scroll-bar-position";
-var fullWidthClassName = "width-before-scroll-bar";
-var noScrollbarsClassName = "with-scroll-bars-hidden";
-var removedBarSizeVariable = "--removed-body-scroll-bar-size";
-function assignRef(ref, value) {
-  if (typeof ref === "function") {
-    ref(value);
-  } else if (ref) {
-    ref.current = value;
-  }
-  return ref;
-}
-function useCallbackRef$1(initialValue, callback) {
-  var ref = reactExports.useState(function() {
-    return {
-      // value
-      value: initialValue,
-      // last callback
-      callback,
-      // "memoized" public interface
-      facade: {
-        get current() {
-          return ref.value;
-        },
-        set current(value) {
-          var last2 = ref.value;
-          if (last2 !== value) {
-            ref.value = value;
-            ref.callback(value, last2);
-          }
-        }
-      }
-    };
-  })[0];
-  ref.callback = callback;
-  return ref.facade;
-}
-var useIsomorphicLayoutEffect$1 = typeof window !== "undefined" ? reactExports.useLayoutEffect : reactExports.useEffect;
-var currentValues = /* @__PURE__ */ new WeakMap();
-function useMergeRefs(refs, defaultValue) {
-  var callbackRef = useCallbackRef$1(null, function(newValue) {
-    return refs.forEach(function(ref) {
-      return assignRef(ref, newValue);
-    });
-  });
-  useIsomorphicLayoutEffect$1(function() {
-    var oldValue = currentValues.get(callbackRef);
-    if (oldValue) {
-      var prevRefs_1 = new Set(oldValue);
-      var nextRefs_1 = new Set(refs);
-      var current_1 = callbackRef.current;
-      prevRefs_1.forEach(function(ref) {
-        if (!nextRefs_1.has(ref)) {
-          assignRef(ref, null);
-        }
-      });
-      nextRefs_1.forEach(function(ref) {
-        if (!prevRefs_1.has(ref)) {
-          assignRef(ref, current_1);
-        }
-      });
-    }
-    currentValues.set(callbackRef, refs);
-  }, [refs]);
-  return callbackRef;
-}
-function ItoI(a) {
-  return a;
-}
-function innerCreateMedium(defaults, middleware) {
-  if (middleware === void 0) {
-    middleware = ItoI;
-  }
-  var buffer = [];
-  var assigned = false;
-  var medium = {
-    read: function() {
-      if (assigned) {
-        throw new Error("Sidecar: could not `read` from an `assigned` medium. `read` could be used only with `useMedium`.");
-      }
-      if (buffer.length) {
-        return buffer[buffer.length - 1];
-      }
-      return defaults;
-    },
-    useMedium: function(data) {
-      var item = middleware(data, assigned);
-      buffer.push(item);
-      return function() {
-        buffer = buffer.filter(function(x) {
-          return x !== item;
-        });
-      };
-    },
-    assignSyncMedium: function(cb) {
-      assigned = true;
-      while (buffer.length) {
-        var cbs = buffer;
-        buffer = [];
-        cbs.forEach(cb);
-      }
-      buffer = {
-        push: function(x) {
-          return cb(x);
-        },
-        filter: function() {
-          return buffer;
-        }
-      };
-    },
-    assignMedium: function(cb) {
-      assigned = true;
-      var pendingQueue = [];
-      if (buffer.length) {
-        var cbs = buffer;
-        buffer = [];
-        cbs.forEach(cb);
-        pendingQueue = buffer;
-      }
-      var executeQueue = function() {
-        var cbs2 = pendingQueue;
-        pendingQueue = [];
-        cbs2.forEach(cb);
-      };
-      var cycle = function() {
-        return Promise.resolve().then(executeQueue);
-      };
-      cycle();
-      buffer = {
-        push: function(x) {
-          pendingQueue.push(x);
-          cycle();
-        },
-        filter: function(filter2) {
-          pendingQueue = pendingQueue.filter(filter2);
-          return buffer;
-        }
-      };
-    }
-  };
-  return medium;
-}
-function createSidecarMedium(options) {
-  if (options === void 0) {
-    options = {};
-  }
-  var medium = innerCreateMedium(null);
-  medium.options = __assign({ async: true, ssr: false }, options);
-  return medium;
-}
-var SideCar$1 = function(_a2) {
-  var sideCar = _a2.sideCar, rest = __rest(_a2, ["sideCar"]);
-  if (!sideCar) {
-    throw new Error("Sidecar: please provide `sideCar` property to import the right car");
-  }
-  var Target = sideCar.read();
-  if (!Target) {
-    throw new Error("Sidecar medium not found");
-  }
-  return reactExports.createElement(Target, __assign({}, rest));
-};
-SideCar$1.isSideCarExport = true;
-function exportSidecar(medium, exported) {
-  medium.useMedium(exported);
-  return SideCar$1;
-}
-var effectCar = createSidecarMedium();
-var nothing = function() {
-  return;
-};
-var RemoveScroll = reactExports.forwardRef(function(props, parentRef) {
-  var ref = reactExports.useRef(null);
-  var _a2 = reactExports.useState({
-    onScrollCapture: nothing,
-    onWheelCapture: nothing,
-    onTouchMoveCapture: nothing
-  }), callbacks = _a2[0], setCallbacks = _a2[1];
-  var forwardProps = props.forwardProps, children = props.children, className = props.className, removeScrollBar = props.removeScrollBar, enabled = props.enabled, shards = props.shards, sideCar = props.sideCar, noIsolation = props.noIsolation, inert = props.inert, allowPinchZoom = props.allowPinchZoom, _b2 = props.as, Container = _b2 === void 0 ? "div" : _b2, gapMode = props.gapMode, rest = __rest(props, ["forwardProps", "children", "className", "removeScrollBar", "enabled", "shards", "sideCar", "noIsolation", "inert", "allowPinchZoom", "as", "gapMode"]);
-  var SideCar2 = sideCar;
-  var containerRef = useMergeRefs([ref, parentRef]);
-  var containerProps = __assign(__assign({}, rest), callbacks);
-  return reactExports.createElement(
-    reactExports.Fragment,
-    null,
-    enabled && reactExports.createElement(SideCar2, { sideCar: effectCar, removeScrollBar, shards, noIsolation, inert, setCallbacks, allowPinchZoom: !!allowPinchZoom, lockRef: ref, gapMode }),
-    forwardProps ? reactExports.cloneElement(reactExports.Children.only(children), __assign(__assign({}, containerProps), { ref: containerRef })) : reactExports.createElement(Container, __assign({}, containerProps, { className, ref: containerRef }), children)
-  );
-});
-RemoveScroll.defaultProps = {
-  enabled: true,
-  removeScrollBar: true,
-  inert: false
-};
-RemoveScroll.classNames = {
-  fullWidth: fullWidthClassName,
-  zeroRight: zeroRightClassName
-};
-var getNonce = function() {
-  if (typeof __webpack_nonce__ !== "undefined") {
-    return __webpack_nonce__;
-  }
-  return void 0;
-};
-function makeStyleTag() {
-  if (!document)
-    return null;
-  var tag2 = document.createElement("style");
-  tag2.type = "text/css";
-  var nonce = getNonce();
-  if (nonce) {
-    tag2.setAttribute("nonce", nonce);
-  }
-  return tag2;
-}
-function injectStyles(tag2, css) {
-  if (tag2.styleSheet) {
-    tag2.styleSheet.cssText = css;
-  } else {
-    tag2.appendChild(document.createTextNode(css));
-  }
-}
-function insertStyleTag(tag2) {
-  var head2 = document.head || document.getElementsByTagName("head")[0];
-  head2.appendChild(tag2);
-}
-var stylesheetSingleton = function() {
-  var counter = 0;
-  var stylesheet = null;
-  return {
-    add: function(style) {
-      if (counter == 0) {
-        if (stylesheet = makeStyleTag()) {
-          injectStyles(stylesheet, style);
-          insertStyleTag(stylesheet);
-        }
-      }
-      counter++;
-    },
-    remove: function() {
-      counter--;
-      if (!counter && stylesheet) {
-        stylesheet.parentNode && stylesheet.parentNode.removeChild(stylesheet);
-        stylesheet = null;
-      }
-    }
-  };
-};
-var styleHookSingleton = function() {
-  var sheet = stylesheetSingleton();
-  return function(styles2, isDynamic) {
-    reactExports.useEffect(function() {
-      sheet.add(styles2);
-      return function() {
-        sheet.remove();
-      };
-    }, [styles2 && isDynamic]);
-  };
-};
-var styleSingleton = function() {
-  var useStyle = styleHookSingleton();
-  var Sheet = function(_a2) {
-    var styles2 = _a2.styles, dynamic = _a2.dynamic;
-    useStyle(styles2, dynamic);
-    return null;
-  };
-  return Sheet;
-};
-var zeroGap = {
-  left: 0,
-  top: 0,
-  right: 0,
-  gap: 0
-};
-var parse$3 = function(x) {
-  return parseInt(x || "", 10) || 0;
-};
-var getOffset = function(gapMode) {
-  var cs = window.getComputedStyle(document.body);
-  var left = cs[gapMode === "padding" ? "paddingLeft" : "marginLeft"];
-  var top = cs[gapMode === "padding" ? "paddingTop" : "marginTop"];
-  var right = cs[gapMode === "padding" ? "paddingRight" : "marginRight"];
-  return [parse$3(left), parse$3(top), parse$3(right)];
-};
-var getGapWidth = function(gapMode) {
-  if (gapMode === void 0) {
-    gapMode = "margin";
-  }
-  if (typeof window === "undefined") {
-    return zeroGap;
-  }
-  var offsets = getOffset(gapMode);
-  var documentWidth = document.documentElement.clientWidth;
-  var windowWidth = window.innerWidth;
-  return {
-    left: offsets[0],
-    top: offsets[1],
-    right: offsets[2],
-    gap: Math.max(0, windowWidth - documentWidth + offsets[2] - offsets[0])
-  };
-};
-var Style$2 = styleSingleton();
-var lockAttribute = "data-scroll-locked";
-var getStyles = function(_a2, allowRelative, gapMode, important) {
-  var left = _a2.left, top = _a2.top, right = _a2.right, gap = _a2.gap;
-  if (gapMode === void 0) {
-    gapMode = "margin";
-  }
-  return "\n  .".concat(noScrollbarsClassName, " {\n   overflow: hidden ").concat(important, ";\n   padding-right: ").concat(gap, "px ").concat(important, ";\n  }\n  body[").concat(lockAttribute, "] {\n    overflow: hidden ").concat(important, ";\n    overscroll-behavior: contain;\n    ").concat([
-    allowRelative && "position: relative ".concat(important, ";"),
-    gapMode === "margin" && "\n    padding-left: ".concat(left, "px;\n    padding-top: ").concat(top, "px;\n    padding-right: ").concat(right, "px;\n    margin-left:0;\n    margin-top:0;\n    margin-right: ").concat(gap, "px ").concat(important, ";\n    "),
-    gapMode === "padding" && "padding-right: ".concat(gap, "px ").concat(important, ";")
-  ].filter(Boolean).join(""), "\n  }\n  \n  .").concat(zeroRightClassName, " {\n    right: ").concat(gap, "px ").concat(important, ";\n  }\n  \n  .").concat(fullWidthClassName, " {\n    margin-right: ").concat(gap, "px ").concat(important, ";\n  }\n  \n  .").concat(zeroRightClassName, " .").concat(zeroRightClassName, " {\n    right: 0 ").concat(important, ";\n  }\n  \n  .").concat(fullWidthClassName, " .").concat(fullWidthClassName, " {\n    margin-right: 0 ").concat(important, ";\n  }\n  \n  body[").concat(lockAttribute, "] {\n    ").concat(removedBarSizeVariable, ": ").concat(gap, "px;\n  }\n");
-};
-var getCurrentUseCounter = function() {
-  var counter = parseInt(document.body.getAttribute(lockAttribute) || "0", 10);
-  return isFinite(counter) ? counter : 0;
-};
-var useLockAttribute = function() {
-  reactExports.useEffect(function() {
-    document.body.setAttribute(lockAttribute, (getCurrentUseCounter() + 1).toString());
-    return function() {
-      var newCounter = getCurrentUseCounter() - 1;
-      if (newCounter <= 0) {
-        document.body.removeAttribute(lockAttribute);
-      } else {
-        document.body.setAttribute(lockAttribute, newCounter.toString());
-      }
-    };
-  }, []);
-};
-var RemoveScrollBar = function(_a2) {
-  var noRelative = _a2.noRelative, noImportant = _a2.noImportant, _b2 = _a2.gapMode, gapMode = _b2 === void 0 ? "margin" : _b2;
-  useLockAttribute();
-  var gap = reactExports.useMemo(function() {
-    return getGapWidth(gapMode);
-  }, [gapMode]);
-  return reactExports.createElement(Style$2, { styles: getStyles(gap, !noRelative, gapMode, !noImportant ? "!important" : "") });
-};
-var passiveSupported = false;
-if (typeof window !== "undefined") {
-  try {
-    var options = Object.defineProperty({}, "passive", {
-      get: function() {
-        passiveSupported = true;
-        return true;
-      }
-    });
-    window.addEventListener("test", options, options);
-    window.removeEventListener("test", options, options);
-  } catch (err) {
-    passiveSupported = false;
-  }
-}
-var nonPassive = passiveSupported ? { passive: false } : false;
-var alwaysContainsScroll = function(node) {
-  return node.tagName === "TEXTAREA";
-};
-var elementCanBeScrolled = function(node, overflow) {
-  if (!(node instanceof Element)) {
-    return false;
-  }
-  var styles2 = window.getComputedStyle(node);
-  return (
-    // not-not-scrollable
-    styles2[overflow] !== "hidden" && // contains scroll inside self
-    !(styles2.overflowY === styles2.overflowX && !alwaysContainsScroll(node) && styles2[overflow] === "visible")
-  );
-};
-var elementCouldBeVScrolled = function(node) {
-  return elementCanBeScrolled(node, "overflowY");
-};
-var elementCouldBeHScrolled = function(node) {
-  return elementCanBeScrolled(node, "overflowX");
-};
-var locationCouldBeScrolled = function(axis, node) {
-  var ownerDocument = node.ownerDocument;
-  var current = node;
-  do {
-    if (typeof ShadowRoot !== "undefined" && current instanceof ShadowRoot) {
-      current = current.host;
-    }
-    var isScrollable2 = elementCouldBeScrolled(axis, current);
-    if (isScrollable2) {
-      var _a2 = getScrollVariables(axis, current), scrollHeight = _a2[1], clientHeight = _a2[2];
-      if (scrollHeight > clientHeight) {
-        return true;
-      }
-    }
-    current = current.parentNode;
-  } while (current && current !== ownerDocument.body);
-  return false;
-};
-var getVScrollVariables = function(_a2) {
-  var scrollTop = _a2.scrollTop, scrollHeight = _a2.scrollHeight, clientHeight = _a2.clientHeight;
-  return [
-    scrollTop,
-    scrollHeight,
-    clientHeight
-  ];
-};
-var getHScrollVariables = function(_a2) {
-  var scrollLeft = _a2.scrollLeft, scrollWidth = _a2.scrollWidth, clientWidth = _a2.clientWidth;
-  return [
-    scrollLeft,
-    scrollWidth,
-    clientWidth
-  ];
-};
-var elementCouldBeScrolled = function(axis, node) {
-  return axis === "v" ? elementCouldBeVScrolled(node) : elementCouldBeHScrolled(node);
-};
-var getScrollVariables = function(axis, node) {
-  return axis === "v" ? getVScrollVariables(node) : getHScrollVariables(node);
-};
-var getDirectionFactor = function(axis, direction) {
-  return axis === "h" && direction === "rtl" ? -1 : 1;
-};
-var handleScroll = function(axis, endTarget, event, sourceDelta, noOverscroll) {
-  var directionFactor = getDirectionFactor(axis, window.getComputedStyle(endTarget).direction);
-  var delta = directionFactor * sourceDelta;
-  var target = event.target;
-  var targetInLock = endTarget.contains(target);
-  var shouldCancelScroll = false;
-  var isDeltaPositive = delta > 0;
-  var availableScroll = 0;
-  var availableScrollTop = 0;
-  do {
-    var _a2 = getScrollVariables(axis, target), position = _a2[0], scroll_1 = _a2[1], capacity = _a2[2];
-    var elementScroll = scroll_1 - capacity - directionFactor * position;
-    if (position || elementScroll) {
-      if (elementCouldBeScrolled(axis, target)) {
-        availableScroll += elementScroll;
-        availableScrollTop += position;
-      }
-    }
-    if (target instanceof ShadowRoot) {
-      target = target.host;
-    } else {
-      target = target.parentNode;
-    }
-  } while (
-    // portaled content
-    !targetInLock && target !== document.body || // self content
-    targetInLock && (endTarget.contains(target) || endTarget === target)
-  );
-  if (isDeltaPositive && (Math.abs(availableScroll) < 1 || false)) {
-    shouldCancelScroll = true;
-  } else if (!isDeltaPositive && (Math.abs(availableScrollTop) < 1 || false)) {
-    shouldCancelScroll = true;
-  }
-  return shouldCancelScroll;
-};
-var getTouchXY = function(event) {
-  return "changedTouches" in event ? [event.changedTouches[0].clientX, event.changedTouches[0].clientY] : [0, 0];
-};
-var getDeltaXY = function(event) {
-  return [event.deltaX, event.deltaY];
-};
-var extractRef = function(ref) {
-  return ref && "current" in ref ? ref.current : ref;
-};
-var deltaCompare = function(x, y) {
-  return x[0] === y[0] && x[1] === y[1];
-};
-var generateStyle = function(id2) {
-  return "\n  .block-interactivity-".concat(id2, " {pointer-events: none;}\n  .allow-interactivity-").concat(id2, " {pointer-events: all;}\n");
-};
-var idCounter = 0;
-var lockStack = [];
-function RemoveScrollSideCar(props) {
-  var shouldPreventQueue = reactExports.useRef([]);
-  var touchStartRef = reactExports.useRef([0, 0]);
-  var activeAxis = reactExports.useRef();
-  var id2 = reactExports.useState(idCounter++)[0];
-  var Style2 = reactExports.useState(styleSingleton)[0];
-  var lastProps = reactExports.useRef(props);
-  reactExports.useEffect(function() {
-    lastProps.current = props;
-  }, [props]);
-  reactExports.useEffect(function() {
-    if (props.inert) {
-      document.body.classList.add("block-interactivity-".concat(id2));
-      var allow_1 = __spreadArray([props.lockRef.current], (props.shards || []).map(extractRef), true).filter(Boolean);
-      allow_1.forEach(function(el) {
-        return el.classList.add("allow-interactivity-".concat(id2));
-      });
-      return function() {
-        document.body.classList.remove("block-interactivity-".concat(id2));
-        allow_1.forEach(function(el) {
-          return el.classList.remove("allow-interactivity-".concat(id2));
-        });
-      };
-    }
-    return;
-  }, [props.inert, props.lockRef.current, props.shards]);
-  var shouldCancelEvent = reactExports.useCallback(function(event, parent) {
-    if ("touches" in event && event.touches.length === 2 || event.type === "wheel" && event.ctrlKey) {
-      return !lastProps.current.allowPinchZoom;
-    }
-    var touch = getTouchXY(event);
-    var touchStart = touchStartRef.current;
-    var deltaX = "deltaX" in event ? event.deltaX : touchStart[0] - touch[0];
-    var deltaY = "deltaY" in event ? event.deltaY : touchStart[1] - touch[1];
-    var currentAxis;
-    var target = event.target;
-    var moveDirection = Math.abs(deltaX) > Math.abs(deltaY) ? "h" : "v";
-    if ("touches" in event && moveDirection === "h" && target.type === "range") {
-      return false;
-    }
-    var canBeScrolledInMainDirection = locationCouldBeScrolled(moveDirection, target);
-    if (!canBeScrolledInMainDirection) {
-      return true;
-    }
-    if (canBeScrolledInMainDirection) {
-      currentAxis = moveDirection;
-    } else {
-      currentAxis = moveDirection === "v" ? "h" : "v";
-      canBeScrolledInMainDirection = locationCouldBeScrolled(moveDirection, target);
-    }
-    if (!canBeScrolledInMainDirection) {
-      return false;
-    }
-    if (!activeAxis.current && "changedTouches" in event && (deltaX || deltaY)) {
-      activeAxis.current = currentAxis;
-    }
-    if (!currentAxis) {
-      return true;
-    }
-    var cancelingAxis = activeAxis.current || currentAxis;
-    return handleScroll(cancelingAxis, parent, event, cancelingAxis === "h" ? deltaX : deltaY);
-  }, []);
-  var shouldPrevent = reactExports.useCallback(function(_event) {
-    var event = _event;
-    if (!lockStack.length || lockStack[lockStack.length - 1] !== Style2) {
-      return;
-    }
-    var delta = "deltaY" in event ? getDeltaXY(event) : getTouchXY(event);
-    var sourceEvent = shouldPreventQueue.current.filter(function(e2) {
-      return e2.name === event.type && (e2.target === event.target || event.target === e2.shadowParent) && deltaCompare(e2.delta, delta);
-    })[0];
-    if (sourceEvent && sourceEvent.should) {
-      if (event.cancelable) {
-        event.preventDefault();
-      }
-      return;
-    }
-    if (!sourceEvent) {
-      var shardNodes = (lastProps.current.shards || []).map(extractRef).filter(Boolean).filter(function(node) {
-        return node.contains(event.target);
-      });
-      var shouldStop = shardNodes.length > 0 ? shouldCancelEvent(event, shardNodes[0]) : !lastProps.current.noIsolation;
-      if (shouldStop) {
-        if (event.cancelable) {
-          event.preventDefault();
-        }
-      }
-    }
-  }, []);
-  var shouldCancel = reactExports.useCallback(function(name2, delta, target, should) {
-    var event = { name: name2, delta, target, should, shadowParent: getOutermostShadowParent(target) };
-    shouldPreventQueue.current.push(event);
-    setTimeout(function() {
-      shouldPreventQueue.current = shouldPreventQueue.current.filter(function(e2) {
-        return e2 !== event;
-      });
-    }, 1);
-  }, []);
-  var scrollTouchStart = reactExports.useCallback(function(event) {
-    touchStartRef.current = getTouchXY(event);
-    activeAxis.current = void 0;
-  }, []);
-  var scrollWheel = reactExports.useCallback(function(event) {
-    shouldCancel(event.type, getDeltaXY(event), event.target, shouldCancelEvent(event, props.lockRef.current));
-  }, []);
-  var scrollTouchMove = reactExports.useCallback(function(event) {
-    shouldCancel(event.type, getTouchXY(event), event.target, shouldCancelEvent(event, props.lockRef.current));
-  }, []);
-  reactExports.useEffect(function() {
-    lockStack.push(Style2);
-    props.setCallbacks({
-      onScrollCapture: scrollWheel,
-      onWheelCapture: scrollWheel,
-      onTouchMoveCapture: scrollTouchMove
-    });
-    document.addEventListener("wheel", shouldPrevent, nonPassive);
-    document.addEventListener("touchmove", shouldPrevent, nonPassive);
-    document.addEventListener("touchstart", scrollTouchStart, nonPassive);
-    return function() {
-      lockStack = lockStack.filter(function(inst) {
-        return inst !== Style2;
-      });
-      document.removeEventListener("wheel", shouldPrevent, nonPassive);
-      document.removeEventListener("touchmove", shouldPrevent, nonPassive);
-      document.removeEventListener("touchstart", scrollTouchStart, nonPassive);
-    };
-  }, []);
-  var removeScrollBar = props.removeScrollBar, inert = props.inert;
-  return reactExports.createElement(
-    reactExports.Fragment,
-    null,
-    inert ? reactExports.createElement(Style2, { styles: generateStyle(id2) }) : null,
-    removeScrollBar ? reactExports.createElement(RemoveScrollBar, { gapMode: props.gapMode }) : null
-  );
-}
-function getOutermostShadowParent(node) {
-  var shadowParent = null;
-  while (node !== null) {
-    if (node instanceof ShadowRoot) {
-      shadowParent = node.host;
-      node = node.host;
-    }
-    node = node.parentNode;
-  }
-  return shadowParent;
-}
-const SideCar = exportSidecar(effectCar, RemoveScrollSideCar);
-var ReactRemoveScroll = reactExports.forwardRef(function(props, ref) {
-  return reactExports.createElement(RemoveScroll, __assign({}, props, { ref, sideCar: SideCar }));
-});
-ReactRemoveScroll.classNames = RemoveScroll.classNames;
-var getDefaultParent = function(originalTarget) {
-  if (typeof document === "undefined") {
-    return null;
-  }
-  var sampleTarget = Array.isArray(originalTarget) ? originalTarget[0] : originalTarget;
-  return sampleTarget.ownerDocument.body;
-};
-var counterMap = /* @__PURE__ */ new WeakMap();
-var uncontrolledNodes = /* @__PURE__ */ new WeakMap();
-var markerMap = {};
-var lockCount = 0;
-var unwrapHost = function(node) {
-  return node && (node.host || unwrapHost(node.parentNode));
-};
-var correctTargets = function(parent, targets) {
-  return targets.map(function(target) {
-    if (parent.contains(target)) {
-      return target;
-    }
-    var correctedTarget = unwrapHost(target);
-    if (correctedTarget && parent.contains(correctedTarget)) {
-      return correctedTarget;
-    }
-    console.error("aria-hidden", target, "in not contained inside", parent, ". Doing nothing");
-    return null;
-  }).filter(function(x) {
-    return Boolean(x);
-  });
-};
-var applyAttributeToOthers = function(originalTarget, parentNode, markerName, controlAttribute) {
-  var targets = correctTargets(parentNode, Array.isArray(originalTarget) ? originalTarget : [originalTarget]);
-  if (!markerMap[markerName]) {
-    markerMap[markerName] = /* @__PURE__ */ new WeakMap();
-  }
-  var markerCounter = markerMap[markerName];
-  var hiddenNodes = [];
-  var elementsToKeep = /* @__PURE__ */ new Set();
-  var elementsToStop = new Set(targets);
-  var keep = function(el) {
-    if (!el || elementsToKeep.has(el)) {
-      return;
-    }
-    elementsToKeep.add(el);
-    keep(el.parentNode);
-  };
-  targets.forEach(keep);
-  var deep = function(parent) {
-    if (!parent || elementsToStop.has(parent)) {
-      return;
-    }
-    Array.prototype.forEach.call(parent.children, function(node) {
-      if (elementsToKeep.has(node)) {
-        deep(node);
-      } else {
-        try {
-          var attr = node.getAttribute(controlAttribute);
-          var alreadyHidden = attr !== null && attr !== "false";
-          var counterValue = (counterMap.get(node) || 0) + 1;
-          var markerValue = (markerCounter.get(node) || 0) + 1;
-          counterMap.set(node, counterValue);
-          markerCounter.set(node, markerValue);
-          hiddenNodes.push(node);
-          if (counterValue === 1 && alreadyHidden) {
-            uncontrolledNodes.set(node, true);
-          }
-          if (markerValue === 1) {
-            node.setAttribute(markerName, "true");
-          }
-          if (!alreadyHidden) {
-            node.setAttribute(controlAttribute, "true");
-          }
-        } catch (e2) {
-          console.error("aria-hidden: cannot operate on ", node, e2);
-        }
-      }
-    });
-  };
-  deep(parentNode);
-  elementsToKeep.clear();
-  lockCount++;
-  return function() {
-    hiddenNodes.forEach(function(node) {
-      var counterValue = counterMap.get(node) - 1;
-      var markerValue = markerCounter.get(node) - 1;
-      counterMap.set(node, counterValue);
-      markerCounter.set(node, markerValue);
-      if (!counterValue) {
-        if (!uncontrolledNodes.has(node)) {
-          node.removeAttribute(controlAttribute);
-        }
-        uncontrolledNodes.delete(node);
-      }
-      if (!markerValue) {
-        node.removeAttribute(markerName);
-      }
-    });
-    lockCount--;
-    if (!lockCount) {
-      counterMap = /* @__PURE__ */ new WeakMap();
-      counterMap = /* @__PURE__ */ new WeakMap();
-      uncontrolledNodes = /* @__PURE__ */ new WeakMap();
-      markerMap = {};
-    }
-  };
-};
-var hideOthers = function(originalTarget, parentNode, markerName) {
-  if (markerName === void 0) {
-    markerName = "data-aria-hidden";
-  }
-  var targets = Array.from(Array.isArray(originalTarget) ? originalTarget : [originalTarget]);
-  var activeParentNode = getDefaultParent(originalTarget);
-  if (!activeParentNode) {
-    return function() {
-      return null;
-    };
-  }
-  targets.push.apply(targets, Array.from(activeParentNode.querySelectorAll("[aria-live]")));
-  return applyAttributeToOthers(targets, activeParentNode, markerName, "aria-hidden");
-};
-var DIALOG_NAME = "Dialog";
-var [createDialogContext, createDialogScope] = createContextScope(DIALOG_NAME);
-var [DialogProvider, useDialogContext] = createDialogContext(DIALOG_NAME);
-var Dialog = (props) => {
-  const {
-    __scopeDialog,
-    children,
-    open: openProp,
-    defaultOpen,
-    onOpenChange,
-    modal = true
-  } = props;
-  const triggerRef = reactExports.useRef(null);
-  const contentRef = reactExports.useRef(null);
-  const [open2 = false, setOpen] = useControllableState$1({
-    prop: openProp,
-    defaultProp: defaultOpen,
-    onChange: onOpenChange
-  });
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    DialogProvider,
-    {
-      scope: __scopeDialog,
-      triggerRef,
-      contentRef,
-      contentId: useId(),
-      titleId: useId(),
-      descriptionId: useId(),
-      open: open2,
-      onOpenChange: setOpen,
-      onOpenToggle: reactExports.useCallback(() => setOpen((prevOpen) => !prevOpen), [setOpen]),
-      modal,
-      children
-    }
-  );
-};
-Dialog.displayName = DIALOG_NAME;
-var TRIGGER_NAME = "DialogTrigger";
-var DialogTrigger = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...triggerProps } = props;
-    const context = useDialogContext(TRIGGER_NAME, __scopeDialog);
-    const composedTriggerRef = useComposedRefs$1(forwardedRef, context.triggerRef);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.button,
-      {
-        type: "button",
-        "aria-haspopup": "dialog",
-        "aria-expanded": context.open,
-        "aria-controls": context.contentId,
-        "data-state": getState(context.open),
-        ...triggerProps,
-        ref: composedTriggerRef,
-        onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
-      }
-    );
-  }
-);
-DialogTrigger.displayName = TRIGGER_NAME;
-var PORTAL_NAME = "DialogPortal";
-var [PortalProvider, usePortalContext] = createDialogContext(PORTAL_NAME, {
-  forceMount: void 0
-});
-var DialogPortal = (props) => {
-  const { __scopeDialog, forceMount, children, container } = props;
-  const context = useDialogContext(PORTAL_NAME, __scopeDialog);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(PortalProvider, { scope: __scopeDialog, forceMount, children: reactExports.Children.map(children, (child) => /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || context.open, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Portal$2, { asChild: true, container, children: child }) })) });
-};
-DialogPortal.displayName = PORTAL_NAME;
-var OVERLAY_NAME = "DialogOverlay";
-var DialogOverlay = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const portalContext = usePortalContext(OVERLAY_NAME, props.__scopeDialog);
-    const { forceMount = portalContext.forceMount, ...overlayProps } = props;
-    const context = useDialogContext(OVERLAY_NAME, props.__scopeDialog);
-    return context.modal ? /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || context.open, children: /* @__PURE__ */ jsxRuntimeExports.jsx(DialogOverlayImpl, { ...overlayProps, ref: forwardedRef }) }) : null;
-  }
-);
-DialogOverlay.displayName = OVERLAY_NAME;
-var Slot = /* @__PURE__ */ createSlot("DialogOverlay.RemoveScroll");
-var DialogOverlayImpl = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...overlayProps } = props;
-    const context = useDialogContext(OVERLAY_NAME, __scopeDialog);
-    return (
-      // Make sure `Content` is scrollable even when it doesn't live inside `RemoveScroll`
-      // ie. when `Overlay` and `Content` are siblings
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ReactRemoveScroll, { as: Slot, allowPinchZoom: true, shards: [context.contentRef], children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Primitive.div,
-        {
-          "data-state": getState(context.open),
-          ...overlayProps,
-          ref: forwardedRef,
-          style: { pointerEvents: "auto", ...overlayProps.style }
-        }
-      ) })
-    );
-  }
-);
-var CONTENT_NAME = "DialogContent";
-var DialogContent = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const portalContext = usePortalContext(CONTENT_NAME, props.__scopeDialog);
-    const { forceMount = portalContext.forceMount, ...contentProps } = props;
-    const context = useDialogContext(CONTENT_NAME, props.__scopeDialog);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || context.open, children: context.modal ? /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentModal, { ...contentProps, ref: forwardedRef }) : /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentNonModal, { ...contentProps, ref: forwardedRef }) });
-  }
-);
-DialogContent.displayName = CONTENT_NAME;
-var DialogContentModal = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const context = useDialogContext(CONTENT_NAME, props.__scopeDialog);
-    const contentRef = reactExports.useRef(null);
-    const composedRefs = useComposedRefs$1(forwardedRef, context.contentRef, contentRef);
-    reactExports.useEffect(() => {
-      const content = contentRef.current;
-      if (content) return hideOthers(content);
-    }, []);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      DialogContentImpl,
-      {
-        ...props,
-        ref: composedRefs,
-        trapFocus: context.open,
-        disableOutsidePointerEvents: true,
-        onCloseAutoFocus: composeEventHandlers(props.onCloseAutoFocus, (event) => {
-          var _a2;
-          event.preventDefault();
-          (_a2 = context.triggerRef.current) == null ? void 0 : _a2.focus();
-        }),
-        onPointerDownOutside: composeEventHandlers(props.onPointerDownOutside, (event) => {
-          const originalEvent = event.detail.originalEvent;
-          const ctrlLeftClick = originalEvent.button === 0 && originalEvent.ctrlKey === true;
-          const isRightClick = originalEvent.button === 2 || ctrlLeftClick;
-          if (isRightClick) event.preventDefault();
-        }),
-        onFocusOutside: composeEventHandlers(
-          props.onFocusOutside,
-          (event) => event.preventDefault()
-        )
-      }
-    );
-  }
-);
-var DialogContentNonModal = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const context = useDialogContext(CONTENT_NAME, props.__scopeDialog);
-    const hasInteractedOutsideRef = reactExports.useRef(false);
-    const hasPointerDownOutsideRef = reactExports.useRef(false);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      DialogContentImpl,
-      {
-        ...props,
-        ref: forwardedRef,
-        trapFocus: false,
-        disableOutsidePointerEvents: false,
-        onCloseAutoFocus: (event) => {
-          var _a2, _b2;
-          (_a2 = props.onCloseAutoFocus) == null ? void 0 : _a2.call(props, event);
-          if (!event.defaultPrevented) {
-            if (!hasInteractedOutsideRef.current) (_b2 = context.triggerRef.current) == null ? void 0 : _b2.focus();
-            event.preventDefault();
-          }
-          hasInteractedOutsideRef.current = false;
-          hasPointerDownOutsideRef.current = false;
-        },
-        onInteractOutside: (event) => {
-          var _a2, _b2;
-          (_a2 = props.onInteractOutside) == null ? void 0 : _a2.call(props, event);
-          if (!event.defaultPrevented) {
-            hasInteractedOutsideRef.current = true;
-            if (event.detail.originalEvent.type === "pointerdown") {
-              hasPointerDownOutsideRef.current = true;
-            }
-          }
-          const target = event.target;
-          const targetIsTrigger = (_b2 = context.triggerRef.current) == null ? void 0 : _b2.contains(target);
-          if (targetIsTrigger) event.preventDefault();
-          if (event.detail.originalEvent.type === "focusin" && hasPointerDownOutsideRef.current) {
-            event.preventDefault();
-          }
-        }
-      }
-    );
-  }
-);
-var DialogContentImpl = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, trapFocus, onOpenAutoFocus, onCloseAutoFocus, ...contentProps } = props;
-    const context = useDialogContext(CONTENT_NAME, __scopeDialog);
-    const contentRef = reactExports.useRef(null);
-    const composedRefs = useComposedRefs$1(forwardedRef, contentRef);
-    useFocusGuards();
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        FocusScope,
-        {
-          asChild: true,
-          loop: true,
-          trapped: trapFocus,
-          onMountAutoFocus: onOpenAutoFocus,
-          onUnmountAutoFocus: onCloseAutoFocus,
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            DismissableLayer,
-            {
-              role: "dialog",
-              id: context.contentId,
-              "aria-describedby": context.descriptionId,
-              "aria-labelledby": context.titleId,
-              "data-state": getState(context.open),
-              ...contentProps,
-              ref: composedRefs,
-              onDismiss: () => context.onOpenChange(false)
-            }
-          )
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TitleWarning, { titleId: context.titleId }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DescriptionWarning, { contentRef, descriptionId: context.descriptionId })
-      ] })
-    ] });
-  }
-);
-var TITLE_NAME = "DialogTitle";
-var DialogTitle = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...titleProps } = props;
-    const context = useDialogContext(TITLE_NAME, __scopeDialog);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.h2, { id: context.titleId, ...titleProps, ref: forwardedRef });
-  }
-);
-DialogTitle.displayName = TITLE_NAME;
-var DESCRIPTION_NAME = "DialogDescription";
-var DialogDescription = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...descriptionProps } = props;
-    const context = useDialogContext(DESCRIPTION_NAME, __scopeDialog);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.p, { id: context.descriptionId, ...descriptionProps, ref: forwardedRef });
-  }
-);
-DialogDescription.displayName = DESCRIPTION_NAME;
-var CLOSE_NAME = "DialogClose";
-var DialogClose = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...closeProps } = props;
-    const context = useDialogContext(CLOSE_NAME, __scopeDialog);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.button,
-      {
-        type: "button",
-        ...closeProps,
-        ref: forwardedRef,
-        onClick: composeEventHandlers(props.onClick, () => context.onOpenChange(false))
-      }
-    );
-  }
-);
-DialogClose.displayName = CLOSE_NAME;
-function getState(open2) {
-  return open2 ? "open" : "closed";
-}
-var TITLE_WARNING_NAME = "DialogTitleWarning";
-var [WarningProvider, useWarningContext] = createContext2(TITLE_WARNING_NAME, {
-  contentName: CONTENT_NAME,
-  titleName: TITLE_NAME,
-  docsSlug: "dialog"
-});
-var TitleWarning = ({ titleId }) => {
-  const titleWarningContext = useWarningContext(TITLE_WARNING_NAME);
-  const MESSAGE = `\`${titleWarningContext.contentName}\` requires a \`${titleWarningContext.titleName}\` for the component to be accessible for screen reader users.
-
-If you want to hide the \`${titleWarningContext.titleName}\`, you can wrap it with our VisuallyHidden component.
-
-For more information, see https://radix-ui.com/primitives/docs/components/${titleWarningContext.docsSlug}`;
-  reactExports.useEffect(() => {
-    if (titleId) {
-      const hasTitle = document.getElementById(titleId);
-      if (!hasTitle) console.error(MESSAGE);
-    }
-  }, [MESSAGE, titleId]);
-  return null;
-};
-var DESCRIPTION_WARNING_NAME = "DialogDescriptionWarning";
-var DescriptionWarning = ({ contentRef, descriptionId }) => {
-  const descriptionWarningContext = useWarningContext(DESCRIPTION_WARNING_NAME);
-  const MESSAGE = `Warning: Missing \`Description\` or \`aria-describedby={undefined}\` for {${descriptionWarningContext.contentName}}.`;
-  reactExports.useEffect(() => {
-    var _a2;
-    const describedById = (_a2 = contentRef.current) == null ? void 0 : _a2.getAttribute("aria-describedby");
-    if (descriptionId && describedById) {
-      const hasDescription = document.getElementById(descriptionId);
-      if (!hasDescription) console.warn(MESSAGE);
-    }
-  }, [MESSAGE, contentRef, descriptionId]);
-  return null;
-};
-var Root$1 = Dialog;
-var Portal$1 = DialogPortal;
-var Overlay$1 = DialogOverlay;
-var Content$1 = DialogContent;
-function __insertCSS(code) {
-  if (typeof document == "undefined") return;
-  let head2 = document.head || document.getElementsByTagName("head")[0];
-  let style = document.createElement("style");
-  style.type = "text/css";
-  head2.appendChild(style);
-  style.styleSheet ? style.styleSheet.cssText = code : style.appendChild(document.createTextNode(code));
-}
-const DrawerContext = React.createContext({
-  drawerRef: {
-    current: null
-  },
-  overlayRef: {
-    current: null
-  },
-  onPress: () => {
-  },
-  onRelease: () => {
-  },
-  onDrag: () => {
-  },
-  onNestedDrag: () => {
-  },
-  onNestedOpenChange: () => {
-  },
-  onNestedRelease: () => {
-  },
-  openProp: void 0,
-  dismissible: false,
-  isOpen: false,
-  isDragging: false,
-  keyboardIsOpen: {
-    current: false
-  },
-  snapPointsOffset: null,
-  snapPoints: null,
-  handleOnly: false,
-  modal: false,
-  shouldFade: false,
-  activeSnapPoint: null,
-  onOpenChange: () => {
-  },
-  setActiveSnapPoint: () => {
-  },
-  closeDrawer: () => {
-  },
-  direction: "bottom",
-  shouldAnimate: {
-    current: true
-  },
-  shouldScaleBackground: false,
-  setBackgroundColorOnScale: true,
-  noBodyStyles: false,
-  container: null,
-  autoFocus: false
-});
-const useDrawerContext = () => {
-  const context = React.useContext(DrawerContext);
-  if (!context) {
-    throw new Error("useDrawerContext must be used within a Drawer.Root");
-  }
-  return context;
-};
-__insertCSS("[data-vaul-drawer]{touch-action:none;will-change:transform;transition:transform .5s cubic-bezier(.32, .72, 0, 1);animation-duration:.5s;animation-timing-function:cubic-bezier(0.32,0.72,0,1)}[data-vaul-drawer][data-vaul-snap-points=false][data-vaul-drawer-direction=bottom][data-state=open]{animation-name:slideFromBottom}[data-vaul-drawer][data-vaul-snap-points=false][data-vaul-drawer-direction=bottom][data-state=closed]{animation-name:slideToBottom}[data-vaul-drawer][data-vaul-snap-points=false][data-vaul-drawer-direction=top][data-state=open]{animation-name:slideFromTop}[data-vaul-drawer][data-vaul-snap-points=false][data-vaul-drawer-direction=top][data-state=closed]{animation-name:slideToTop}[data-vaul-drawer][data-vaul-snap-points=false][data-vaul-drawer-direction=left][data-state=open]{animation-name:slideFromLeft}[data-vaul-drawer][data-vaul-snap-points=false][data-vaul-drawer-direction=left][data-state=closed]{animation-name:slideToLeft}[data-vaul-drawer][data-vaul-snap-points=false][data-vaul-drawer-direction=right][data-state=open]{animation-name:slideFromRight}[data-vaul-drawer][data-vaul-snap-points=false][data-vaul-drawer-direction=right][data-state=closed]{animation-name:slideToRight}[data-vaul-drawer][data-vaul-snap-points=true][data-vaul-drawer-direction=bottom]{transform:translate3d(0,var(--initial-transform,100%),0)}[data-vaul-drawer][data-vaul-snap-points=true][data-vaul-drawer-direction=top]{transform:translate3d(0,calc(var(--initial-transform,100%) * -1),0)}[data-vaul-drawer][data-vaul-snap-points=true][data-vaul-drawer-direction=left]{transform:translate3d(calc(var(--initial-transform,100%) * -1),0,0)}[data-vaul-drawer][data-vaul-snap-points=true][data-vaul-drawer-direction=right]{transform:translate3d(var(--initial-transform,100%),0,0)}[data-vaul-drawer][data-vaul-delayed-snap-points=true][data-vaul-drawer-direction=top]{transform:translate3d(0,var(--snap-point-height,0),0)}[data-vaul-drawer][data-vaul-delayed-snap-points=true][data-vaul-drawer-direction=bottom]{transform:translate3d(0,var(--snap-point-height,0),0)}[data-vaul-drawer][data-vaul-delayed-snap-points=true][data-vaul-drawer-direction=left]{transform:translate3d(var(--snap-point-height,0),0,0)}[data-vaul-drawer][data-vaul-delayed-snap-points=true][data-vaul-drawer-direction=right]{transform:translate3d(var(--snap-point-height,0),0,0)}[data-vaul-overlay][data-vaul-snap-points=false]{animation-duration:.5s;animation-timing-function:cubic-bezier(0.32,0.72,0,1)}[data-vaul-overlay][data-vaul-snap-points=false][data-state=open]{animation-name:fadeIn}[data-vaul-overlay][data-state=closed]{animation-name:fadeOut}[data-vaul-animate=false]{animation:none!important}[data-vaul-overlay][data-vaul-snap-points=true]{opacity:0;transition:opacity .5s cubic-bezier(.32, .72, 0, 1)}[data-vaul-overlay][data-vaul-snap-points=true]{opacity:1}[data-vaul-drawer]:not([data-vaul-custom-container=true])::after{content:'';position:absolute;background:inherit;background-color:inherit}[data-vaul-drawer][data-vaul-drawer-direction=top]::after{top:initial;bottom:100%;left:0;right:0;height:200%}[data-vaul-drawer][data-vaul-drawer-direction=bottom]::after{top:100%;bottom:initial;left:0;right:0;height:200%}[data-vaul-drawer][data-vaul-drawer-direction=left]::after{left:initial;right:100%;top:0;bottom:0;width:200%}[data-vaul-drawer][data-vaul-drawer-direction=right]::after{left:100%;right:initial;top:0;bottom:0;width:200%}[data-vaul-overlay][data-vaul-snap-points=true]:not([data-vaul-snap-points-overlay=true]):not(\n[data-state=closed]\n){opacity:0}[data-vaul-overlay][data-vaul-snap-points-overlay=true]{opacity:1}[data-vaul-handle]{display:block;position:relative;opacity:.7;background:#e2e2e4;margin-left:auto;margin-right:auto;height:5px;width:32px;border-radius:1rem;touch-action:pan-y}[data-vaul-handle]:active,[data-vaul-handle]:hover{opacity:1}[data-vaul-handle-hitarea]{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max(100%,2.75rem);height:max(100%,2.75rem);touch-action:inherit}@media (hover:hover) and (pointer:fine){[data-vaul-drawer]{user-select:none}}@media (pointer:fine){[data-vaul-handle-hitarea]:{width:100%;height:100%}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes fadeOut{to{opacity:0}}@keyframes slideFromBottom{from{transform:translate3d(0,var(--initial-transform,100%),0)}to{transform:translate3d(0,0,0)}}@keyframes slideToBottom{to{transform:translate3d(0,var(--initial-transform,100%),0)}}@keyframes slideFromTop{from{transform:translate3d(0,calc(var(--initial-transform,100%) * -1),0)}to{transform:translate3d(0,0,0)}}@keyframes slideToTop{to{transform:translate3d(0,calc(var(--initial-transform,100%) * -1),0)}}@keyframes slideFromLeft{from{transform:translate3d(calc(var(--initial-transform,100%) * -1),0,0)}to{transform:translate3d(0,0,0)}}@keyframes slideToLeft{to{transform:translate3d(calc(var(--initial-transform,100%) * -1),0,0)}}@keyframes slideFromRight{from{transform:translate3d(var(--initial-transform,100%),0,0)}to{transform:translate3d(0,0,0)}}@keyframes slideToRight{to{transform:translate3d(var(--initial-transform,100%),0,0)}}");
-function isMobileFirefox() {
-  const userAgent = navigator.userAgent;
-  return typeof window !== "undefined" && (/Firefox/.test(userAgent) && /Mobile/.test(userAgent) || // Android Firefox
-  /FxiOS/.test(userAgent));
-}
-function isMac() {
-  return testPlatform(/^Mac/);
-}
-function isIPhone() {
-  return testPlatform(/^iPhone/);
-}
-function isSafari() {
-  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-}
-function isIPad() {
-  return testPlatform(/^iPad/) || // iPadOS 13 lies and says it's a Mac, but we can distinguish by detecting touch support.
-  isMac() && navigator.maxTouchPoints > 1;
-}
-function isIOS() {
-  return isIPhone() || isIPad();
-}
-function testPlatform(re2) {
-  return typeof window !== "undefined" && window.navigator != null ? re2.test(window.navigator.platform) : void 0;
-}
-const KEYBOARD_BUFFER = 24;
-const useIsomorphicLayoutEffect = typeof window !== "undefined" ? reactExports.useLayoutEffect : reactExports.useEffect;
-function chain$1(...callbacks) {
-  return (...args) => {
-    for (let callback of callbacks) {
-      if (typeof callback === "function") {
-        callback(...args);
-      }
-    }
-  };
-}
-const visualViewport = typeof document !== "undefined" && window.visualViewport;
-function isScrollable(node) {
-  let style = window.getComputedStyle(node);
-  return /(auto|scroll)/.test(style.overflow + style.overflowX + style.overflowY);
-}
-function getScrollParent(node) {
-  if (isScrollable(node)) {
-    node = node.parentElement;
-  }
-  while (node && !isScrollable(node)) {
-    node = node.parentElement;
-  }
-  return node || document.scrollingElement || document.documentElement;
-}
-const nonTextInputTypes = /* @__PURE__ */ new Set([
-  "checkbox",
-  "radio",
-  "range",
-  "color",
-  "file",
-  "image",
-  "button",
-  "submit",
-  "reset"
-]);
-let preventScrollCount = 0;
-let restore;
-function usePreventScroll(options = {}) {
-  let { isDisabled } = options;
-  useIsomorphicLayoutEffect(() => {
-    if (isDisabled) {
-      return;
-    }
-    preventScrollCount++;
-    if (preventScrollCount === 1) {
-      if (isIOS()) {
-        restore = preventScrollMobileSafari();
-      }
-    }
-    return () => {
-      preventScrollCount--;
-      if (preventScrollCount === 0) {
-        restore == null ? void 0 : restore();
-      }
-    };
-  }, [
-    isDisabled
-  ]);
-}
-function preventScrollMobileSafari() {
-  let scrollable;
-  let lastY = 0;
-  let onTouchStart = (e2) => {
-    scrollable = getScrollParent(e2.target);
-    if (scrollable === document.documentElement && scrollable === document.body) {
-      return;
-    }
-    lastY = e2.changedTouches[0].pageY;
-  };
-  let onTouchMove = (e2) => {
-    if (!scrollable || scrollable === document.documentElement || scrollable === document.body) {
-      e2.preventDefault();
-      return;
-    }
-    let y = e2.changedTouches[0].pageY;
-    let scrollTop = scrollable.scrollTop;
-    let bottom = scrollable.scrollHeight - scrollable.clientHeight;
-    if (bottom === 0) {
-      return;
-    }
-    if (scrollTop <= 0 && y > lastY || scrollTop >= bottom && y < lastY) {
-      e2.preventDefault();
-    }
-    lastY = y;
-  };
-  let onTouchEnd = (e2) => {
-    let target = e2.target;
-    if (isInput(target) && target !== document.activeElement) {
-      e2.preventDefault();
-      target.style.transform = "translateY(-2000px)";
-      target.focus();
-      requestAnimationFrame(() => {
-        target.style.transform = "";
-      });
-    }
-  };
-  let onFocus = (e2) => {
-    let target = e2.target;
-    if (isInput(target)) {
-      target.style.transform = "translateY(-2000px)";
-      requestAnimationFrame(() => {
-        target.style.transform = "";
-        if (visualViewport) {
-          if (visualViewport.height < window.innerHeight) {
-            requestAnimationFrame(() => {
-              scrollIntoView(target);
-            });
-          } else {
-            visualViewport.addEventListener("resize", () => scrollIntoView(target), {
-              once: true
-            });
-          }
-        }
-      });
-    }
-  };
-  let onWindowScroll = () => {
-    window.scrollTo(0, 0);
-  };
-  let scrollX = window.pageXOffset;
-  let scrollY = window.pageYOffset;
-  let restoreStyles = chain$1(setStyle(document.documentElement, "paddingRight", `${window.innerWidth - document.documentElement.clientWidth}px`));
-  window.scrollTo(0, 0);
-  let removeEvents = chain$1(addEvent(document, "touchstart", onTouchStart, {
-    passive: false,
-    capture: true
-  }), addEvent(document, "touchmove", onTouchMove, {
-    passive: false,
-    capture: true
-  }), addEvent(document, "touchend", onTouchEnd, {
-    passive: false,
-    capture: true
-  }), addEvent(document, "focus", onFocus, true), addEvent(window, "scroll", onWindowScroll));
-  return () => {
-    restoreStyles();
-    removeEvents();
-    window.scrollTo(scrollX, scrollY);
-  };
-}
-function setStyle(element, style, value) {
-  let cur = element.style[style];
-  element.style[style] = value;
-  return () => {
-    element.style[style] = cur;
-  };
-}
-function addEvent(target, event, handler, options) {
-  target.addEventListener(event, handler, options);
-  return () => {
-    target.removeEventListener(event, handler, options);
-  };
-}
-function scrollIntoView(target) {
-  let root = document.scrollingElement || document.documentElement;
-  while (target && target !== root) {
-    let scrollable = getScrollParent(target);
-    if (scrollable !== document.documentElement && scrollable !== document.body && scrollable !== target) {
-      let scrollableTop = scrollable.getBoundingClientRect().top;
-      let targetTop = target.getBoundingClientRect().top;
-      let targetBottom = target.getBoundingClientRect().bottom;
-      const keyboardHeight = scrollable.getBoundingClientRect().bottom + KEYBOARD_BUFFER;
-      if (targetBottom > keyboardHeight) {
-        scrollable.scrollTop += targetTop - scrollableTop;
-      }
-    }
-    target = scrollable.parentElement;
-  }
-}
-function isInput(target) {
-  return target instanceof HTMLInputElement && !nonTextInputTypes.has(target.type) || target instanceof HTMLTextAreaElement || target instanceof HTMLElement && target.isContentEditable;
-}
-function setRef(ref, value) {
-  if (typeof ref === "function") {
-    ref(value);
-  } else if (ref !== null && ref !== void 0) {
-    ref.current = value;
-  }
-}
-function composeRefs(...refs) {
-  return (node) => refs.forEach((ref) => setRef(ref, node));
-}
-function useComposedRefs(...refs) {
-  return reactExports.useCallback(composeRefs(...refs), refs);
-}
-const cache = /* @__PURE__ */ new WeakMap();
-function set(el, styles2, ignoreCache = false) {
-  if (!el || !(el instanceof HTMLElement)) return;
-  let originalStyles = {};
-  Object.entries(styles2).forEach(([key, value]) => {
-    if (key.startsWith("--")) {
-      el.style.setProperty(key, value);
-      return;
-    }
-    originalStyles[key] = el.style[key];
-    el.style[key] = value;
-  });
-  if (ignoreCache) return;
-  cache.set(el, originalStyles);
-}
-function reset(el, prop) {
-  if (!el || !(el instanceof HTMLElement)) return;
-  let originalStyles = cache.get(el);
-  if (!originalStyles) {
-    return;
-  }
-  {
-    el.style[prop] = originalStyles[prop];
-  }
-}
-const isVertical = (direction) => {
-  switch (direction) {
-    case "top":
-    case "bottom":
-      return true;
-    case "left":
-    case "right":
-      return false;
-    default:
-      return direction;
-  }
-};
-function getTranslate(element, direction) {
-  if (!element) {
-    return null;
-  }
-  const style = window.getComputedStyle(element);
-  const transform = (
-    // @ts-ignore
-    style.transform || style.webkitTransform || style.mozTransform
-  );
-  let mat = transform.match(/^matrix3d\((.+)\)$/);
-  if (mat) {
-    return parseFloat(mat[1].split(", ")[isVertical(direction) ? 13 : 12]);
-  }
-  mat = transform.match(/^matrix\((.+)\)$/);
-  return mat ? parseFloat(mat[1].split(", ")[isVertical(direction) ? 5 : 4]) : null;
-}
-function dampenValue(v) {
-  return 8 * (Math.log(v + 1) - 2);
-}
-function assignStyle(element, style) {
-  if (!element) return () => {
-  };
-  const prevStyle = element.style.cssText;
-  Object.assign(element.style, style);
-  return () => {
-    element.style.cssText = prevStyle;
-  };
-}
-function chain$2(...fns) {
-  return (...args) => {
-    for (const fn of fns) {
-      if (typeof fn === "function") {
-        fn(...args);
-      }
-    }
-  };
-}
-const TRANSITIONS = {
-  DURATION: 0.5,
-  EASE: [
-    0.32,
-    0.72,
-    0,
-    1
-  ]
-};
-const VELOCITY_THRESHOLD = 0.4;
-const CLOSE_THRESHOLD = 0.25;
-const SCROLL_LOCK_TIMEOUT = 100;
-const BORDER_RADIUS = 8;
-const NESTED_DISPLACEMENT = 16;
-const WINDOW_TOP_OFFSET = 26;
-const DRAG_CLASS = "vaul-dragging";
-function useCallbackRef(callback) {
-  const callbackRef = React.useRef(callback);
-  React.useEffect(() => {
-    callbackRef.current = callback;
-  });
-  return React.useMemo(() => (...args) => callbackRef.current == null ? void 0 : callbackRef.current.call(callbackRef, ...args), []);
-}
-function useUncontrolledState({ defaultProp, onChange }) {
-  const uncontrolledState = React.useState(defaultProp);
-  const [value] = uncontrolledState;
-  const prevValueRef = React.useRef(value);
-  const handleChange = useCallbackRef(onChange);
-  React.useEffect(() => {
-    if (prevValueRef.current !== value) {
-      handleChange(value);
-      prevValueRef.current = value;
-    }
-  }, [
-    value,
-    prevValueRef,
-    handleChange
-  ]);
-  return uncontrolledState;
-}
-function useControllableState({ prop, defaultProp, onChange = () => {
-} }) {
-  const [uncontrolledProp, setUncontrolledProp] = useUncontrolledState({
-    defaultProp,
-    onChange
-  });
-  const isControlled = prop !== void 0;
-  const value = isControlled ? prop : uncontrolledProp;
-  const handleChange = useCallbackRef(onChange);
-  const setValue = React.useCallback((nextValue) => {
-    if (isControlled) {
-      const setter = nextValue;
-      const value2 = typeof nextValue === "function" ? setter(prop) : nextValue;
-      if (value2 !== prop) handleChange(value2);
-    } else {
-      setUncontrolledProp(nextValue);
-    }
-  }, [
-    isControlled,
-    prop,
-    setUncontrolledProp,
-    handleChange
-  ]);
-  return [
-    value,
-    setValue
-  ];
-}
-function useSnapPoints({ activeSnapPointProp, setActiveSnapPointProp, snapPoints, drawerRef, overlayRef, fadeFromIndex, onSnapPointChange, direction = "bottom", container, snapToSequentialPoint }) {
-  const [activeSnapPoint, setActiveSnapPoint] = useControllableState({
-    prop: activeSnapPointProp,
-    defaultProp: snapPoints == null ? void 0 : snapPoints[0],
-    onChange: setActiveSnapPointProp
-  });
-  const [windowDimensions, setWindowDimensions] = React.useState(typeof window !== "undefined" ? {
-    innerWidth: window.innerWidth,
-    innerHeight: window.innerHeight
-  } : void 0);
-  React.useEffect(() => {
-    function onResize() {
-      setWindowDimensions({
-        innerWidth: window.innerWidth,
-        innerHeight: window.innerHeight
-      });
-    }
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  const isLastSnapPoint = React.useMemo(() => activeSnapPoint === (snapPoints == null ? void 0 : snapPoints[snapPoints.length - 1]) || null, [
-    snapPoints,
-    activeSnapPoint
-  ]);
-  const activeSnapPointIndex = React.useMemo(() => {
-    var _snapPoints_findIndex;
-    return (_snapPoints_findIndex = snapPoints == null ? void 0 : snapPoints.findIndex((snapPoint) => snapPoint === activeSnapPoint)) != null ? _snapPoints_findIndex : null;
-  }, [
-    snapPoints,
-    activeSnapPoint
-  ]);
-  const shouldFade = snapPoints && snapPoints.length > 0 && (fadeFromIndex || fadeFromIndex === 0) && !Number.isNaN(fadeFromIndex) && snapPoints[fadeFromIndex] === activeSnapPoint || !snapPoints;
-  const snapPointsOffset = React.useMemo(() => {
-    const containerSize = container ? {
-      width: container.getBoundingClientRect().width,
-      height: container.getBoundingClientRect().height
-    } : typeof window !== "undefined" ? {
-      width: window.innerWidth,
-      height: window.innerHeight
-    } : {
-      width: 0,
-      height: 0
-    };
-    var _snapPoints_map;
-    return (_snapPoints_map = snapPoints == null ? void 0 : snapPoints.map((snapPoint) => {
-      const isPx = typeof snapPoint === "string";
-      let snapPointAsNumber = 0;
-      if (isPx) {
-        snapPointAsNumber = parseInt(snapPoint, 10);
-      }
-      if (isVertical(direction)) {
-        const height = isPx ? snapPointAsNumber : windowDimensions ? snapPoint * containerSize.height : 0;
-        if (windowDimensions) {
-          return direction === "bottom" ? containerSize.height - height : -containerSize.height + height;
-        }
-        return height;
-      }
-      const width = isPx ? snapPointAsNumber : windowDimensions ? snapPoint * containerSize.width : 0;
-      if (windowDimensions) {
-        return direction === "right" ? containerSize.width - width : -containerSize.width + width;
-      }
-      return width;
-    })) != null ? _snapPoints_map : [];
-  }, [
-    snapPoints,
-    windowDimensions,
-    container
-  ]);
-  const activeSnapPointOffset = React.useMemo(() => activeSnapPointIndex !== null ? snapPointsOffset == null ? void 0 : snapPointsOffset[activeSnapPointIndex] : null, [
-    snapPointsOffset,
-    activeSnapPointIndex
-  ]);
-  const snapToPoint = React.useCallback((dimension) => {
-    var _snapPointsOffset_findIndex;
-    const newSnapPointIndex = (_snapPointsOffset_findIndex = snapPointsOffset == null ? void 0 : snapPointsOffset.findIndex((snapPointDim) => snapPointDim === dimension)) != null ? _snapPointsOffset_findIndex : null;
-    onSnapPointChange(newSnapPointIndex);
-    set(drawerRef.current, {
-      transition: `transform ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(",")})`,
-      transform: isVertical(direction) ? `translate3d(0, ${dimension}px, 0)` : `translate3d(${dimension}px, 0, 0)`
-    });
-    if (snapPointsOffset && newSnapPointIndex !== snapPointsOffset.length - 1 && fadeFromIndex !== void 0 && newSnapPointIndex !== fadeFromIndex && newSnapPointIndex < fadeFromIndex) {
-      set(overlayRef.current, {
-        transition: `opacity ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(",")})`,
-        opacity: "0"
-      });
-    } else {
-      set(overlayRef.current, {
-        transition: `opacity ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(",")})`,
-        opacity: "1"
-      });
-    }
-    setActiveSnapPoint(snapPoints == null ? void 0 : snapPoints[Math.max(newSnapPointIndex, 0)]);
-  }, [
-    drawerRef.current,
-    snapPoints,
-    snapPointsOffset,
-    fadeFromIndex,
-    overlayRef,
-    setActiveSnapPoint
-  ]);
-  React.useEffect(() => {
-    if (activeSnapPoint || activeSnapPointProp) {
-      var _snapPoints_findIndex;
-      const newIndex = (_snapPoints_findIndex = snapPoints == null ? void 0 : snapPoints.findIndex((snapPoint) => snapPoint === activeSnapPointProp || snapPoint === activeSnapPoint)) != null ? _snapPoints_findIndex : -1;
-      if (snapPointsOffset && newIndex !== -1 && typeof snapPointsOffset[newIndex] === "number") {
-        snapToPoint(snapPointsOffset[newIndex]);
-      }
-    }
-  }, [
-    activeSnapPoint,
-    activeSnapPointProp,
-    snapPoints,
-    snapPointsOffset,
-    snapToPoint
-  ]);
-  function onRelease({ draggedDistance, closeDrawer, velocity, dismissible }) {
-    if (fadeFromIndex === void 0) return;
-    const currentPosition = direction === "bottom" || direction === "right" ? (activeSnapPointOffset != null ? activeSnapPointOffset : 0) - draggedDistance : (activeSnapPointOffset != null ? activeSnapPointOffset : 0) + draggedDistance;
-    const isOverlaySnapPoint = activeSnapPointIndex === fadeFromIndex - 1;
-    const isFirst = activeSnapPointIndex === 0;
-    const hasDraggedUp = draggedDistance > 0;
-    if (isOverlaySnapPoint) {
-      set(overlayRef.current, {
-        transition: `opacity ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(",")})`
-      });
-    }
-    if (!snapToSequentialPoint && velocity > 2 && !hasDraggedUp) {
-      if (dismissible) closeDrawer();
-      else snapToPoint(snapPointsOffset[0]);
-      return;
-    }
-    if (!snapToSequentialPoint && velocity > 2 && hasDraggedUp && snapPointsOffset && snapPoints) {
-      snapToPoint(snapPointsOffset[snapPoints.length - 1]);
-      return;
-    }
-    const closestSnapPoint = snapPointsOffset == null ? void 0 : snapPointsOffset.reduce((prev, curr) => {
-      if (typeof prev !== "number" || typeof curr !== "number") return prev;
-      return Math.abs(curr - currentPosition) < Math.abs(prev - currentPosition) ? curr : prev;
-    });
-    const dim = isVertical(direction) ? window.innerHeight : window.innerWidth;
-    if (velocity > VELOCITY_THRESHOLD && Math.abs(draggedDistance) < dim * 0.4) {
-      const dragDirection = hasDraggedUp ? 1 : -1;
-      if (dragDirection > 0 && isLastSnapPoint && snapPoints) {
-        snapToPoint(snapPointsOffset[snapPoints.length - 1]);
-        return;
-      }
-      if (isFirst && dragDirection < 0 && dismissible) {
-        closeDrawer();
-      }
-      if (activeSnapPointIndex === null) return;
-      snapToPoint(snapPointsOffset[activeSnapPointIndex + dragDirection]);
-      return;
-    }
-    snapToPoint(closestSnapPoint);
-  }
-  function onDrag({ draggedDistance }) {
-    if (activeSnapPointOffset === null) return;
-    const newValue = direction === "bottom" || direction === "right" ? activeSnapPointOffset - draggedDistance : activeSnapPointOffset + draggedDistance;
-    if ((direction === "bottom" || direction === "right") && newValue < snapPointsOffset[snapPointsOffset.length - 1]) {
-      return;
-    }
-    if ((direction === "top" || direction === "left") && newValue > snapPointsOffset[snapPointsOffset.length - 1]) {
-      return;
-    }
-    set(drawerRef.current, {
-      transform: isVertical(direction) ? `translate3d(0, ${newValue}px, 0)` : `translate3d(${newValue}px, 0, 0)`
-    });
-  }
-  function getPercentageDragged(absDraggedDistance, isDraggingDown) {
-    if (!snapPoints || typeof activeSnapPointIndex !== "number" || !snapPointsOffset || fadeFromIndex === void 0) return null;
-    const isOverlaySnapPoint = activeSnapPointIndex === fadeFromIndex - 1;
-    const isOverlaySnapPointOrHigher = activeSnapPointIndex >= fadeFromIndex;
-    if (isOverlaySnapPointOrHigher && isDraggingDown) {
-      return 0;
-    }
-    if (isOverlaySnapPoint && !isDraggingDown) return 1;
-    if (!shouldFade && !isOverlaySnapPoint) return null;
-    const targetSnapPointIndex = isOverlaySnapPoint ? activeSnapPointIndex + 1 : activeSnapPointIndex - 1;
-    const snapPointDistance = isOverlaySnapPoint ? snapPointsOffset[targetSnapPointIndex] - snapPointsOffset[targetSnapPointIndex - 1] : snapPointsOffset[targetSnapPointIndex + 1] - snapPointsOffset[targetSnapPointIndex];
-    const percentageDragged = absDraggedDistance / Math.abs(snapPointDistance);
-    if (isOverlaySnapPoint) {
-      return 1 - percentageDragged;
-    } else {
-      return percentageDragged;
-    }
-  }
-  return {
-    isLastSnapPoint,
-    activeSnapPoint,
-    shouldFade,
-    getPercentageDragged,
-    setActiveSnapPoint,
-    activeSnapPointIndex,
-    onRelease,
-    onDrag,
-    snapPointsOffset
-  };
-}
-const noop = () => () => {
-};
-function useScaleBackground() {
-  const { direction, isOpen, shouldScaleBackground, setBackgroundColorOnScale, noBodyStyles } = useDrawerContext();
-  const timeoutIdRef = React.useRef(null);
-  const initialBackgroundColor = reactExports.useMemo(() => document.body.style.backgroundColor, []);
-  function getScale() {
-    return (window.innerWidth - WINDOW_TOP_OFFSET) / window.innerWidth;
-  }
-  React.useEffect(() => {
-    if (isOpen && shouldScaleBackground) {
-      if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
-      const wrapper = document.querySelector("[data-vaul-drawer-wrapper]") || document.querySelector("[vaul-drawer-wrapper]");
-      if (!wrapper) return;
-      chain$2(setBackgroundColorOnScale && !noBodyStyles ? assignStyle(document.body, {
-        background: "black"
-      }) : noop, assignStyle(wrapper, {
-        transformOrigin: isVertical(direction) ? "top" : "left",
-        transitionProperty: "transform, border-radius",
-        transitionDuration: `${TRANSITIONS.DURATION}s`,
-        transitionTimingFunction: `cubic-bezier(${TRANSITIONS.EASE.join(",")})`
-      }));
-      const wrapperStylesCleanup = assignStyle(wrapper, {
-        borderRadius: `${BORDER_RADIUS}px`,
-        overflow: "hidden",
-        ...isVertical(direction) ? {
-          transform: `scale(${getScale()}) translate3d(0, calc(env(safe-area-inset-top) + 14px), 0)`
-        } : {
-          transform: `scale(${getScale()}) translate3d(calc(env(safe-area-inset-top) + 14px), 0, 0)`
-        }
-      });
-      return () => {
-        wrapperStylesCleanup();
-        timeoutIdRef.current = window.setTimeout(() => {
-          if (initialBackgroundColor) {
-            document.body.style.background = initialBackgroundColor;
-          } else {
-            document.body.style.removeProperty("background");
-          }
-        }, TRANSITIONS.DURATION * 1e3);
-      };
-    }
-  }, [
-    isOpen,
-    shouldScaleBackground,
-    initialBackgroundColor
-  ]);
-}
-let previousBodyPosition = null;
-function usePositionFixed({ isOpen, modal, nested, hasBeenOpened, preventScrollRestoration, noBodyStyles }) {
-  const [activeUrl, setActiveUrl] = React.useState(() => typeof window !== "undefined" ? window.location.href : "");
-  const scrollPos = React.useRef(0);
-  const setPositionFixed = React.useCallback(() => {
-    if (!isSafari()) return;
-    if (previousBodyPosition === null && isOpen && !noBodyStyles) {
-      previousBodyPosition = {
-        position: document.body.style.position,
-        top: document.body.style.top,
-        left: document.body.style.left,
-        height: document.body.style.height,
-        right: "unset"
-      };
-      const { scrollX, innerHeight } = window;
-      document.body.style.setProperty("position", "fixed", "important");
-      Object.assign(document.body.style, {
-        top: `${-scrollPos.current}px`,
-        left: `${-scrollX}px`,
-        right: "0px",
-        height: "auto"
-      });
-      window.setTimeout(() => window.requestAnimationFrame(() => {
-        const bottomBarHeight = innerHeight - window.innerHeight;
-        if (bottomBarHeight && scrollPos.current >= innerHeight) {
-          document.body.style.top = `${-(scrollPos.current + bottomBarHeight)}px`;
-        }
-      }), 300);
-    }
-  }, [
-    isOpen
-  ]);
-  const restorePositionSetting = React.useCallback(() => {
-    if (!isSafari()) return;
-    if (previousBodyPosition !== null && !noBodyStyles) {
-      const y = -parseInt(document.body.style.top, 10);
-      const x = -parseInt(document.body.style.left, 10);
-      Object.assign(document.body.style, previousBodyPosition);
-      window.requestAnimationFrame(() => {
-        if (preventScrollRestoration && activeUrl !== window.location.href) {
-          setActiveUrl(window.location.href);
-          return;
-        }
-        window.scrollTo(x, y);
-      });
-      previousBodyPosition = null;
-    }
-  }, [
-    activeUrl
-  ]);
-  React.useEffect(() => {
-    function onScroll() {
-      scrollPos.current = window.scrollY;
-    }
-    onScroll();
-    window.addEventListener("scroll", onScroll);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, []);
-  React.useEffect(() => {
-    if (!modal) return;
-    return () => {
-      if (typeof document === "undefined") return;
-      const hasDrawerOpened = !!document.querySelector("[data-vaul-drawer]");
-      if (hasDrawerOpened) return;
-      restorePositionSetting();
-    };
-  }, [
-    modal,
-    restorePositionSetting
-  ]);
-  React.useEffect(() => {
-    if (nested || !hasBeenOpened) return;
-    if (isOpen) {
-      const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
-      !isStandalone && setPositionFixed();
-      if (!modal) {
-        window.setTimeout(() => {
-          restorePositionSetting();
-        }, 500);
-      }
-    } else {
-      restorePositionSetting();
-    }
-  }, [
-    isOpen,
-    hasBeenOpened,
-    activeUrl,
-    modal,
-    nested,
-    setPositionFixed,
-    restorePositionSetting
-  ]);
-  return {
-    restorePositionSetting
-  };
-}
-function Root({ open: openProp, onOpenChange, children, onDrag: onDragProp, onRelease: onReleaseProp, snapPoints, shouldScaleBackground = false, setBackgroundColorOnScale = true, closeThreshold = CLOSE_THRESHOLD, scrollLockTimeout = SCROLL_LOCK_TIMEOUT, dismissible = true, handleOnly = false, fadeFromIndex = snapPoints && snapPoints.length - 1, activeSnapPoint: activeSnapPointProp, setActiveSnapPoint: setActiveSnapPointProp, fixed, modal = true, onClose, nested, noBodyStyles = false, direction = "bottom", defaultOpen = false, disablePreventScroll = true, snapToSequentialPoint = false, preventScrollRestoration = false, repositionInputs = true, onAnimationEnd, container, autoFocus = false }) {
-  var _drawerRef_current, _drawerRef_current1;
-  const [isOpen = false, setIsOpen] = useControllableState({
-    defaultProp: defaultOpen,
-    prop: openProp,
-    onChange: (o) => {
-      onOpenChange == null ? void 0 : onOpenChange(o);
-      if (!o && !nested) {
-        restorePositionSetting();
-      }
-      setTimeout(() => {
-        onAnimationEnd == null ? void 0 : onAnimationEnd(o);
-      }, TRANSITIONS.DURATION * 1e3);
-      if (o && !modal) {
-        if (typeof window !== "undefined") {
-          window.requestAnimationFrame(() => {
-            document.body.style.pointerEvents = "auto";
-          });
-        }
-      }
-      if (!o) {
-        document.body.style.pointerEvents = "auto";
-      }
-    }
-  });
-  const [hasBeenOpened, setHasBeenOpened] = React.useState(false);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [justReleased, setJustReleased] = React.useState(false);
-  const overlayRef = React.useRef(null);
-  const openTime = React.useRef(null);
-  const dragStartTime = React.useRef(null);
-  const dragEndTime = React.useRef(null);
-  const lastTimeDragPrevented = React.useRef(null);
-  const isAllowedToDrag = React.useRef(false);
-  const nestedOpenChangeTimer = React.useRef(null);
-  const pointerStart = React.useRef(0);
-  const keyboardIsOpen = React.useRef(false);
-  const shouldAnimate = React.useRef(!defaultOpen);
-  const previousDiffFromInitial = React.useRef(0);
-  const drawerRef = React.useRef(null);
-  const drawerHeightRef = React.useRef(((_drawerRef_current = drawerRef.current) == null ? void 0 : _drawerRef_current.getBoundingClientRect().height) || 0);
-  const drawerWidthRef = React.useRef(((_drawerRef_current1 = drawerRef.current) == null ? void 0 : _drawerRef_current1.getBoundingClientRect().width) || 0);
-  const initialDrawerHeight = React.useRef(0);
-  const onSnapPointChange = React.useCallback((activeSnapPointIndex2) => {
-    if (snapPoints && activeSnapPointIndex2 === snapPointsOffset.length - 1) openTime.current = /* @__PURE__ */ new Date();
-  }, []);
-  const { activeSnapPoint, activeSnapPointIndex, setActiveSnapPoint, onRelease: onReleaseSnapPoints, snapPointsOffset, onDrag: onDragSnapPoints, shouldFade, getPercentageDragged: getSnapPointsPercentageDragged } = useSnapPoints({
-    snapPoints,
-    activeSnapPointProp,
-    setActiveSnapPointProp,
-    drawerRef,
-    fadeFromIndex,
-    overlayRef,
-    onSnapPointChange,
-    direction,
-    container,
-    snapToSequentialPoint
-  });
-  usePreventScroll({
-    isDisabled: !isOpen || isDragging || !modal || justReleased || !hasBeenOpened || !repositionInputs || !disablePreventScroll
-  });
-  const { restorePositionSetting } = usePositionFixed({
-    isOpen,
-    modal,
-    nested: nested != null ? nested : false,
-    hasBeenOpened,
-    preventScrollRestoration,
-    noBodyStyles
-  });
-  function getScale() {
-    return (window.innerWidth - WINDOW_TOP_OFFSET) / window.innerWidth;
-  }
-  function onPress(event) {
-    var _drawerRef_current2, _drawerRef_current12;
-    if (!dismissible && !snapPoints) return;
-    if (drawerRef.current && !drawerRef.current.contains(event.target)) return;
-    drawerHeightRef.current = ((_drawerRef_current2 = drawerRef.current) == null ? void 0 : _drawerRef_current2.getBoundingClientRect().height) || 0;
-    drawerWidthRef.current = ((_drawerRef_current12 = drawerRef.current) == null ? void 0 : _drawerRef_current12.getBoundingClientRect().width) || 0;
-    setIsDragging(true);
-    dragStartTime.current = /* @__PURE__ */ new Date();
-    if (isIOS()) {
-      window.addEventListener("touchend", () => isAllowedToDrag.current = false, {
-        once: true
-      });
-    }
-    event.target.setPointerCapture(event.pointerId);
-    pointerStart.current = isVertical(direction) ? event.pageY : event.pageX;
-  }
-  function shouldDrag(el, isDraggingInDirection) {
-    var _window_getSelection;
-    let element = el;
-    const highlightedText = (_window_getSelection = window.getSelection()) == null ? void 0 : _window_getSelection.toString();
-    const swipeAmount = drawerRef.current ? getTranslate(drawerRef.current, direction) : null;
-    const date = /* @__PURE__ */ new Date();
-    if (element.tagName === "SELECT") {
-      return false;
-    }
-    if (element.hasAttribute("data-vaul-no-drag") || element.closest("[data-vaul-no-drag]")) {
-      return false;
-    }
-    if (direction === "right" || direction === "left") {
-      return true;
-    }
-    if (openTime.current && date.getTime() - openTime.current.getTime() < 500) {
-      return false;
-    }
-    if (swipeAmount !== null) {
-      if (direction === "bottom" ? swipeAmount > 0 : swipeAmount < 0) {
-        return true;
-      }
-    }
-    if (highlightedText && highlightedText.length > 0) {
-      return false;
-    }
-    if (lastTimeDragPrevented.current && date.getTime() - lastTimeDragPrevented.current.getTime() < scrollLockTimeout && swipeAmount === 0) {
-      lastTimeDragPrevented.current = date;
-      return false;
-    }
-    if (isDraggingInDirection) {
-      lastTimeDragPrevented.current = date;
-      return false;
-    }
-    while (element) {
-      if (element.scrollHeight > element.clientHeight) {
-        if (element.scrollTop !== 0) {
-          lastTimeDragPrevented.current = /* @__PURE__ */ new Date();
-          return false;
-        }
-        if (element.getAttribute("role") === "dialog") {
-          return true;
-        }
-      }
-      element = element.parentNode;
-    }
-    return true;
-  }
-  function onDrag(event) {
-    if (!drawerRef.current) {
-      return;
-    }
-    if (isDragging) {
-      const directionMultiplier = direction === "bottom" || direction === "right" ? 1 : -1;
-      const draggedDistance = (pointerStart.current - (isVertical(direction) ? event.pageY : event.pageX)) * directionMultiplier;
-      const isDraggingInDirection = draggedDistance > 0;
-      const noCloseSnapPointsPreCondition = snapPoints && !dismissible && !isDraggingInDirection;
-      if (noCloseSnapPointsPreCondition && activeSnapPointIndex === 0) return;
-      const absDraggedDistance = Math.abs(draggedDistance);
-      const wrapper = document.querySelector("[data-vaul-drawer-wrapper]");
-      const drawerDimension = direction === "bottom" || direction === "top" ? drawerHeightRef.current : drawerWidthRef.current;
-      let percentageDragged = absDraggedDistance / drawerDimension;
-      const snapPointPercentageDragged = getSnapPointsPercentageDragged(absDraggedDistance, isDraggingInDirection);
-      if (snapPointPercentageDragged !== null) {
-        percentageDragged = snapPointPercentageDragged;
-      }
-      if (noCloseSnapPointsPreCondition && percentageDragged >= 1) {
-        return;
-      }
-      if (!isAllowedToDrag.current && !shouldDrag(event.target, isDraggingInDirection)) return;
-      drawerRef.current.classList.add(DRAG_CLASS);
-      isAllowedToDrag.current = true;
-      set(drawerRef.current, {
-        transition: "none"
-      });
-      set(overlayRef.current, {
-        transition: "none"
-      });
-      if (snapPoints) {
-        onDragSnapPoints({
-          draggedDistance
-        });
-      }
-      if (isDraggingInDirection && !snapPoints) {
-        const dampenedDraggedDistance = dampenValue(draggedDistance);
-        const translateValue = Math.min(dampenedDraggedDistance * -1, 0) * directionMultiplier;
-        set(drawerRef.current, {
-          transform: isVertical(direction) ? `translate3d(0, ${translateValue}px, 0)` : `translate3d(${translateValue}px, 0, 0)`
-        });
-        return;
-      }
-      const opacityValue = 1 - percentageDragged;
-      if (shouldFade || fadeFromIndex && activeSnapPointIndex === fadeFromIndex - 1) {
-        onDragProp == null ? void 0 : onDragProp(event, percentageDragged);
-        set(overlayRef.current, {
-          opacity: `${opacityValue}`,
-          transition: "none"
-        }, true);
-      }
-      if (wrapper && overlayRef.current && shouldScaleBackground) {
-        const scaleValue = Math.min(getScale() + percentageDragged * (1 - getScale()), 1);
-        const borderRadiusValue = 8 - percentageDragged * 8;
-        const translateValue = Math.max(0, 14 - percentageDragged * 14);
-        set(wrapper, {
-          borderRadius: `${borderRadiusValue}px`,
-          transform: isVertical(direction) ? `scale(${scaleValue}) translate3d(0, ${translateValue}px, 0)` : `scale(${scaleValue}) translate3d(${translateValue}px, 0, 0)`,
-          transition: "none"
-        }, true);
-      }
-      if (!snapPoints) {
-        const translateValue = absDraggedDistance * directionMultiplier;
-        set(drawerRef.current, {
-          transform: isVertical(direction) ? `translate3d(0, ${translateValue}px, 0)` : `translate3d(${translateValue}px, 0, 0)`
-        });
-      }
-    }
-  }
-  React.useEffect(() => {
-    window.requestAnimationFrame(() => {
-      shouldAnimate.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    var _window_visualViewport;
-    function onVisualViewportChange() {
-      if (!drawerRef.current || !repositionInputs) return;
-      const focusedElement = document.activeElement;
-      if (isInput(focusedElement) || keyboardIsOpen.current) {
-        var _window_visualViewport2;
-        const visualViewportHeight = ((_window_visualViewport2 = window.visualViewport) == null ? void 0 : _window_visualViewport2.height) || 0;
-        const totalHeight = window.innerHeight;
-        let diffFromInitial = totalHeight - visualViewportHeight;
-        const drawerHeight = drawerRef.current.getBoundingClientRect().height || 0;
-        const isTallEnough = drawerHeight > totalHeight * 0.8;
-        if (!initialDrawerHeight.current) {
-          initialDrawerHeight.current = drawerHeight;
-        }
-        const offsetFromTop = drawerRef.current.getBoundingClientRect().top;
-        if (Math.abs(previousDiffFromInitial.current - diffFromInitial) > 60) {
-          keyboardIsOpen.current = !keyboardIsOpen.current;
-        }
-        if (snapPoints && snapPoints.length > 0 && snapPointsOffset && activeSnapPointIndex) {
-          const activeSnapPointHeight = snapPointsOffset[activeSnapPointIndex] || 0;
-          diffFromInitial += activeSnapPointHeight;
-        }
-        previousDiffFromInitial.current = diffFromInitial;
-        if (drawerHeight > visualViewportHeight || keyboardIsOpen.current) {
-          const height = drawerRef.current.getBoundingClientRect().height;
-          let newDrawerHeight = height;
-          if (height > visualViewportHeight) {
-            newDrawerHeight = visualViewportHeight - (isTallEnough ? offsetFromTop : WINDOW_TOP_OFFSET);
-          }
-          if (fixed) {
-            drawerRef.current.style.height = `${height - Math.max(diffFromInitial, 0)}px`;
-          } else {
-            drawerRef.current.style.height = `${Math.max(newDrawerHeight, visualViewportHeight - offsetFromTop)}px`;
-          }
-        } else if (!isMobileFirefox()) {
-          drawerRef.current.style.height = `${initialDrawerHeight.current}px`;
-        }
-        if (snapPoints && snapPoints.length > 0 && !keyboardIsOpen.current) {
-          drawerRef.current.style.bottom = `0px`;
-        } else {
-          drawerRef.current.style.bottom = `${Math.max(diffFromInitial, 0)}px`;
-        }
-      }
-    }
-    (_window_visualViewport = window.visualViewport) == null ? void 0 : _window_visualViewport.addEventListener("resize", onVisualViewportChange);
-    return () => {
-      var _window_visualViewport2;
-      return (_window_visualViewport2 = window.visualViewport) == null ? void 0 : _window_visualViewport2.removeEventListener("resize", onVisualViewportChange);
-    };
-  }, [
-    activeSnapPointIndex,
-    snapPoints,
-    snapPointsOffset
-  ]);
-  function closeDrawer(fromWithin) {
-    cancelDrag();
-    onClose == null ? void 0 : onClose();
-    if (!fromWithin) {
-      setIsOpen(false);
-    }
-    setTimeout(() => {
-      if (snapPoints) {
-        setActiveSnapPoint(snapPoints[0]);
-      }
-    }, TRANSITIONS.DURATION * 1e3);
-  }
-  function resetDrawer() {
-    if (!drawerRef.current) return;
-    const wrapper = document.querySelector("[data-vaul-drawer-wrapper]");
-    const currentSwipeAmount = getTranslate(drawerRef.current, direction);
-    set(drawerRef.current, {
-      transform: "translate3d(0, 0, 0)",
-      transition: `transform ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(",")})`
-    });
-    set(overlayRef.current, {
-      transition: `opacity ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(",")})`,
-      opacity: "1"
-    });
-    if (shouldScaleBackground && currentSwipeAmount && currentSwipeAmount > 0 && isOpen) {
-      set(wrapper, {
-        borderRadius: `${BORDER_RADIUS}px`,
-        overflow: "hidden",
-        ...isVertical(direction) ? {
-          transform: `scale(${getScale()}) translate3d(0, calc(env(safe-area-inset-top) + 14px), 0)`,
-          transformOrigin: "top"
-        } : {
-          transform: `scale(${getScale()}) translate3d(calc(env(safe-area-inset-top) + 14px), 0, 0)`,
-          transformOrigin: "left"
-        },
-        transitionProperty: "transform, border-radius",
-        transitionDuration: `${TRANSITIONS.DURATION}s`,
-        transitionTimingFunction: `cubic-bezier(${TRANSITIONS.EASE.join(",")})`
-      }, true);
-    }
-  }
-  function cancelDrag() {
-    if (!isDragging || !drawerRef.current) return;
-    drawerRef.current.classList.remove(DRAG_CLASS);
-    isAllowedToDrag.current = false;
-    setIsDragging(false);
-    dragEndTime.current = /* @__PURE__ */ new Date();
-  }
-  function onRelease(event) {
-    if (!isDragging || !drawerRef.current) return;
-    drawerRef.current.classList.remove(DRAG_CLASS);
-    isAllowedToDrag.current = false;
-    setIsDragging(false);
-    dragEndTime.current = /* @__PURE__ */ new Date();
-    const swipeAmount = getTranslate(drawerRef.current, direction);
-    if (!event || !shouldDrag(event.target, false) || !swipeAmount || Number.isNaN(swipeAmount)) return;
-    if (dragStartTime.current === null) return;
-    const timeTaken = dragEndTime.current.getTime() - dragStartTime.current.getTime();
-    const distMoved = pointerStart.current - (isVertical(direction) ? event.pageY : event.pageX);
-    const velocity = Math.abs(distMoved) / timeTaken;
-    if (velocity > 0.05) {
-      setJustReleased(true);
-      setTimeout(() => {
-        setJustReleased(false);
-      }, 200);
-    }
-    if (snapPoints) {
-      const directionMultiplier = direction === "bottom" || direction === "right" ? 1 : -1;
-      onReleaseSnapPoints({
-        draggedDistance: distMoved * directionMultiplier,
-        closeDrawer,
-        velocity,
-        dismissible
-      });
-      onReleaseProp == null ? void 0 : onReleaseProp(event, true);
-      return;
-    }
-    if (direction === "bottom" || direction === "right" ? distMoved > 0 : distMoved < 0) {
-      resetDrawer();
-      onReleaseProp == null ? void 0 : onReleaseProp(event, true);
-      return;
-    }
-    if (velocity > VELOCITY_THRESHOLD) {
-      closeDrawer();
-      onReleaseProp == null ? void 0 : onReleaseProp(event, false);
-      return;
-    }
-    var _drawerRef_current_getBoundingClientRect_height;
-    const visibleDrawerHeight = Math.min((_drawerRef_current_getBoundingClientRect_height = drawerRef.current.getBoundingClientRect().height) != null ? _drawerRef_current_getBoundingClientRect_height : 0, window.innerHeight);
-    var _drawerRef_current_getBoundingClientRect_width;
-    const visibleDrawerWidth = Math.min((_drawerRef_current_getBoundingClientRect_width = drawerRef.current.getBoundingClientRect().width) != null ? _drawerRef_current_getBoundingClientRect_width : 0, window.innerWidth);
-    const isHorizontalSwipe = direction === "left" || direction === "right";
-    if (Math.abs(swipeAmount) >= (isHorizontalSwipe ? visibleDrawerWidth : visibleDrawerHeight) * closeThreshold) {
-      closeDrawer();
-      onReleaseProp == null ? void 0 : onReleaseProp(event, false);
-      return;
-    }
-    onReleaseProp == null ? void 0 : onReleaseProp(event, true);
-    resetDrawer();
-  }
-  React.useEffect(() => {
-    if (isOpen) {
-      set(document.documentElement, {
-        scrollBehavior: "auto"
-      });
-      openTime.current = /* @__PURE__ */ new Date();
-    }
-    return () => {
-      reset(document.documentElement, "scrollBehavior");
-    };
-  }, [
-    isOpen
-  ]);
-  function onNestedOpenChange(o) {
-    const scale = o ? (window.innerWidth - NESTED_DISPLACEMENT) / window.innerWidth : 1;
-    const initialTranslate = o ? -16 : 0;
-    if (nestedOpenChangeTimer.current) {
-      window.clearTimeout(nestedOpenChangeTimer.current);
-    }
-    set(drawerRef.current, {
-      transition: `transform ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(",")})`,
-      transform: isVertical(direction) ? `scale(${scale}) translate3d(0, ${initialTranslate}px, 0)` : `scale(${scale}) translate3d(${initialTranslate}px, 0, 0)`
-    });
-    if (!o && drawerRef.current) {
-      nestedOpenChangeTimer.current = setTimeout(() => {
-        const translateValue = getTranslate(drawerRef.current, direction);
-        set(drawerRef.current, {
-          transition: "none",
-          transform: isVertical(direction) ? `translate3d(0, ${translateValue}px, 0)` : `translate3d(${translateValue}px, 0, 0)`
-        });
-      }, 500);
-    }
-  }
-  function onNestedDrag(_event, percentageDragged) {
-    if (percentageDragged < 0) return;
-    const initialScale = (window.innerWidth - NESTED_DISPLACEMENT) / window.innerWidth;
-    const newScale = initialScale + percentageDragged * (1 - initialScale);
-    const newTranslate = -16 + percentageDragged * NESTED_DISPLACEMENT;
-    set(drawerRef.current, {
-      transform: isVertical(direction) ? `scale(${newScale}) translate3d(0, ${newTranslate}px, 0)` : `scale(${newScale}) translate3d(${newTranslate}px, 0, 0)`,
-      transition: "none"
-    });
-  }
-  function onNestedRelease(_event, o) {
-    const dim = isVertical(direction) ? window.innerHeight : window.innerWidth;
-    const scale = o ? (dim - NESTED_DISPLACEMENT) / dim : 1;
-    const translate = o ? -16 : 0;
-    if (o) {
-      set(drawerRef.current, {
-        transition: `transform ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(",")})`,
-        transform: isVertical(direction) ? `scale(${scale}) translate3d(0, ${translate}px, 0)` : `scale(${scale}) translate3d(${translate}px, 0, 0)`
-      });
-    }
-  }
-  React.useEffect(() => {
-    if (!modal) {
-      window.requestAnimationFrame(() => {
-        document.body.style.pointerEvents = "auto";
-      });
-    }
-  }, [
-    modal
-  ]);
-  return /* @__PURE__ */ React.createElement(Root$1, {
-    defaultOpen,
-    onOpenChange: (open2) => {
-      if (!dismissible && !open2) return;
-      if (open2) {
-        setHasBeenOpened(true);
-      } else {
-        closeDrawer(true);
-      }
-      setIsOpen(open2);
-    },
-    open: isOpen
-  }, /* @__PURE__ */ React.createElement(DrawerContext.Provider, {
-    value: {
-      activeSnapPoint,
-      snapPoints,
-      setActiveSnapPoint,
-      drawerRef,
-      overlayRef,
-      onOpenChange,
-      onPress,
-      onRelease,
-      onDrag,
-      dismissible,
-      shouldAnimate,
-      handleOnly,
-      isOpen,
-      isDragging,
-      shouldFade,
-      closeDrawer,
-      onNestedDrag,
-      onNestedOpenChange,
-      onNestedRelease,
-      keyboardIsOpen,
-      modal,
-      snapPointsOffset,
-      activeSnapPointIndex,
-      direction,
-      shouldScaleBackground,
-      setBackgroundColorOnScale,
-      noBodyStyles,
-      container,
-      autoFocus
-    }
-  }, children));
-}
-const Overlay = /* @__PURE__ */ React.forwardRef(function({ ...rest }, ref) {
-  const { overlayRef, snapPoints, onRelease, shouldFade, isOpen, modal, shouldAnimate } = useDrawerContext();
-  const composedRef = useComposedRefs(ref, overlayRef);
-  const hasSnapPoints = snapPoints && snapPoints.length > 0;
-  if (!modal) {
-    return null;
-  }
-  const onMouseUp = React.useCallback((event) => onRelease(event), [
-    onRelease
-  ]);
-  return /* @__PURE__ */ React.createElement(Overlay$1, {
-    onMouseUp,
-    ref: composedRef,
-    "data-vaul-overlay": "",
-    "data-vaul-snap-points": isOpen && hasSnapPoints ? "true" : "false",
-    "data-vaul-snap-points-overlay": isOpen && shouldFade ? "true" : "false",
-    "data-vaul-animate": (shouldAnimate == null ? void 0 : shouldAnimate.current) ? "true" : "false",
-    ...rest
-  });
-});
-Overlay.displayName = "Drawer.Overlay";
-const Content = /* @__PURE__ */ React.forwardRef(function({ onPointerDownOutside, style, onOpenAutoFocus, ...rest }, ref) {
-  const { drawerRef, onPress, onRelease, onDrag, keyboardIsOpen, snapPointsOffset, activeSnapPointIndex, modal, isOpen, direction, snapPoints, container, handleOnly, shouldAnimate, autoFocus } = useDrawerContext();
-  const [delayedSnapPoints, setDelayedSnapPoints] = React.useState(false);
-  const composedRef = useComposedRefs(ref, drawerRef);
-  const pointerStartRef = React.useRef(null);
-  const lastKnownPointerEventRef = React.useRef(null);
-  const wasBeyondThePointRef = React.useRef(false);
-  const hasSnapPoints = snapPoints && snapPoints.length > 0;
-  useScaleBackground();
-  const isDeltaInDirection = (delta, direction2, threshold = 0) => {
-    if (wasBeyondThePointRef.current) return true;
-    const deltaY = Math.abs(delta.y);
-    const deltaX = Math.abs(delta.x);
-    const isDeltaX = deltaX > deltaY;
-    const dFactor = [
-      "bottom",
-      "right"
-    ].includes(direction2) ? 1 : -1;
-    if (direction2 === "left" || direction2 === "right") {
-      const isReverseDirection = delta.x * dFactor < 0;
-      if (!isReverseDirection && deltaX >= 0 && deltaX <= threshold) {
-        return isDeltaX;
-      }
-    } else {
-      const isReverseDirection = delta.y * dFactor < 0;
-      if (!isReverseDirection && deltaY >= 0 && deltaY <= threshold) {
-        return !isDeltaX;
-      }
-    }
-    wasBeyondThePointRef.current = true;
-    return true;
-  };
-  React.useEffect(() => {
-    if (hasSnapPoints) {
-      window.requestAnimationFrame(() => {
-        setDelayedSnapPoints(true);
-      });
-    }
-  }, []);
-  function handleOnPointerUp(event) {
-    pointerStartRef.current = null;
-    wasBeyondThePointRef.current = false;
-    onRelease(event);
-  }
-  return /* @__PURE__ */ React.createElement(Content$1, {
-    "data-vaul-drawer-direction": direction,
-    "data-vaul-drawer": "",
-    "data-vaul-delayed-snap-points": delayedSnapPoints ? "true" : "false",
-    "data-vaul-snap-points": isOpen && hasSnapPoints ? "true" : "false",
-    "data-vaul-custom-container": container ? "true" : "false",
-    "data-vaul-animate": (shouldAnimate == null ? void 0 : shouldAnimate.current) ? "true" : "false",
-    ...rest,
-    ref: composedRef,
-    style: snapPointsOffset && snapPointsOffset.length > 0 ? {
-      "--snap-point-height": `${snapPointsOffset[activeSnapPointIndex != null ? activeSnapPointIndex : 0]}px`,
-      ...style
-    } : style,
-    onPointerDown: (event) => {
-      if (handleOnly) return;
-      rest.onPointerDown == null ? void 0 : rest.onPointerDown.call(rest, event);
-      pointerStartRef.current = {
-        x: event.pageX,
-        y: event.pageY
-      };
-      onPress(event);
-    },
-    onOpenAutoFocus: (e2) => {
-      onOpenAutoFocus == null ? void 0 : onOpenAutoFocus(e2);
-      if (!autoFocus) {
-        e2.preventDefault();
-      }
-    },
-    onPointerDownOutside: (e2) => {
-      onPointerDownOutside == null ? void 0 : onPointerDownOutside(e2);
-      if (!modal || e2.defaultPrevented) {
-        e2.preventDefault();
-        return;
-      }
-      if (keyboardIsOpen.current) {
-        keyboardIsOpen.current = false;
-      }
-    },
-    onFocusOutside: (e2) => {
-      if (!modal) {
-        e2.preventDefault();
-        return;
-      }
-    },
-    onPointerMove: (event) => {
-      lastKnownPointerEventRef.current = event;
-      if (handleOnly) return;
-      rest.onPointerMove == null ? void 0 : rest.onPointerMove.call(rest, event);
-      if (!pointerStartRef.current) return;
-      const yPosition = event.pageY - pointerStartRef.current.y;
-      const xPosition = event.pageX - pointerStartRef.current.x;
-      const swipeStartThreshold = event.pointerType === "touch" ? 10 : 2;
-      const delta = {
-        x: xPosition,
-        y: yPosition
-      };
-      const isAllowedToSwipe = isDeltaInDirection(delta, direction, swipeStartThreshold);
-      if (isAllowedToSwipe) onDrag(event);
-      else if (Math.abs(xPosition) > swipeStartThreshold || Math.abs(yPosition) > swipeStartThreshold) {
-        pointerStartRef.current = null;
-      }
-    },
-    onPointerUp: (event) => {
-      rest.onPointerUp == null ? void 0 : rest.onPointerUp.call(rest, event);
-      pointerStartRef.current = null;
-      wasBeyondThePointRef.current = false;
-      onRelease(event);
-    },
-    onPointerOut: (event) => {
-      rest.onPointerOut == null ? void 0 : rest.onPointerOut.call(rest, event);
-      handleOnPointerUp(lastKnownPointerEventRef.current);
-    },
-    onContextMenu: (event) => {
-      rest.onContextMenu == null ? void 0 : rest.onContextMenu.call(rest, event);
-      if (lastKnownPointerEventRef.current) {
-        handleOnPointerUp(lastKnownPointerEventRef.current);
-      }
-    }
-  });
-});
-Content.displayName = "Drawer.Content";
-const LONG_HANDLE_PRESS_TIMEOUT = 250;
-const DOUBLE_TAP_TIMEOUT = 120;
-const Handle = /* @__PURE__ */ React.forwardRef(function({ preventCycle = false, children, ...rest }, ref) {
-  const { closeDrawer, isDragging, snapPoints, activeSnapPoint, setActiveSnapPoint, dismissible, handleOnly, isOpen, onPress, onDrag } = useDrawerContext();
-  const closeTimeoutIdRef = React.useRef(null);
-  const shouldCancelInteractionRef = React.useRef(false);
-  function handleStartCycle() {
-    if (shouldCancelInteractionRef.current) {
-      handleCancelInteraction();
-      return;
-    }
-    window.setTimeout(() => {
-      handleCycleSnapPoints();
-    }, DOUBLE_TAP_TIMEOUT);
-  }
-  function handleCycleSnapPoints() {
-    if (isDragging || preventCycle || shouldCancelInteractionRef.current) {
-      handleCancelInteraction();
-      return;
-    }
-    handleCancelInteraction();
-    if (!snapPoints || snapPoints.length === 0) {
-      if (!dismissible) {
-        closeDrawer();
-      }
-      return;
-    }
-    const isLastSnapPoint = activeSnapPoint === snapPoints[snapPoints.length - 1];
-    if (isLastSnapPoint && dismissible) {
-      closeDrawer();
-      return;
-    }
-    const currentSnapIndex = snapPoints.findIndex((point) => point === activeSnapPoint);
-    if (currentSnapIndex === -1) return;
-    const nextSnapPoint = snapPoints[currentSnapIndex + 1];
-    setActiveSnapPoint(nextSnapPoint);
-  }
-  function handleStartInteraction() {
-    closeTimeoutIdRef.current = window.setTimeout(() => {
-      shouldCancelInteractionRef.current = true;
-    }, LONG_HANDLE_PRESS_TIMEOUT);
-  }
-  function handleCancelInteraction() {
-    if (closeTimeoutIdRef.current) {
-      window.clearTimeout(closeTimeoutIdRef.current);
-    }
-    shouldCancelInteractionRef.current = false;
-  }
-  return /* @__PURE__ */ React.createElement("div", {
-    onClick: handleStartCycle,
-    onPointerCancel: handleCancelInteraction,
-    onPointerDown: (e2) => {
-      if (handleOnly) onPress(e2);
-      handleStartInteraction();
-    },
-    onPointerMove: (e2) => {
-      if (handleOnly) onDrag(e2);
-    },
-    // onPointerUp is already handled by the content component
-    ref,
-    "data-vaul-drawer-visible": isOpen ? "true" : "false",
-    "data-vaul-handle": "",
-    "aria-hidden": "true",
-    ...rest
-  }, /* @__PURE__ */ React.createElement("span", {
-    "data-vaul-handle-hitarea": "",
-    "aria-hidden": "true"
-  }, children));
-});
-Handle.displayName = "Drawer.Handle";
-function Portal(props) {
-  const context = useDrawerContext();
-  const { container = context.container, ...portalProps } = props;
-  return /* @__PURE__ */ React.createElement(Portal$1, {
-    container,
-    ...portalProps
-  });
-}
-const Drawer = {
-  Root,
-  Content,
-  Overlay,
-  Portal
-};
-const MobileBottomSheet = ({
-  open: open2,
-  onOpenChange,
-  children,
-  title
+const ImageSection = ({
+  object
 }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    Drawer.Root,
-    {
-      open: open2,
-      onOpenChange,
-      modal: false,
-      snapPoints: [0.4],
-      activeSnapPoint: 0.4,
-      shouldScaleBackground: false,
-      "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx:28:8",
-      "data-matrix-name": "Drawer.Root",
-      "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx",
-      "data-component-line": "28",
-      "data-component-file": "MobileBottomSheet.tsx",
-      "data-component-name": "Drawer.Root",
-      "data-component-content": "%7B%22open%22%3A%22%5BIdentifier%5D%22%2C%22onOpenChange%22%3A%22%5BIdentifier%5D%22%2C%22modal%22%3Afalse%2C%22snapPoints%22%3A%5B0.4%5D%2C%22activeSnapPoint%22%3A0.4%2C%22shouldScaleBackground%22%3Afalse%7D",
-      children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Drawer.Portal, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx:39:12", "data-matrix-name": "Drawer.Portal", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx", "data-component-line": "39", "data-component-file": "MobileBottomSheet.tsx", "data-component-name": "Drawer.Portal", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Drawer.Overlay, { className: "fixed inset-0 bg-black/20 pointer-events-none z-40", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx:41:16", "data-matrix-name": "Drawer.Overlay", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx", "data-component-line": "41", "data-component-file": "MobileBottomSheet.tsx", "data-component-name": "Drawer.Overlay", "data-component-content": "%7B%22className%22%3A%22fixed%20inset-0%20bg-black%2F20%20pointer-events-none%20z-40%22%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          Drawer.Content,
-          {
-            className: "\r\n            fixed bottom-0 left-0 right-0 z-50\r\n            flex flex-col\r\n            bg-white rounded-t-2xl shadow-2xl\r\n            max-h-[40vh]\r\n            outline-none\r\n          ",
-            onPointerDownOutside: (e2) => e2.preventDefault(),
-            "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx:43:16",
-            "data-matrix-name": "Drawer.Content",
-            "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx",
-            "data-component-line": "43",
-            "data-component-file": "MobileBottomSheet.tsx",
-            "data-component-name": "Drawer.Content",
-            "data-component-content": "%7B%22className%22%3A%22%5Cr%5Cn%20%20%20%20%20%20%20%20%20%20%20%20fixed%20bottom-0%20left-0%20right-0%20z-50%5Cr%5Cn%20%20%20%20%20%20%20%20%20%20%20%20flex%20flex-col%5Cr%5Cn%20%20%20%20%20%20%20%20%20%20%20%20bg-white%20rounded-t-2xl%20shadow-2xl%5Cr%5Cn%20%20%20%20%20%20%20%20%20%20%20%20max-h-%5B40vh%5D%5Cr%5Cn%20%20%20%20%20%20%20%20%20%20%20%20outline-none%5Cr%5Cn%20%20%20%20%20%20%20%20%20%20%22%2C%22onPointerDownOutside%22%3A%22%5BArrowFunctionExpression%5D%22%7D",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center pt-3 pb-1 flex-shrink-0", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx:55:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx", "data-component-line": "55", "data-component-file": "MobileBottomSheet.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-center%20pt-3%20pb-1%20flex-shrink-0%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-10 h-1 rounded-full bg-gray-300", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx:56:24", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx", "data-component-line": "56", "data-component-file": "MobileBottomSheet.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-10%20h-1%20rounded-full%20bg-gray-300%22%7D" }) }),
-              title && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pb-2 flex-shrink-0", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx:61:24", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx", "data-component-line": "61", "data-component-file": "MobileBottomSheet.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22px-4%20pb-2%20flex-shrink-0%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx:62:28", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx", "data-component-line": "62", "data-component-file": "MobileBottomSheet.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20uppercase%20tracking-wide%22%7D", children: title }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto overscroll-contain", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx:67:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/MobileBottomSheet.tsx", "data-component-line": "67", "data-component-file": "MobileBottomSheet.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20overflow-y-auto%20overscroll-contain%22%7D", children })
-            ]
-          }
-        )
-      ] })
-    }
-  );
-};
-const ColorPicker = ({
-  label,
-  value,
-  onChange
-}) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx:11:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx", "data-component-line": "11", "data-component-file": "ColorPicker.tsx", "data-component-name": "div", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx:12:6", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx", "data-component-line": "12", "data-component-file": "ColorPicker.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: label }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx:13:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx", "data-component-line": "13", "data-component-file": "ColorPicker.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-2%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "color", value, onChange: (e2) => onChange(e2.target.value), className: "w-8 h-8 rounded cursor-pointer", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx:14:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx", "data-component-line": "14", "data-component-file": "ColorPicker.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22color%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-8%20h-8%20rounded%20cursor-pointer%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value, onChange: (e2) => onChange(e2.target.value), className: "flex-1 px-2 py-1 text-sm border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx:20:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPicker.tsx", "data-component-line": "20", "data-component-file": "ColorPicker.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex-1%20px-2%20py-1%20text-sm%20border%20rounded%22%7D" })
-    ] })
-  ] });
-};
-const EXCLUDED_TYPES_FOR_POSITION = ["line", "geoshape", "geopoint", "freehand"];
-const EXCLUDED_TYPES_FOR_SIZE = ["line", "geoshape", "geopoint", "freehand"];
-const EXCLUDED_TYPES_FOR_ROTATION = ["chart", "line", "fraction", "geoshape", "text", "geopoint", "freehand"];
-const PositionSizePanel = ({
-  object,
-  onUpdate
-}) => {
-  const showPosition = !EXCLUDED_TYPES_FOR_POSITION.includes(object.type);
-  const showSize = !EXCLUDED_TYPES_FOR_SIZE.includes(object.type);
-  const showRotation = !EXCLUDED_TYPES_FOR_ROTATION.includes(object.type);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    showPosition && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:22:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "22", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-medium text-gray-500 mb-2 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:23:10", "data-matrix-name": "h4", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "23", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "h4", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-medium%20text-gray-500%20mb-2%20flex%20items-center%20gap-1%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Move, { size: 12, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:24:12", "data-matrix-name": "Move", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "24", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "Move", "data-component-content": "%7B%22size%22%3A12%7D" }),
-        " Позиция"
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:26:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "26", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22grid%20grid-cols-2%20gap-2%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:27:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "27", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:28:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "28", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-400%22%7D", children: "X" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: Math.round(object.x), onChange: (e2) => onUpdate({
-            x: parseInt(e2.target.value) || 0
-          }), className: "w-full px-2 py-1 text-sm border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:29:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "29", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%7D" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:36:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "36", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:37:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "37", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-400%22%7D", children: "Y" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: Math.round(object.y), onChange: (e2) => onUpdate({
-            y: parseInt(e2.target.value) || 0
-          }), className: "w-full px-2 py-1 text-sm border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:38:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "38", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%7D" })
-        ] })
-      ] })
+  const [imageError, setImageError] = reactExports.useState(false);
+  if (object.type !== "image") {
+    return null;
+  }
+  const imageData = object.data;
+  const hasValidImage = (imageData == null ? void 0 : imageData.url) && !imageError;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:38:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "38", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5 uppercase tracking-wide", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:39:6", "data-matrix-name": "h4", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "39", "data-component-file": "ImageSection.tsx", "data-component-name": "h4", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20mb-3%20flex%20items-center%20gap-1.5%20uppercase%20tracking-wide%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Image$1, { size: 12, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:40:8", "data-matrix-name": "ImageIcon", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "40", "data-component-file": "ImageSection.tsx", "data-component-name": "ImageIcon", "data-component-content": "%7B%22size%22%3A12%7D" }),
+      " Image"
     ] }),
-    showSize && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:50:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "50", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-medium text-gray-500 mb-2 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:51:10", "data-matrix-name": "h4", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "51", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "h4", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-medium%20text-gray-500%20mb-2%20flex%20items-center%20gap-1%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Maximize2, { size: 12, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:52:12", "data-matrix-name": "Maximize2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "52", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "Maximize2", "data-component-content": "%7B%22size%22%3A12%7D" }),
-        " Размер"
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:54:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "54", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22grid%20grid-cols-2%20gap-2%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:55:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "55", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:56:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "56", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-400%22%7D", children: "Ширина" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: Math.round(object.width), onChange: (e2) => onUpdate({
-            width: parseInt(e2.target.value) || 10
-          }), className: "w-full px-2 py-1 text-sm border rounded", min: 10, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:57:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "57", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A10%7D" })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:43:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "43", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:45:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "45", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22relative%20w-full%20h-32%20bg-gray-100%20rounded-lg%20overflow-hidden%20flex%20items-center%20justify-center%20border%20border-gray-200%22%7D", children: hasValidImage ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: imageData.url, alt: imageData.alt || "Image preview", className: "max-w-full max-h-full object-contain", onError: () => setImageError(true), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:47:12", "data-matrix-name": "img", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "47", "data-component-file": "ImageSection.tsx", "data-component-name": "img", "data-component-content": "%7B%22src%22%3A%22%5BMemberExpression%5D%22%2C%22alt%22%3A%22%5BLogicalExpression%5D%22%2C%22className%22%3A%22max-w-full%20max-h-full%20object-contain%22%2C%22onError%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:54:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "54", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20items-center%20text-gray-400%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Image$1, { size: 24, className: "mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:55:14", "data-matrix-name": "ImageIcon", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "55", "data-component-file": "ImageSection.tsx", "data-component-name": "ImageIcon", "data-component-content": "%7B%22size%22%3A24%2C%22className%22%3A%22mb-1%22%7D" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:56:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "56", "data-component-file": "ImageSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%22%7D", children: "No preview" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:62:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "62", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-between%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:63:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "63", "data-component-file": "ImageSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-500%22%7D", children: [
+          "Type: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:64:18", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "64", "data-component-file": "ImageSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22font-medium%20text-gray-700%22%7D", children: TYPE_LABELS$1[object.type] || object.type })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:65:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "65", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:66:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "66", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-400%22%7D", children: "Высота" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: Math.round(object.height), onChange: (e2) => onUpdate({
-            height: parseInt(e2.target.value) || 10
-          }), className: "w-full px-2 py-1 text-sm border rounded", min: 10, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:67:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "67", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A10%7D" })
-        ] })
-      ] })
-    ] }),
-    showRotation && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:80:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "80", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-medium text-gray-500 mb-2 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:81:10", "data-matrix-name": "h4", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "81", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "h4", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-medium%20text-gray-500%20mb-2%20flex%20items-center%20gap-1%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCw, { size: 12, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:82:12", "data-matrix-name": "RotateCw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "82", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "RotateCw", "data-component-content": "%7B%22size%22%3A12%7D" }),
-        " Поворот"
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:84:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "84", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "range", value: object.rotation, onChange: (e2) => onUpdate({
-          rotation: parseInt(e2.target.value)
-        }), className: "w-full", min: 0, max: 360, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:85:12", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "85", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22range%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%22%2C%22min%22%3A0%2C%22max%22%3A360%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:93:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "93", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: object.rotation, onChange: (e2) => {
-            const val = parseInt(e2.target.value) || 0;
-            onUpdate({
-              rotation: Math.max(0, Math.min(360, val))
-            });
-          }, className: "flex-1 px-2 py-1 text-sm border rounded", min: 0, max: 360, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:94:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "94", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex-1%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A0%2C%22max%22%3A360%7D" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx:105:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/PositionSizePanel.tsx", "data-component-line": "105", "data-component-file": "PositionSizePanel.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-400%22%7D", children: "°" })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:66:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "66", "data-component-file": "ImageSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-400%22%7D", children: [
+          Math.round(object.width),
+          " × ",
+          Math.round(object.height)
         ] })
       ] })
     ] })
@@ -39928,6 +36568,243 @@ const PenSettingsPanel = ({
     ] })
   ] });
 };
+const HIGHLIGHTER_COLORS = [{
+  color: "#FAFF00",
+  name: "Жёлтый"
+}, {
+  color: "#ADFF2F",
+  name: "Салатовый"
+}, {
+  color: "#00FFFF",
+  name: "Голубой"
+}, {
+  color: "#FF69B4",
+  name: "Розовый"
+}, {
+  color: "#FF8C00",
+  name: "Оранжевый"
+}, {
+  color: "#DA70D6",
+  name: "Сиреневый"
+}];
+const HighlighterSettingsPanel = ({
+  highlighterSettings,
+  setHighlighterSettings
+}) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-80 bg-white border-l border-gray-200 flex flex-col overflow-y-auto overflow-x-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:22:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "22", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-80%20bg-white%20border-l%20border-gray-200%20flex%20flex-col%20overflow-y-auto%20overflow-x-hidden%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:23:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "23", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:24:16", "data-matrix-name": "h3", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "24", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "h3", "data-component-content": "%7B%22className%22%3A%22text-sm%20font-semibold%20text-gray-700%22%7D", children: "Выделитель" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:25:16", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "25", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-400%20mt-1%22%7D", children: "Настройки инструмента" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-5", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:28:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "28", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20space-y-5%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:30:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "30", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:31:20", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "31", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%20mb-2%22%7D", children: "Цвет маркера" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:32:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "32", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-wrap%20gap-2%22%7D", children: HIGHLIGHTER_COLORS.map((preset) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setHighlighterSettings({
+          color: preset.color
+        }), title: preset.name, className: `w-8 h-8 rounded-full border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1 ${highlighterSettings.color === preset.color ? "border-indigo-500 ring-2 ring-indigo-200" : "border-gray-200 hover:border-gray-300"}`, style: {
+          backgroundColor: preset.color
+        }, "aria-label": preset.name, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:34:28", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "34", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22title%22%3A%22%5BMemberExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22style%22%3A%7B%22backgroundColor%22%3A%22%5BMemberExpression%5D%22%7D%7D" }, preset.color)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:47:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "47", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-3%20flex%20items-center%20gap-2%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "color", value: highlighterSettings.color, onChange: (e2) => setHighlighterSettings({
+            color: e2.target.value
+          }), className: "w-8 h-8 rounded cursor-pointer border border-gray-200", "aria-label": "Выбрать цвет маркера", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:48:24", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "48", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22color%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-8%20h-8%20rounded%20cursor-pointer%20border%20border-gray-200%22%7D" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: highlighterSettings.color, onChange: (e2) => setHighlighterSettings({
+            color: e2.target.value
+          }), className: "flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500", placeholder: "#FAFF00", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:55:24", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "55", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex-1%20px-3%20py-2%20text-sm%20border%20border-gray-200%20rounded-lg%20focus%3Aoutline-none%20focus%3Aring-2%20focus%3Aring-indigo-500%22%2C%22placeholder%22%3A%22%23FAFF00%22%7D" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:66:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "66", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-xs font-medium text-gray-500 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:67:20", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "67", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%20mb-2%22%7D", children: [
+          "Толщина: ",
+          highlighterSettings.width,
+          "px"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "range", value: highlighterSettings.width, onChange: (e2) => setHighlighterSettings({
+          width: parseInt(e2.target.value)
+        }), className: "w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600", min: 10, max: 60, step: 2, "aria-label": "Толщина маркера", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:70:20", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "70", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22range%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20h-2%20bg-gray-200%20rounded-lg%20appearance-none%20cursor-pointer%20accent-indigo-600%22%2C%22min%22%3A10%2C%22max%22%3A60%2C%22step%22%3A2%7D" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs text-gray-400 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:80:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "80", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-between%20text-xs%20text-gray-400%20mt-1%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:81:24", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "81", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "span", children: "10px" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:82:24", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "82", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "span", children: "60px" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:87:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "87", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:88:20", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "88", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%20mb-2%22%7D", children: "Предпросмотр" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-14 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:89:20", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "89", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22h-14%20bg-gray-50%20rounded-lg%20border%20border-gray-200%20flex%20items-center%20justify-center%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "200", height: "40", viewBox: "0 0 200 40", "aria-hidden": "true", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx:90:24", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/HighlighterSettingsPanel.tsx", "data-component-line": "90", "data-component-file": "HighlighterSettingsPanel.tsx", "data-component-name": "svg", "data-component-content": "%7B%22width%22%3A%22200%22%2C%22height%22%3A%2240%22%2C%22viewBox%22%3A%220%200%20200%2040%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "10", y: "28", fontSize: "14", fill: "#374151", fontFamily: "sans-serif", children: "Пример текста" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M 8 22 Q 50 18, 100 22 T 192 22", stroke: highlighterSettings.color, strokeWidth: highlighterSettings.width, fill: "none", strokeLinecap: "round", opacity: 0.4, style: {
+            mixBlendMode: "multiply"
+          } })
+        ] }) })
+      ] })
+    ] })
+  ] });
+};
+const PRESET_COLORS = ["transparent", "#000000", "#374151", "#EF4444", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"];
+const ColorPalette = ({
+  value,
+  onChange,
+  label,
+  allowTransparent = true,
+  disabled = false
+}) => {
+  const colors = allowTransparent ? PRESET_COLORS : PRESET_COLORS.filter((c) => c !== "transparent");
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx:34:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx", "data-component-line": "34", "data-component-file": "ColorPalette.tsx", "data-component-name": "div", children: [
+    label && /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx:36:16", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx", "data-component-line": "36", "data-component-file": "ColorPalette.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid grid-cols-4 gap-2 ${disabled ? "opacity-50" : ""}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx:38:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx", "data-component-line": "38", "data-component-file": "ColorPalette.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: colors.map((color) => {
+      const isActive = color === value;
+      const isTransparent = color === "transparent";
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", disabled, onClick: () => onChange(color), className: ["w-6 h-6 rounded-full cursor-pointer border border-gray-300", isActive ? "ring-2 ring-offset-1 ring-indigo-500" : "", disabled ? "cursor-not-allowed" : ""].filter(Boolean).join(" "), style: isTransparent ? {} : {
+        backgroundColor: color
+      }, title: color, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx:44:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx", "data-component-line": "44", "data-component-file": "ColorPalette.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22disabled%22%3A%22%5BIdentifier%5D%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BCallExpression%5D%22%2C%22style%22%3A%22%5BConditionalExpression%5D%22%2C%22title%22%3A%22%5BIdentifier%5D%22%7D", children: isTransparent && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "relative flex items-center justify-center w-full h-full rounded-full bg-white overflow-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx:60:32", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx", "data-component-line": "60", "data-component-file": "ColorPalette.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22relative%20flex%20items-center%20justify-center%20w-full%20h-full%20rounded-full%20bg-white%20overflow-hidden%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { viewBox: "0 0 24 24", className: "absolute inset-0 w-full h-full", "aria-hidden": "true", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx:61:36", "data-matrix-name": "svg", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ColorPalette.tsx", "data-component-line": "61", "data-component-file": "ColorPalette.tsx", "data-component-name": "svg", "data-component-content": "%7B%22viewBox%22%3A%220%200%2024%2024%22%2C%22className%22%3A%22absolute%20inset-0%20w-full%20h-full%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "2", y1: "22", x2: "22", y2: "2", stroke: "#EF4444", strokeWidth: "2.5", strokeLinecap: "round" }) }) }) }, color);
+    }) })
+  ] });
+};
+const StrokeWidthSlider = ({
+  value,
+  onChange,
+  label,
+  disabled = false
+}) => {
+  const clamped = Math.max(1, Math.min(10, value));
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: disabled ? "opacity-50" : "", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx:19:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx", "data-component-line": "19", "data-component-file": "StrokeWidthSlider.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22%5BConditionalExpression%5D%22%7D", children: [
+    label && /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx:21:16", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx", "data-component-line": "21", "data-component-file": "StrokeWidthSlider.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx:23:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx", "data-component-line": "23", "data-component-file": "StrokeWidthSlider.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "range", min: 1, max: 10, step: 1, value: clamped, disabled, onChange: (e2) => onChange(parseInt(e2.target.value, 10)), className: "flex-1 accent-indigo-500 disabled:cursor-not-allowed", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx:24:16", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx", "data-component-line": "24", "data-component-file": "StrokeWidthSlider.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22range%22%2C%22min%22%3A1%2C%22max%22%3A10%2C%22step%22%3A1%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22disabled%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex-1%20accent-indigo-500%20disabled%3Acursor-not-allowed%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono text-gray-700 w-4 text-right", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx:34:16", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/StrokeWidthSlider.tsx", "data-component-line": "34", "data-component-file": "StrokeWidthSlider.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-mono%20text-gray-700%20w-4%20text-right%22%7D", children: clamped })
+    ] })
+  ] });
+};
+function triType(a, b, c) {
+  const [s1, s2, s3] = [a, b, c].sort((x, y) => x - y);
+  if (Math.abs(s1 - s2) < 0.5 && Math.abs(s2 - s3) < 0.5) return "Равносторонний";
+  if (Math.abs(s3 * s3 - (s1 * s1 + s2 * s2)) < 1) return "Прямоугольный";
+  if (Math.abs(a - b) < 0.5 || Math.abs(b - c) < 0.5 || Math.abs(a - c) < 0.5) return "Равнобедренный";
+  return "Разносторонний";
+}
+function shoelace(pts, w, h) {
+  const abs2 = pts.map((p) => ({
+    x: p.x * w,
+    y: p.y * h
+  }));
+  let area = 0, perim = 0;
+  for (let i = 0; i < abs2.length; i++) {
+    const j = (i + 1) % abs2.length;
+    area += abs2[i].x * abs2[j].y - abs2[j].x * abs2[i].y;
+    const dx = abs2[j].x - abs2[i].x, dy = abs2[j].y - abs2[i].y;
+    perim += Math.sqrt(dx * dx + dy * dy);
+  }
+  return {
+    area: Math.abs(area) / 2,
+    perimeter: perim
+  };
+}
+const Row = ({
+  label,
+  value,
+  sub: sub2,
+  warn: warn2
+}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-baseline justify-between text-xs py-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:34:2", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "34", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-baseline%20justify-between%20text-xs%20py-1%22%7D", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:35:4", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "35", "data-component-file": "ShapeProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-gray-500%22%7D", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:36:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "36", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-right%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-mono font-semibold ${warn2 ? "text-amber-500" : "text-gray-800"}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:37:6", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "37", "data-component-file": "ShapeProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children: value }),
+    sub2 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 ml-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:38:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "38", "data-component-file": "ShapeProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-gray-400%20ml-1%22%7D", children: sub2 })
+  ] })
+] });
+const Badge = ({
+  children,
+  color = "bg-indigo-100 text-indigo-700"
+}) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-block px-2 py-0.5 rounded-full text-xs font-medium ${color}`, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:44:2", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "44", "data-component-file": "ShapeProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22%5BTemplateLiteral%5D%22%7D", children });
+const GeometryBlock = ({
+  object
+}) => {
+  if (object.type === "rectangle") {
+    const a = object.width, b = object.height;
+    const P2 = 2 * (a + b), S2 = a * b;
+    const isSquare = Math.abs(a - b) < 2;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:56:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "56", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22rounded-xl%20border%20border-gray-100%20bg-gray-50%20p-3%20space-y-1%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:57:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "57", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-between%20mb-1%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:58:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "58", "data-component-file": "ShapeProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20uppercase%20tracking-wide%22%7D", children: "Геометрия" }),
+        isSquare && /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:59:23", "data-matrix-name": "Badge", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "59", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Badge", children: "Квадрат" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "a (ширина)", value: `${Math.round(a)}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:61:8", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "61", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22a%20(%D1%88%D0%B8%D1%80%D0%B8%D0%BD%D0%B0)%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "b (высота)", value: `${Math.round(b)}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:62:8", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "62", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22b%20(%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%B0)%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-200 mt-1 pt-1 space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:63:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "63", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22border-t%20border-gray-200%20mt-1%20pt-1%20space-y-1%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "P = 2(a + b)", value: `${Math.round(P2)}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:64:10", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "64", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22P%20%3D%202(a%20%2B%20b)%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "S = a × b", value: `${Math.round(S2)}`, sub: "px²", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:65:10", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "65", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22S%20%3D%20a%20%C3%97%20b%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%C2%B2%22%7D" })
+      ] })
+    ] });
+  }
+  if (object.type === "circle") {
+    const r = object.width / 2;
+    const C = 2 * Math.PI * r, S2 = Math.PI * r * r;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:76:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "76", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22rounded-xl%20border%20border-gray-100%20bg-gray-50%20p-3%20space-y-1%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:77:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "77", "data-component-file": "ShapeProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20uppercase%20tracking-wide%20block%20mb-1%22%7D", children: "Геометрия" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "r (радиус)", value: `${Math.round(r)}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:78:8", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "78", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22r%20(%D1%80%D0%B0%D0%B4%D0%B8%D1%83%D1%81)%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "d (диаметр)", value: `${Math.round(r * 2)}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:79:8", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "79", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22d%20(%D0%B4%D0%B8%D0%B0%D0%BC%D0%B5%D1%82%D1%80)%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-200 mt-1 pt-1 space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:80:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "80", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22border-t%20border-gray-200%20mt-1%20pt-1%20space-y-1%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "C = 2πr", value: C.toFixed(1), sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:81:10", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "81", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22C%20%3D%202%CF%80r%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "S = πr²", value: `${Math.round(S2)}`, sub: "px²", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:82:10", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "82", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22S%20%3D%20%CF%80r%C2%B2%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%C2%B2%22%7D" })
+      ] })
+    ] });
+  }
+  if (object.type === "triangle") {
+    const base = object.width, h = object.height;
+    const leg = Math.sqrt((base / 2) ** 2 + h ** 2);
+    const a = Math.round(base), b = Math.round(leg);
+    const type = triType(a, b, b);
+    const S2 = Math.round(0.5 * base * h);
+    const P2 = a + b + b;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:97:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "97", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22rounded-xl%20border%20border-gray-100%20bg-gray-50%20p-3%20space-y-1%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:98:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "98", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-between%20mb-1%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:99:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "99", "data-component-file": "ShapeProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20uppercase%20tracking-wide%22%7D", children: "Геометрия" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:100:10", "data-matrix-name": "Badge", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "100", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Badge", children: type })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "основание (a)", value: `${a}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:102:8", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "102", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%20(a)%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "боковые (b)", value: `${b}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:103:8", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "103", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22%D0%B1%D0%BE%D0%BA%D0%BE%D0%B2%D1%8B%D0%B5%20(b)%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "высота (h)", value: `${Math.round(h)}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:104:8", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "104", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%B0%20(h)%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-200 mt-1 pt-1 space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:105:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "105", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22border-t%20border-gray-200%20mt-1%20pt-1%20space-y-1%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "P = a + 2b", value: `${P2}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:106:10", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "106", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22P%20%3D%20a%20%2B%202b%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "S = ½ · a · h", value: `${S2}`, sub: "px²", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:107:10", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "107", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22S%20%3D%20%C2%BD%20%C2%B7%20a%20%C2%B7%20h%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%C2%B2%22%7D" })
+      ] })
+    ] });
+  }
+  if (object.type === "polygon") {
+    const pts = object.data.points;
+    if (!pts || pts.length < 3) return null;
+    const {
+      area,
+      perimeter
+    } = shoelace(pts, object.width, object.height);
+    const n = pts.length;
+    const shapeLabel = n === 4 && Math.abs(pts[0].x - 0.2) < 0.05 ? "Трапеция" : n === 4 && Math.abs(pts[0].x - 0.5) < 0.05 ? "Ромб" : n === 4 && Math.abs(pts[0].x - 0.25) < 0.05 ? "Параллелограмм" : n === 5 ? "Пятиугольник" : `${n}-угольник`;
+    const extras = [];
+    if (shapeLabel === "Ромб") {
+      const d1 = object.width, d2 = object.height;
+      extras.push(/* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "S = d₁ × d₂ / 2", value: `${Math.round(d1 * d2 / 2)}`, sub: "px²", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:131:18", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "131", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22S%20%3D%20d%E2%82%81%20%C3%97%20d%E2%82%82%20%2F%202%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%C2%B2%22%7D" }, "d"));
+    }
+    if (shapeLabel === "Трапеция") {
+      const topRatio = 1 - 2 * pts[0].x;
+      const a = Math.round(object.width * topRatio);
+      const b = Math.round(object.width);
+      const h = Math.round(object.height);
+      extras.push(/* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "S = (a+b)/2 · h", value: `${Math.round((a + b) / 2 * h)}`, sub: "px²", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:139:18", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "139", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22S%20%3D%20(a%2Bb)%2F2%20%C2%B7%20h%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%C2%B2%22%7D" }, "trap"));
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:143:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "143", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22rounded-xl%20border%20border-gray-100%20bg-gray-50%20p-3%20space-y-1%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:144:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "144", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-between%20mb-1%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:145:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "145", "data-component-file": "ShapeProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20uppercase%20tracking-wide%22%7D", children: "Геометрия" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:146:10", "data-matrix-name": "Badge", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "146", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Badge", children: shapeLabel })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "ширина", value: `${Math.round(object.width)}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:148:8", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "148", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22%D1%88%D0%B8%D1%80%D0%B8%D0%BD%D0%B0%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "высота", value: `${Math.round(object.height)}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:149:8", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "149", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%B0%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-200 mt-1 pt-1 space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:150:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "150", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22border-t%20border-gray-200%20mt-1%20pt-1%20space-y-1%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "P", value: `${Math.round(perimeter)}`, sub: "px", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:151:10", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "151", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22P%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%22%7D" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Row, { label: "S", value: `${Math.round(area)}`, sub: "px²", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:152:10", "data-matrix-name": "Row", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "152", "data-component-file": "ShapeProperties.tsx", "data-component-name": "Row", "data-component-content": "%7B%22label%22%3A%22S%22%2C%22value%22%3A%22%5BTemplateLiteral%5D%22%2C%22sub%22%3A%22px%C2%B2%22%7D" }),
+        extras
+      ] })
+    ] });
+  }
+  return null;
+};
 const ShapeProperties = ({
   object,
   onUpdate
@@ -39941,16 +36818,17 @@ const ShapeProperties = ({
       }
     });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Заливка", value: (data == null ? void 0 : data.fill) || "#4F46E5", onChange: (value) => handleUpdateData("fill", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:26:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "26", "data-component-file": "ShapeProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%97%D0%B0%D0%BB%D0%B8%D0%B2%D0%BA%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Обводка", value: (data == null ? void 0 : data.stroke) || "#312E81", onChange: (value) => handleUpdateData("stroke", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:31:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "31", "data-component-file": "ShapeProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%9E%D0%B1%D0%B2%D0%BE%D0%B4%D0%BA%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:36:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "36", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:37:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "37", "data-component-file": "ShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Толщина обводки" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: (data == null ? void 0 : data.strokeWidth) || 2, onChange: (e2) => handleUpdateData("strokeWidth", parseInt(e2.target.value)), className: "w-full px-2 py-1 text-sm border rounded", min: 0, max: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:38:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "38", "data-component-file": "ShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A0%2C%22max%22%3A20%7D" })
-    ] }),
-    object.type === "rectangle" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:48:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "48", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:49:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "49", "data-component-file": "ShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Скругление углов" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: (data == null ? void 0 : data.cornerRadius) || 0, onChange: (e2) => handleUpdateData("cornerRadius", parseInt(e2.target.value)), className: "w-full px-2 py-1 text-sm border rounded", min: 0, max: 50, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:50:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "50", "data-component-file": "ShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A0%2C%22max%22%3A50%7D" })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:176:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "176", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(GeometryBlock, { object, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:178:6", "data-matrix-name": "GeometryBlock", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "178", "data-component-file": "ShapeProperties.tsx", "data-component-name": "GeometryBlock", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:181:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "181", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22rounded-xl%20border%20border-gray-100%20bg-gray-50%20p-3%20space-y-3%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide block", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:182:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "182", "data-component-file": "ShapeProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20uppercase%20tracking-wide%20block%22%7D", children: "Оформление" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Заливка", value: (data == null ? void 0 : data.fill) || "transparent", onChange: (value) => handleUpdateData("fill", value), allowTransparent: true, disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:183:8", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "183", "data-component-file": "ShapeProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%97%D0%B0%D0%BB%D0%B8%D0%B2%D0%BA%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Atrue%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Цвет контура", value: (data == null ? void 0 : data.stroke) || "#374151", onChange: (value) => handleUpdateData("stroke", value), allowTransparent: false, disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:190:8", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "190", "data-component-file": "ShapeProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%20%D0%BA%D0%BE%D0%BD%D1%82%D1%83%D1%80%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StrokeWidthSlider, { label: "Толщина", value: (data == null ? void 0 : data.strokeWidth) ?? 2, onChange: (value) => handleUpdateData("strokeWidth", value), disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:197:8", "data-matrix-name": "StrokeWidthSlider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "197", "data-component-file": "ShapeProperties.tsx", "data-component-name": "StrokeWidthSlider", "data-component-content": "%7B%22label%22%3A%22%D0%A2%D0%BE%D0%BB%D1%89%D0%B8%D0%BD%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+      object.type === "rectangle" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:204:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "204", "data-component-file": "ShapeProperties.tsx", "data-component-name": "div", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:205:12", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "205", "data-component-file": "ShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Скругление углов" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: (data == null ? void 0 : data.cornerRadius) || 0, onChange: (e2) => handleUpdateData("cornerRadius", parseInt(e2.target.value)), className: "w-full px-2 py-1 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400", min: 0, max: 50, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx:206:12", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ShapeProperties.tsx", "data-component-line": "206", "data-component-file": "ShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-xs%20border%20border-gray-200%20rounded-lg%20focus%3Aoutline-none%20focus%3Aring-1%20focus%3Aring-indigo-400%22%2C%22min%22%3A0%2C%22max%22%3A50%7D" })
+      ] })
     ] })
   ] });
 };
@@ -39971,14 +36849,12 @@ const GeoShapeProperties = ({
     const a = data.sideA ?? 0, b = data.sideB ?? 0, c = data.sideC ?? 0;
     return a + b > c && a + c > b && b + c > a;
   })();
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:32:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "32", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-4%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Цвет линии", value: data.stroke || "#374151", onChange: (value) => handleUpdateData("stroke", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:33:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "33", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%20%D0%BB%D0%B8%D0%BD%D0%B8%D0%B8%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:39:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "39", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:40:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "40", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%20mb-1%22%7D", children: "Толщина линии" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: data.strokeWidth || 2, onChange: (e2) => handleUpdateData("strokeWidth", parseInt(e2.target.value) || 1), className: "w-full px-2 py-1 text-sm border rounded", min: 1, max: 10, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:41:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "41", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A1%2C%22max%22%3A10%7D" })
-    ] }),
-    data.shapeKind === "circle" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:51:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "51", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:52:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "52", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%20mb-1%22%7D", children: "Радиус (px)" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:33:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "33", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-4%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Заливка", value: data.fill || "transparent", onChange: (value) => handleUpdateData("fill", value), allowTransparent: true, disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:34:6", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "34", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%97%D0%B0%D0%BB%D0%B8%D0%B2%D0%BA%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Atrue%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Цвет контура", value: data.stroke || "#374151", onChange: (value) => handleUpdateData("stroke", value), allowTransparent: false, disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:41:6", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "41", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%20%D0%BA%D0%BE%D0%BD%D1%82%D1%83%D1%80%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(StrokeWidthSlider, { label: "Толщина", value: data.strokeWidth || 2, onChange: (value) => handleUpdateData("strokeWidth", value), disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:48:6", "data-matrix-name": "StrokeWidthSlider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "48", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "StrokeWidthSlider", "data-component-content": "%7B%22label%22%3A%22%D0%A2%D0%BE%D0%BB%D1%89%D0%B8%D0%BD%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+    data.shapeKind === "circle" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:56:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "56", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:57:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "57", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%20mb-1%22%7D", children: "Радиус (px)" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: data.radius || 80, onChange: (e2) => {
         const r = parseInt(e2.target.value) || 1;
         onUpdate({
@@ -39989,13 +36865,13 @@ const GeoShapeProperties = ({
           width: r * 2,
           height: r * 2
         });
-      }, className: "w-full px-2 py-1 text-sm border rounded", min: 10, max: 400, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:53:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "53", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A10%2C%22max%22%3A400%7D" })
+      }, className: "w-full px-2 py-1 text-sm border rounded", min: 10, max: 400, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:58:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "58", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A10%2C%22max%22%3A400%7D" })
     ] }),
-    data.shapeKind === "triangle" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:71:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "71", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:72:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "72", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%22%7D", children: "Стороны треугольника" }),
-      !triValid && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-red-500 bg-red-50 px-2 py-1 rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:74:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "74", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-red-500%20bg-red-50%20px-2%20py-1%20rounded%22%7D", children: "⚠ Не выполняется неравенство треугольника" }),
-      ["sideA", "sideB", "sideC"].map((key, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:79:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "79", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-gray-500 w-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:80:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "80", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-500%20w-4%22%7D", children: ["a", "b", "c"][i] }),
+    data.shapeKind === "triangle" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:76:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "76", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:77:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "77", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%22%7D", children: "Стороны треугольника" }),
+      !triValid && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-red-500 bg-red-50 px-2 py-1 rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:79:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "79", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-red-500%20bg-red-50%20px-2%20py-1%20rounded%22%7D", children: "⚠ Не выполняется неравенство треугольника" }),
+      ["sideA", "sideB", "sideC"].map((key, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:84:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "84", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-gray-500 w-4", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:85:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "85", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-500%20w-4%22%7D", children: ["a", "b", "c"][i] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: data[key] ?? 100, onChange: (e2) => {
           const val = parseInt(e2.target.value) || 1;
           const a = key === "sideA" ? val : data.sideA ?? 100;
@@ -40010,17 +36886,17 @@ const GeoShapeProperties = ({
             width: maxSide * 1.2,
             height: maxSide * 1
           });
-        }, className: "flex-1 px-2 py-1 text-sm border rounded", min: 1, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:81:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "81", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BTSAsExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex-1%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A1%7D" })
+        }, className: "flex-1 px-2 py-1 text-sm border rounded", min: 1, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:86:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "86", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BTSAsExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex-1%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A1%7D" })
       ] }, key))
     ] }),
-    data.shapeKind === "quadrilateral" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:105:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "105", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:106:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "106", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%22%7D", children: "Стороны" }),
-      [["sideAB", "AB"], ["sideBC", "BC"], ["sideCD", "CD"], ["sideDA", "DA"]].map(([key, label]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:110:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "110", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-gray-500 w-20", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:111:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "111", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-500%20w-20%22%7D", children: label }),
+    data.shapeKind === "quadrilateral" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:110:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "110", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:111:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "111", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%22%7D", children: "Стороны" }),
+      [["sideAB", "AB"], ["sideBC", "BC"], ["sideCD", "CD"], ["sideDA", "DA"]].map(([key, label]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:115:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "115", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-gray-500 w-20", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:116:14", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "116", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-500%20w-20%22%7D", children: label }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: data[key] ?? 100, onChange: (e2) => {
           const val = parseInt(e2.target.value) || 1;
           handleUpdateData(key, val);
-        }, className: "flex-1 px-2 py-1 text-sm border rounded", min: 1, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:112:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "112", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BTSAsExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex-1%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A1%7D" })
+        }, className: "flex-1 px-2 py-1 text-sm border rounded", min: 1, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx:117:14", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoShapeProperties.tsx", "data-component-line": "117", "data-component-file": "GeoShapeProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BTSAsExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22flex-1%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A1%7D" })
       ] }, key))
     ] })
   ] });
@@ -40039,10 +36915,10 @@ const GeoPointProperties = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Цвет", value: (data == null ? void 0 : data.color) || "#1D4ED8", onChange: (value) => handleUpdateData("color", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx:21:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx", "data-component-line": "21", "data-component-file": "GeoPointProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx:26:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx", "data-component-line": "26", "data-component-file": "GeoPointProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx:27:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx", "data-component-line": "27", "data-component-file": "GeoPointProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Метка" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: (data == null ? void 0 : data.label) ?? "", onChange: (e2) => handleUpdateData("label", e2.target.value || null), placeholder: "A, B, C…", className: "w-full px-2 py-1 text-sm border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx:28:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx", "data-component-line": "28", "data-component-file": "GeoPointProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22A%2C%20B%2C%20C%E2%80%A6%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%7D" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Цвет", value: (data == null ? void 0 : data.color) || "#1D4ED8", onChange: (value) => handleUpdateData("color", value), allowTransparent: false, disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx:21:6", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx", "data-component-line": "21", "data-component-file": "GeoPointProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx:28:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx", "data-component-line": "28", "data-component-file": "GeoPointProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx:29:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx", "data-component-line": "29", "data-component-file": "GeoPointProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Метка" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: (data == null ? void 0 : data.label) ?? "", onChange: (e2) => handleUpdateData("label", e2.target.value || null), placeholder: "A, B, C…", className: "w-full px-2 py-1 text-sm border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx:30:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoPointProperties.tsx", "data-component-line": "30", "data-component-file": "GeoPointProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22A%2C%20B%2C%20C%E2%80%A6%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%7D" })
     ] })
   ] });
 };
@@ -40060,14 +36936,11 @@ const GeoSegmentProperties = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Цвет", value: data.color || "#374151", onChange: (value) => handleUpdateData("color", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:21:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "21", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:26:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "26", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:27:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "27", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Толщина" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: data.strokeWidth || 2, onChange: (e2) => handleUpdateData("strokeWidth", parseInt(e2.target.value) || 1), className: "w-full px-2 py-1 text-sm border rounded", min: 1, max: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:28:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "28", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A1%2C%22max%22%3A20%7D" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:36:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "36", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:37:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "37", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20cursor-pointer%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: data.showPoints !== false, onChange: (e2) => handleUpdateData("showPoints", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:38:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "38", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BBinaryExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:44:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "44", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-600%22%7D", children: "Показывать точки" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Цвет", value: data.color || "#374151", onChange: (value) => handleUpdateData("color", value), allowTransparent: false, disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:22:6", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "22", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(StrokeWidthSlider, { label: "Толщина", value: data.strokeWidth || 2, onChange: (value) => handleUpdateData("strokeWidth", value), disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:29:6", "data-matrix-name": "StrokeWidthSlider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "29", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "StrokeWidthSlider", "data-component-content": "%7B%22label%22%3A%22%D0%A2%D0%BE%D0%BB%D1%89%D0%B8%D0%BD%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:35:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "35", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:36:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "36", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20cursor-pointer%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: data.showPoints !== false, onChange: (e2) => handleUpdateData("showPoints", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:37:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "37", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BBinaryExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx:43:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoSegmentProperties.tsx", "data-component-line": "43", "data-component-file": "GeoSegmentProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-600%22%7D", children: "Показывать точки" })
     ] }) })
   ] });
 };
@@ -40085,14 +36958,14 @@ const GeoAngleProperties = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Цвет", value: data.color || "#7C3AED", onChange: (value) => handleUpdateData("color", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:24:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "24", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:29:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "29", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:30:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "30", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Радиус дуги (px)" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: data.arcRadius || 25, onChange: (e2) => handleUpdateData("arcRadius", parseInt(e2.target.value) || 25), className: "w-full px-2 py-1 text-sm border rounded", min: 10, max: 80, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:31:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "31", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A10%2C%22max%22%3A80%7D" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Цвет", value: data.color || "#7C3AED", onChange: (value) => handleUpdateData("color", value), allowTransparent: false, disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:24:6", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "24", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:31:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "31", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:32:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "32", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Радиус дуги (px)" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: data.arcRadius || 25, onChange: (e2) => handleUpdateData("arcRadius", parseInt(e2.target.value) || 25), className: "w-full px-2 py-1 text-sm border rounded", min: 10, max: 80, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:33:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "33", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A10%2C%22max%22%3A80%7D" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:39:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "39", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:40:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "40", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20cursor-pointer%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: data.showLabel !== false, onChange: (e2) => handleUpdateData("showLabel", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:41:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "41", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BBinaryExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:47:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "47", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-600%22%7D", children: "Показывать значение угла" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:41:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "41", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:42:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "42", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20cursor-pointer%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: data.showLabel !== false, onChange: (e2) => handleUpdateData("showLabel", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:43:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "43", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BBinaryExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx:49:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/GeoAngleProperties.tsx", "data-component-line": "49", "data-component-file": "GeoAngleProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-600%22%7D", children: "Показывать значение угла" })
     ] }) })
   ] });
 };
@@ -40126,7 +36999,7 @@ const TextProperties = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "right", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/TextProperties.tsx:57:10", "data-matrix-name": "option", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/TextProperties.tsx", "data-component-line": "57", "data-component-file": "TextProperties.tsx", "data-component-name": "option", "data-component-content": "%7B%22value%22%3A%22right%22%7D", children: "По правому краю" })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Цвет текста", value: (data == null ? void 0 : data.fill) || "#1F2937", onChange: (value) => handleUpdateData("fill", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/TextProperties.tsx:60:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/TextProperties.tsx", "data-component-line": "60", "data-component-file": "TextProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%20%D1%82%D0%B5%D0%BA%D1%81%D1%82%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Цвет текста", value: (data == null ? void 0 : data.fill) || "#1F2937", onChange: (value) => handleUpdateData("fill", value), allowTransparent: false, disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/TextProperties.tsx:60:6", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/TextProperties.tsx", "data-component-line": "60", "data-component-file": "TextProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%20%D1%82%D0%B5%D0%BA%D1%81%D1%82%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" })
   ] });
 };
 const ArrowProperties = ({
@@ -40142,28 +37015,16 @@ const ArrowProperties = ({
       }
     });
   };
+  const disabled = object.locked === true;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:25:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "25", "data-component-file": "ArrowProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:26:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "26", "data-component-file": "ArrowProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Длина стрелки" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "range", value: object.width, onChange: (e2) => onUpdate({
-        width: parseInt(e2.target.value)
-      }), className: "w-full", min: 50, max: 500, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:27:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "27", "data-component-file": "ArrowProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22range%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%22%2C%22min%22%3A50%2C%22max%22%3A500%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:35:8", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "35", "data-component-file": "ArrowProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-400%22%7D", children: [
-        Math.round(object.width),
-        "px"
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Цвет стрелки", value: (data == null ? void 0 : data.stroke) || "#374151", onChange: (value) => handleUpdateData("stroke", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:37:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "37", "data-component-file": "ArrowProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%20%D1%81%D1%82%D1%80%D0%B5%D0%BB%D0%BA%D0%B8%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:42:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "42", "data-component-file": "ArrowProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:43:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "43", "data-component-file": "ArrowProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Толщина линии" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: (data == null ? void 0 : data.strokeWidth) || 2, onChange: (e2) => handleUpdateData("strokeWidth", parseInt(e2.target.value)), className: "w-full px-2 py-1 text-sm border rounded", min: 1, max: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:44:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "44", "data-component-file": "ArrowProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A1%2C%22max%22%3A20%7D" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:53:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "53", "data-component-file": "ArrowProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:54:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "54", "data-component-file": "ArrowProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Наконечник" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: (data == null ? void 0 : data.arrowHead) || "end", onChange: (e2) => handleUpdateData("arrowHead", e2.target.value), className: "w-full px-2 py-1 text-sm border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:55:8", "data-matrix-name": "select", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "55", "data-component-file": "ArrowProperties.tsx", "data-component-name": "select", "data-component-content": "%7B%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "end", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:60:10", "data-matrix-name": "option", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "60", "data-component-file": "ArrowProperties.tsx", "data-component-name": "option", "data-component-content": "%7B%22value%22%3A%22end%22%7D", children: "Конец" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "both", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:61:10", "data-matrix-name": "option", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "61", "data-component-file": "ArrowProperties.tsx", "data-component-name": "option", "data-component-content": "%7B%22value%22%3A%22both%22%7D", children: "Оба конца" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:62:10", "data-matrix-name": "option", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "62", "data-component-file": "ArrowProperties.tsx", "data-component-name": "option", "data-component-content": "%7B%22value%22%3A%22none%22%7D", children: "Без наконечника" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Цвет стрелки", value: (data == null ? void 0 : data.stroke) || "#374151", onChange: (value) => handleUpdateData("stroke", value), allowTransparent: false, disabled, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:28:6", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "28", "data-component-file": "ArrowProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%20%D1%81%D1%82%D1%80%D0%B5%D0%BB%D0%BA%D0%B8%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%2C%22disabled%22%3A%22%5BIdentifier%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:35:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "35", "data-component-file": "ArrowProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(StrokeWidthSlider, { label: "Толщина", value: (data == null ? void 0 : data.strokeWidth) || 2, onChange: (value) => handleUpdateData("strokeWidth", value), disabled, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:36:8", "data-matrix-name": "StrokeWidthSlider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "36", "data-component-file": "ArrowProperties.tsx", "data-component-name": "StrokeWidthSlider", "data-component-content": "%7B%22label%22%3A%22%D0%A2%D0%BE%D0%BB%D1%89%D0%B8%D0%BD%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BIdentifier%5D%22%7D" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 mt-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:43:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "43", "data-component-file": "ArrowProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%20mt-3%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:44:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "44", "data-component-file": "ArrowProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Наконечник" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: (data == null ? void 0 : data.arrowHead) || "end", onChange: (e2) => handleUpdateData("arrowHead", e2.target.value), className: "w-full px-2 py-1 text-sm border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:45:8", "data-matrix-name": "select", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "45", "data-component-file": "ArrowProperties.tsx", "data-component-name": "select", "data-component-content": "%7B%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "end", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:50:10", "data-matrix-name": "option", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "50", "data-component-file": "ArrowProperties.tsx", "data-component-name": "option", "data-component-content": "%7B%22value%22%3A%22end%22%7D", children: "Конец" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "both", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:51:10", "data-matrix-name": "option", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "51", "data-component-file": "ArrowProperties.tsx", "data-component-name": "option", "data-component-content": "%7B%22value%22%3A%22both%22%7D", children: "Оба конца" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "none", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx:52:10", "data-matrix-name": "option", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ArrowProperties.tsx", "data-component-line": "52", "data-component-file": "ArrowProperties.tsx", "data-component-name": "option", "data-component-content": "%7B%22value%22%3A%22none%22%7D", children: "Без наконечника" })
       ] })
     ] })
   ] });
@@ -40181,18 +37042,16 @@ const LineProperties = ({
       }
     });
   };
+  const disabled = object.locked === true;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Цвет линии", value: (data == null ? void 0 : data.color) || "#374151", onChange: (value) => handleUpdateData("color", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:30:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "30", "data-component-file": "LineProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%20%D0%BB%D0%B8%D0%BD%D0%B8%D0%B8%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:35:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "35", "data-component-file": "LineProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:36:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "36", "data-component-file": "LineProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Толщина линии" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: (data == null ? void 0 : data.strokeWidth) || 2, onChange: (e2) => handleUpdateData("strokeWidth", parseInt(e2.target.value)), className: "w-full px-2 py-1 text-sm border rounded", min: 1, max: 20, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:37:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "37", "data-component-file": "LineProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A1%2C%22max%22%3A20%7D" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:46:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "46", "data-component-file": "LineProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-700 cursor-pointer", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:47:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "47", "data-component-file": "LineProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-gray-700%20cursor-pointer%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: (data == null ? void 0 : data.arrowStart) || false, onChange: (e2) => handleUpdateData("arrowStart", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:48:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "48", "data-component-file": "LineProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Цвет линии", value: (data == null ? void 0 : data.color) || "#374151", onChange: (value) => handleUpdateData("color", value), allowTransparent: false, disabled, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:33:6", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "33", "data-component-file": "LineProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%A6%D0%B2%D0%B5%D1%82%20%D0%BB%D0%B8%D0%BD%D0%B8%D0%B8%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%2C%22disabled%22%3A%22%5BIdentifier%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:40:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "40", "data-component-file": "LineProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mt-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(StrokeWidthSlider, { label: "Толщина", value: (data == null ? void 0 : data.strokeWidth) || 2, onChange: (value) => handleUpdateData("strokeWidth", value), disabled, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:41:8", "data-matrix-name": "StrokeWidthSlider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "41", "data-component-file": "LineProperties.tsx", "data-component-name": "StrokeWidthSlider", "data-component-content": "%7B%22label%22%3A%22%D0%A2%D0%BE%D0%BB%D1%89%D0%B8%D0%BD%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22disabled%22%3A%22%5BIdentifier%5D%22%7D" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 mt-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:48:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "48", "data-component-file": "LineProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%20mt-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-700 cursor-pointer", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:49:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "49", "data-component-file": "LineProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-gray-700%20cursor-pointer%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: (data == null ? void 0 : data.arrowStart) || false, onChange: (e2) => handleUpdateData("arrowStart", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:50:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "50", "data-component-file": "LineProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
       "Стрелка в начале"
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:57:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "57", "data-component-file": "LineProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-700 cursor-pointer", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:58:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "58", "data-component-file": "LineProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-gray-700%20cursor-pointer%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: (data == null ? void 0 : data.arrowEnd) || false, onChange: (e2) => handleUpdateData("arrowEnd", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:59:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "59", "data-component-file": "LineProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:59:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "59", "data-component-file": "LineProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-700 cursor-pointer", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:60:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "60", "data-component-file": "LineProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%20text-sm%20text-gray-700%20cursor-pointer%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: (data == null ? void 0 : data.arrowEnd) || false, onChange: (e2) => handleUpdateData("arrowEnd", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx:61:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/LineProperties.tsx", "data-component-line": "61", "data-component-file": "LineProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
       "Стрелка в конце"
     ] }) })
   ] });
@@ -40253,30 +37112,30 @@ const ChartProperties = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:83:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "83", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-1%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: sector.label, onChange: (e2) => handleSectorChange(index2, "label", e2.target.value), placeholder: "Название", className: "w-full px-2 py-1 text-xs border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:84:18", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "84", "data-component-file": "ChartProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%9D%D0%B0%D0%B7%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-xs%20border%20rounded%22%7D" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: sector.value, onChange: (e2) => handleSectorChange(index2, "value", parseFloat(e2.target.value) || 0), placeholder: "Значение", className: "w-full px-2 py-1 text-xs border rounded", min: 0, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:91:18", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "91", "data-component-file": "ChartProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%97%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-xs%20border%20rounded%22%2C%22min%22%3A0%7D" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "", value: sector.color, onChange: (value) => handleSectorChange(index2, "color", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:99:18", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "99", "data-component-file": "ChartProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "", value: sector.color, onChange: (value) => handleSectorChange(index2, "color", value), allowTransparent: false, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:99:18", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "99", "data-component-file": "ChartProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%7D" })
         ] })
       ] }, index2)) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddSector, className: "w-full px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 text-xs font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:108:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "108", "data-component-file": "ChartProperties.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20px-3%20py-2%20bg-indigo-50%20text-indigo-600%20rounded-lg%20hover%3Abg-indigo-100%20text-xs%20font-medium%22%7D", children: "+ Добавить сектор" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddSector, className: "w-full px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 text-xs font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:109:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "109", "data-component-file": "ChartProperties.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20px-3%20py-2%20bg-indigo-50%20text-indigo-600%20rounded-lg%20hover%3Abg-indigo-100%20text-xs%20font-medium%22%7D", children: "+ Добавить сектор" })
     ] }),
     (data == null ? void 0 : data.chartType) === "bar" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:119:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "119", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:120:12", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "120", "data-component-file": "ChartProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%20mb-2%22%7D", children: "Столбцы" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:120:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "120", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-500 mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:121:12", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "121", "data-component-file": "ChartProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20font-medium%20text-gray-500%20mb-2%22%7D", children: "Столбцы" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 mb-3 overflow-y-auto", style: {
         maxHeight: "300px"
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:122:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "122", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%20mb-3%20overflow-y-auto%22%2C%22style%22%3A%7B%22maxHeight%22%3A%22300px%22%7D%7D", children: chartData.map((column2, index2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-2 border rounded bg-gray-50", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:124:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "124", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-2%20border%20rounded%20bg-gray-50%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:125:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "125", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-between%20mb-2%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-medium text-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:126:18", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "126", "data-component-file": "ChartProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-medium%20text-gray-600%22%7D", children: [
+      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:123:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "123", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%20mb-3%20overflow-y-auto%22%2C%22style%22%3A%7B%22maxHeight%22%3A%22300px%22%7D%7D", children: chartData.map((column2, index2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-2 border rounded bg-gray-50", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:125:14", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "125", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-2%20border%20rounded%20bg-gray-50%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:126:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "126", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-between%20mb-2%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-medium text-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:127:18", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "127", "data-component-file": "ChartProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-medium%20text-gray-600%22%7D", children: [
             "Столбец ",
             index2 + 1
           ] }),
-          chartData.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveSector(index2), className: "text-red-500 hover:text-red-700 text-xs", title: "Удалить столбец", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:128:20", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "128", "data-component-file": "ChartProperties.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22text-red-500%20hover%3Atext-red-700%20text-xs%22%2C%22title%22%3A%22%D0%A3%D0%B4%D0%B0%D0%BB%D0%B8%D1%82%D1%8C%20%D1%81%D1%82%D0%BE%D0%BB%D0%B1%D0%B5%D1%86%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 14, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:133:22", "data-matrix-name": "X", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "133", "data-component-file": "ChartProperties.tsx", "data-component-name": "X", "data-component-content": "%7B%22size%22%3A14%7D" }) })
+          chartData.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveSector(index2), className: "text-red-500 hover:text-red-700 text-xs", title: "Удалить столбец", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:129:20", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "129", "data-component-file": "ChartProperties.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22text-red-500%20hover%3Atext-red-700%20text-xs%22%2C%22title%22%3A%22%D0%A3%D0%B4%D0%B0%D0%BB%D0%B8%D1%82%D1%8C%20%D1%81%D1%82%D0%BE%D0%BB%D0%B1%D0%B5%D1%86%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 14, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:134:22", "data-matrix-name": "X", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "134", "data-component-file": "ChartProperties.tsx", "data-component-name": "X", "data-component-content": "%7B%22size%22%3A14%7D" }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:137:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "137", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-1%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: column2.label, onChange: (e2) => handleSectorChange(index2, "label", e2.target.value), placeholder: "Название", className: "w-full px-2 py-1 text-xs border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:138:18", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "138", "data-component-file": "ChartProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%9D%D0%B0%D0%B7%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-xs%20border%20rounded%22%7D" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: column2.value, onChange: (e2) => handleSectorChange(index2, "value", parseFloat(e2.target.value) || 0), placeholder: "Значение", className: "w-full px-2 py-1 text-xs border rounded", min: 0, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:145:18", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "145", "data-component-file": "ChartProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%97%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-xs%20border%20rounded%22%2C%22min%22%3A0%7D" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "", value: column2.color, onChange: (value) => handleSectorChange(index2, "color", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:153:18", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "153", "data-component-file": "ChartProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:138:16", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "138", "data-component-file": "ChartProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-1%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: column2.label, onChange: (e2) => handleSectorChange(index2, "label", e2.target.value), placeholder: "Название", className: "w-full px-2 py-1 text-xs border rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:139:18", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "139", "data-component-file": "ChartProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22text%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%9D%D0%B0%D0%B7%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-xs%20border%20rounded%22%7D" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: column2.value, onChange: (e2) => handleSectorChange(index2, "value", parseFloat(e2.target.value) || 0), placeholder: "Значение", className: "w-full px-2 py-1 text-xs border rounded", min: 0, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:146:18", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "146", "data-component-file": "ChartProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22placeholder%22%3A%22%D0%97%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-xs%20border%20rounded%22%2C%22min%22%3A0%7D" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "", value: column2.color, onChange: (value) => handleSectorChange(index2, "color", value), allowTransparent: false, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:154:18", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "154", "data-component-file": "ChartProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%22%2C%22value%22%3A%22%5BMemberExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Afalse%7D" })
         ] })
       ] }, index2)) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddSector, className: "w-full px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 text-xs font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:162:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "162", "data-component-file": "ChartProperties.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20px-3%20py-2%20bg-indigo-50%20text-indigo-600%20rounded-lg%20hover%3Abg-indigo-100%20text-xs%20font-medium%22%7D", children: "+ Добавить столбец" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddSector, className: "w-full px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 text-xs font-medium", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx:164:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/ChartProperties.tsx", "data-component-line": "164", "data-component-file": "ChartProperties.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20px-3%20py-2%20bg-indigo-50%20text-indigo-600%20rounded-lg%20hover%3Abg-indigo-100%20text-xs%20font-medium%22%7D", children: "+ Добавить столбец" })
     ] })
   ] });
 };
@@ -40302,10 +37161,10 @@ const FractionProperties = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:39:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "39", "data-component-file": "FractionProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-500%20mb-1%22%7D", children: "Знаменатель" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: (data == null ? void 0 : data.denominator) || 1, onChange: (e2) => handleUpdateData("denominator", parseInt(e2.target.value) || 1), className: "w-full px-2 py-1 text-sm border rounded", min: 1, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:40:8", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "40", "data-component-file": "FractionProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1%20text-sm%20border%20rounded%22%2C%22min%22%3A1%7D" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPicker, { label: "Заливка", value: (data == null ? void 0 : data.fill) || "#4F46E5", onChange: (value) => handleUpdateData("fill", value), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:48:6", "data-matrix-name": "ColorPicker", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "48", "data-component-file": "FractionProperties.tsx", "data-component-name": "ColorPicker", "data-component-content": "%7B%22label%22%3A%22%D0%97%D0%B0%D0%BB%D0%B8%D0%B2%D0%BA%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:53:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "53", "data-component-file": "FractionProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:54:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "54", "data-component-file": "FractionProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: (data == null ? void 0 : data.showLabels) ?? true, onChange: (e2) => handleUpdateData("showLabels", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:55:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "55", "data-component-file": "FractionProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:61:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "61", "data-component-file": "FractionProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-500%22%7D", children: "Показать подписи" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ColorPalette, { label: "Заливка", value: (data == null ? void 0 : data.fill) || "#4F46E5", onChange: (value) => handleUpdateData("fill", value), allowTransparent: true, disabled: object.locked === true, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:48:6", "data-matrix-name": "ColorPalette", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "48", "data-component-file": "FractionProperties.tsx", "data-component-name": "ColorPalette", "data-component-content": "%7B%22label%22%3A%22%D0%97%D0%B0%D0%BB%D0%B8%D0%B2%D0%BA%D0%B0%22%2C%22value%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22allowTransparent%22%3Atrue%2C%22disabled%22%3A%22%5BBinaryExpression%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:55:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "55", "data-component-file": "FractionProperties.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22mb-3%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:56:8", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "56", "data-component-file": "FractionProperties.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: (data == null ? void 0 : data.showLabels) ?? true, onChange: (e2) => handleUpdateData("showLabels", e2.target.checked), className: "rounded", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:57:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "57", "data-component-file": "FractionProperties.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22checkbox%22%2C%22checked%22%3A%22%5BLogicalExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22rounded%22%7D" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx:63:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/FractionProperties.tsx", "data-component-line": "63", "data-component-file": "FractionProperties.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-500%22%7D", children: "Показать подписи" })
     ] }) })
   ] });
 };
@@ -40320,136 +37179,6 @@ const MultiSelectPanel = ({
       objects.length
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onDeleteAll, className: "mt-4 w-full px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/MultiSelectPanel.tsx:14:6", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel/MultiSelectPanel.tsx", "data-component-line": "14", "data-component-file": "MultiSelectPanel.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22mt-4%20w-full%20px-3%20py-2%20bg-red-50%20text-red-600%20rounded-lg%20hover%3Abg-red-100%20text-sm%22%7D", children: "Удалить все" })
-  ] });
-};
-const EXCLUDED_TYPES$1 = ["line", "geoshape", "geopoint", "freehand"];
-const TransformSection = ({
-  object,
-  onUpdate,
-  onPublish
-}) => {
-  const [lockAspect, setLockAspect] = reactExports.useState(true);
-  const initialAspectRatioRef = reactExports.useRef(object.width / object.height);
-  reactExports.useEffect(() => {
-    initialAspectRatioRef.current = object.width / object.height;
-  }, [object.id, object.width, object.height]);
-  const handleWidthChange = reactExports.useCallback((newWidth) => {
-    const currentAspectRatio = initialAspectRatioRef.current;
-    if (lockAspect && currentAspectRatio > 0) {
-      const newHeight = newWidth / currentAspectRatio;
-      onUpdate({
-        width: newWidth,
-        height: newHeight
-      });
-    } else {
-      onUpdate({
-        width: newWidth
-      });
-    }
-    onPublish == null ? void 0 : onPublish();
-  }, [lockAspect, onUpdate, onPublish]);
-  const handleHeightChange = reactExports.useCallback((newHeight) => {
-    const currentAspectRatio = initialAspectRatioRef.current;
-    if (lockAspect && currentAspectRatio > 0) {
-      const newWidth = newHeight * currentAspectRatio;
-      onUpdate({
-        width: newWidth,
-        height: newHeight
-      });
-    } else {
-      onUpdate({
-        height: newHeight
-      });
-    }
-    onPublish == null ? void 0 : onPublish();
-  }, [lockAspect, onUpdate, onPublish]);
-  const handlePositionChange = reactExports.useCallback((axis, value) => {
-    onUpdate({
-      [axis]: value
-    });
-    onPublish == null ? void 0 : onPublish();
-  }, [onUpdate, onPublish]);
-  if (EXCLUDED_TYPES$1.includes(object.type)) {
-    return null;
-  }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:58:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "58", "data-component-file": "TransformSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5 uppercase tracking-wide", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:59:6", "data-matrix-name": "h4", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "59", "data-component-file": "TransformSection.tsx", "data-component-name": "h4", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20mb-3%20flex%20items-center%20gap-1.5%20uppercase%20tracking-wide%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Move, { size: 12, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:60:8", "data-matrix-name": "Move", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "60", "data-component-file": "TransformSection.tsx", "data-component-name": "Move", "data-component-content": "%7B%22size%22%3A12%7D" }),
-      " Transform"
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:63:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "63", "data-component-file": "TransformSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:65:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "65", "data-component-file": "TransformSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22grid%20grid-cols-2%20gap-2%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:66:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "66", "data-component-file": "TransformSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-1%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:67:12", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "67", "data-component-file": "TransformSection.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-400%22%7D", children: "X" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: Math.round(object.x), onChange: (e2) => handlePositionChange("x", parseInt(e2.target.value) || 0), className: "w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:68:12", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "68", "data-component-file": "TransformSection.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1.5%20text-sm%20border%20border-gray-200%20rounded-md%20bg-gray-50%20focus%3Abg-white%20focus%3Aborder-blue-500%20focus%3Aring-1%20focus%3Aring-blue-500%20transition-colors%22%7D" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:75:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "75", "data-component-file": "TransformSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-1%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:76:12", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "76", "data-component-file": "TransformSection.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-400%22%7D", children: "Y" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: Math.round(object.y), onChange: (e2) => handlePositionChange("y", parseInt(e2.target.value) || 0), className: "w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:77:12", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "77", "data-component-file": "TransformSection.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-2%20py-1.5%20text-sm%20border%20border-gray-200%20rounded-md%20bg-gray-50%20focus%3Abg-white%20focus%3Aborder-blue-500%20focus%3Aring-1%20focus%3Aring-blue-500%20transition-colors%22%7D" })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:87:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "87", "data-component-file": "TransformSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-1%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-xs text-gray-400 flex items-center gap-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:88:10", "data-matrix-name": "label", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "88", "data-component-file": "TransformSection.tsx", "data-component-name": "label", "data-component-content": "%7B%22className%22%3A%22block%20text-xs%20text-gray-400%20flex%20items-center%20gap-1%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Maximize2, { size: 10, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:89:12", "data-matrix-name": "Maximize2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "89", "data-component-file": "TransformSection.tsx", "data-component-name": "Maximize2", "data-component-content": "%7B%22size%22%3A10%7D" }),
-          " Size",
-          lockAspect && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-blue-500 text-[10px]", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:90:27", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "90", "data-component-file": "TransformSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-blue-500%20text-%5B10px%5D%22%7D", children: "(locked)" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto_1fr] gap-2 items-center", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:92:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "92", "data-component-file": "TransformSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22grid%20grid-cols-%5B1fr_auto_1fr%5D%20gap-2%20items-center%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: Math.round(object.width), onChange: (e2) => handleWidthChange(parseInt(e2.target.value) || 10), className: `w-full px-2 py-1.5 text-sm border rounded-md bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors ${lockAspect ? "border-blue-300" : "border-gray-200"}`, min: 10, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:93:12", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "93", "data-component-file": "TransformSection.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22min%22%3A10%7D" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setLockAspect(!lockAspect), className: `p-1.5 rounded-md transition-colors ${lockAspect ? "bg-blue-100 text-blue-600 hover:bg-blue-200" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`, title: lockAspect ? "Unlock aspect ratio" : "Lock aspect ratio", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:102:12", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "102", "data-component-file": "TransformSection.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22title%22%3A%22%5BConditionalExpression%5D%22%7D", children: lockAspect ? /* @__PURE__ */ jsxRuntimeExports.jsx(Lock, { size: 14, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:112:28", "data-matrix-name": "Lock", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "112", "data-component-file": "TransformSection.tsx", "data-component-name": "Lock", "data-component-content": "%7B%22size%22%3A14%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(LockOpen, { size: 14, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:112:49", "data-matrix-name": "Unlock", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "112", "data-component-file": "TransformSection.tsx", "data-component-name": "Unlock", "data-component-content": "%7B%22size%22%3A14%7D" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: Math.round(object.height), onChange: (e2) => handleHeightChange(parseInt(e2.target.value) || 10), className: `w-full px-2 py-1.5 text-sm border rounded-md bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors ${lockAspect ? "border-blue-300" : "border-gray-200"}`, min: 10, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx:114:12", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/TransformSection.tsx", "data-component-line": "114", "data-component-file": "TransformSection.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22min%22%3A10%7D" })
-        ] })
-      ] })
-    ] })
-  ] });
-};
-const EXCLUDED_TYPES = ["chart", "line", "fraction", "geoshape", "text", "geopoint", "freehand"];
-const RotationSection = ({
-  object,
-  onUpdate,
-  onPublish
-}) => {
-  const handleRotationChange = reactExports.useCallback((value) => {
-    const normalized = Math.max(0, Math.min(360, value));
-    onUpdate({
-      rotation: normalized
-    });
-    onPublish == null ? void 0 : onPublish();
-  }, [onUpdate, onPublish]);
-  const handleReset = reactExports.useCallback(() => {
-    onUpdate({
-      rotation: 0
-    });
-    onPublish == null ? void 0 : onPublish();
-  }, [onUpdate, onPublish]);
-  if (EXCLUDED_TYPES.includes(object.type)) {
-    return null;
-  }
-  const rotation = object.rotation || 0;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:36:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "36", "data-component-file": "RotationSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5 uppercase tracking-wide", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:37:6", "data-matrix-name": "h4", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "37", "data-component-file": "RotationSection.tsx", "data-component-name": "h4", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20mb-3%20flex%20items-center%20gap-1.5%20uppercase%20tracking-wide%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCw, { size: 12, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:38:8", "data-matrix-name": "RotateCw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "38", "data-component-file": "RotationSection.tsx", "data-component-name": "RotateCw", "data-component-content": "%7B%22size%22%3A12%7D" }),
-      " Rotation"
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:41:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "41", "data-component-file": "RotationSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-3%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:43:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "43", "data-component-file": "RotationSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22relative%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "range", value: rotation, onChange: (e2) => handleRotationChange(parseInt(e2.target.value)), className: "w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500", min: 0, max: 360, step: 1, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:44:10", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "44", "data-component-file": "RotationSection.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22range%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20h-2%20bg-gray-200%20rounded-lg%20appearance-none%20cursor-pointer%20accent-blue-500%22%2C%22min%22%3A0%2C%22max%22%3A360%2C%22step%22%3A1%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs text-gray-400 mt-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:53:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "53", "data-component-file": "RotationSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20justify-between%20text-xs%20text-gray-400%20mt-1%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:54:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "54", "data-component-file": "RotationSection.tsx", "data-component-name": "span", children: "0°" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:55:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "55", "data-component-file": "RotationSection.tsx", "data-component-name": "span", children: "90°" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:56:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "56", "data-component-file": "RotationSection.tsx", "data-component-name": "span", children: "180°" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:57:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "57", "data-component-file": "RotationSection.tsx", "data-component-name": "span", children: "270°" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:58:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "58", "data-component-file": "RotationSection.tsx", "data-component-name": "span", children: "360°" })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:63:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "63", "data-component-file": "RotationSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20gap-2%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:64:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "64", "data-component-file": "RotationSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22relative%20flex-1%22%7D", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: Math.round(rotation), onChange: (e2) => handleRotationChange(parseInt(e2.target.value) || 0), className: "w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors pr-8", min: 0, max: 360, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:65:12", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "65", "data-component-file": "RotationSection.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22number%22%2C%22value%22%3A%22%5BCallExpression%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20px-3%20py-1.5%20text-sm%20border%20border-gray-200%20rounded-md%20bg-gray-50%20focus%3Abg-white%20focus%3Aborder-blue-500%20focus%3Aring-1%20focus%3Aring-blue-500%20transition-colors%20pr-8%22%2C%22min%22%3A0%2C%22max%22%3A360%7D" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:73:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "73", "data-component-file": "RotationSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22absolute%20right-3%20top-1%2F2%20-translate-y-1%2F2%20text-xs%20text-gray-400%22%7D", children: "°" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleReset, className: "p-1.5 rounded-md bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors", title: "Reset rotation", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:75:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "75", "data-component-file": "RotationSection.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22p-1.5%20rounded-md%20bg-gray-100%20text-gray-500%20hover%3Abg-gray-200%20hover%3Atext-gray-700%20transition-colors%22%2C%22title%22%3A%22Reset%20rotation%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 14, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx:81:12", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/RotationSection.tsx", "data-component-line": "81", "data-component-file": "RotationSection.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A14%7D" }) })
-      ] })
-    ] })
   ] });
 };
 const TYPE_LABELS = {
@@ -40469,74 +37198,6 @@ const TYPE_LABELS = {
   image: "Image",
   freehand: "Freehand"
 };
-const ImageSection = ({
-  object
-}) => {
-  const [imageError, setImageError] = reactExports.useState(false);
-  if (object.type !== "image") {
-    return null;
-  }
-  const imageData = object.data;
-  const hasValidImage = (imageData == null ? void 0 : imageData.url) && !imageError;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:38:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "38", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5 uppercase tracking-wide", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:39:6", "data-matrix-name": "h4", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "39", "data-component-file": "ImageSection.tsx", "data-component-name": "h4", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20mb-3%20flex%20items-center%20gap-1.5%20uppercase%20tracking-wide%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Image$1, { size: 12, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:40:8", "data-matrix-name": "ImageIcon", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "40", "data-component-file": "ImageSection.tsx", "data-component-name": "ImageIcon", "data-component-content": "%7B%22size%22%3A12%7D" }),
-      " Image"
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:43:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "43", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22space-y-2%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:45:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "45", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22relative%20w-full%20h-32%20bg-gray-100%20rounded-lg%20overflow-hidden%20flex%20items-center%20justify-center%20border%20border-gray-200%22%7D", children: hasValidImage ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: imageData.url, alt: imageData.alt || "Image preview", className: "max-w-full max-h-full object-contain", onError: () => setImageError(true), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:47:12", "data-matrix-name": "img", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "47", "data-component-file": "ImageSection.tsx", "data-component-name": "img", "data-component-content": "%7B%22src%22%3A%22%5BMemberExpression%5D%22%2C%22alt%22%3A%22%5BLogicalExpression%5D%22%2C%22className%22%3A%22max-w-full%20max-h-full%20object-contain%22%2C%22onError%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:54:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "54", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20flex-col%20items-center%20text-gray-400%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Image$1, { size: 24, className: "mb-1", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:55:14", "data-matrix-name": "ImageIcon", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "55", "data-component-file": "ImageSection.tsx", "data-component-name": "ImageIcon", "data-component-content": "%7B%22size%22%3A24%2C%22className%22%3A%22mb-1%22%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:56:14", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "56", "data-component-file": "ImageSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%22%7D", children: "No preview" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:62:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "62", "data-component-file": "ImageSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-between%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-500", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:63:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "63", "data-component-file": "ImageSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-500%22%7D", children: [
-          "Type: ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-gray-700", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:64:18", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "64", "data-component-file": "ImageSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22font-medium%20text-gray-700%22%7D", children: TYPE_LABELS[object.type] || object.type })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx:66:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ImageSection.tsx", "data-component-line": "66", "data-component-file": "ImageSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-400%22%7D", children: [
-          Math.round(object.width),
-          " × ",
-          Math.round(object.height)
-        ] })
-      ] })
-    ] })
-  ] });
-};
-const ACTION_BUTTON_STYLE = "flex-1 flex flex-col items-center justify-center gap-1 p-2.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 active:bg-gray-100 transition-all text-gray-600 hover:text-gray-800";
-const ActionSection = ({
-  object,
-  onDelete,
-  onDuplicate,
-  onBringToFront,
-  onSendToBack
-}) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:30:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "30", "data-component-file": "ActionSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5 uppercase tracking-wide", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:31:6", "data-matrix-name": "h4", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "31", "data-component-file": "ActionSection.tsx", "data-component-name": "h4", "data-component-content": "%7B%22className%22%3A%22text-xs%20font-semibold%20text-gray-500%20mb-3%20flex%20items-center%20gap-1.5%20uppercase%20tracking-wide%22%7D", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Layers, { size: 12, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:32:8", "data-matrix-name": "Layers", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "32", "data-component-file": "ActionSection.tsx", "data-component-name": "Layers", "data-component-content": "%7B%22size%22%3A12%7D" }),
-      " Actions"
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 mb-3", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:36:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "36", "data-component-file": "ActionSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22grid%20grid-cols-2%20gap-2%20mb-3%22%7D", children: [
-      onDuplicate && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onDuplicate, className: ACTION_BUTTON_STYLE, title: "Duplicate", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:38:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "38", "data-component-file": "ActionSection.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22%5BIdentifier%5D%22%2C%22title%22%3A%22Duplicate%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Copy, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:44:12", "data-matrix-name": "Copy", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "44", "data-component-file": "ActionSection.tsx", "data-component-name": "Copy", "data-component-content": "%7B%22size%22%3A16%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:45:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "45", "data-component-file": "ActionSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%22%7D", children: "Duplicate" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onDelete, className: `${ACTION_BUTTON_STYLE} text-red-500 hover:text-red-600 hover:border-red-300 hover:bg-red-50`, title: "Delete", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:48:8", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "48", "data-component-file": "ActionSection.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22%5BTemplateLiteral%5D%22%2C%22title%22%3A%22Delete%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:54:10", "data-matrix-name": "Trash2", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "54", "data-component-file": "ActionSection.tsx", "data-component-name": "Trash2", "data-component-content": "%7B%22size%22%3A16%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:55:10", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "55", "data-component-file": "ActionSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%22%7D", children: "Delete" })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:60:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "60", "data-component-file": "ActionSection.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22grid%20grid-cols-2%20gap-2%22%7D", children: [
-      onBringToFront && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onBringToFront, className: ACTION_BUTTON_STYLE, title: "Bring to Front", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:62:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "62", "data-component-file": "ActionSection.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22%5BIdentifier%5D%22%2C%22title%22%3A%22Bring%20to%20Front%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowUp, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:68:12", "data-matrix-name": "ArrowUp", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "68", "data-component-file": "ActionSection.tsx", "data-component-name": "ArrowUp", "data-component-content": "%7B%22size%22%3A16%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:69:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "69", "data-component-file": "ActionSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%22%7D", children: "Front" })
-      ] }),
-      onSendToBack && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onSendToBack, className: ACTION_BUTTON_STYLE, title: "Send to Back", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:73:10", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "73", "data-component-file": "ActionSection.tsx", "data-component-name": "button", "data-component-content": "%7B%22type%22%3A%22button%22%2C%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22%5BIdentifier%5D%22%2C%22title%22%3A%22Send%20to%20Back%22%7D", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowDown, { size: 16, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:79:12", "data-matrix-name": "ArrowDown", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "79", "data-component-file": "ActionSection.tsx", "data-component-name": "ArrowDown", "data-component-content": "%7B%22size%22%3A16%7D" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx:80:12", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/ActionSection.tsx", "data-component-line": "80", "data-component-file": "ActionSection.tsx", "data-component-name": "span", "data-component-content": "%7B%22className%22%3A%22text-xs%22%7D", children: "Back" })
-      ] })
-    ] })
-  ] });
-};
 const PropertiesPanel = () => {
   const {
     state,
@@ -40545,66 +37206,52 @@ const PropertiesPanel = () => {
     handleDeleteObject: onDeleteObject,
     penSettings,
     setPenSettings,
-    getCanvasSnapshot
+    highlighterSettings,
+    setHighlighterSettings
   } = useEditorContext();
-  const {
-    publishLocalChange
-  } = useCollaborationContext();
-  const isMobile = useIsMobile();
+  useCollaborationContext();
   const selectedObject = selectedObjects[0];
   const mode2 = state.mode;
-  const handlePublish = React.useCallback(() => {
-    publishLocalChange(getCanvasSnapshot());
-  }, [publishLocalChange, getCanvasSnapshot]);
-  const createUpdater = (objId) => (updates) => {
-    onUpdateObject(objId, updates);
-  };
-  const isVisible2 = mode2 === "freehand" || selectedObjects.length > 0;
-  const panelContent = (() => {
-    if (mode2 === "freehand") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(PenSettingsPanel, { penSettings, setPenSettings, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:58:13", "data-matrix-name": "PenSettingsPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "58", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "PenSettingsPanel", "data-component-content": "%7B%22penSettings%22%3A%22%5BIdentifier%5D%22%2C%22setPenSettings%22%3A%22%5BIdentifier%5D%22%7D" });
-    }
-    if (selectedObjects.length === 0) return null;
-    if (selectedObjects.length > 1) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(MultiSelectPanel, { objects: selectedObjects, onDeleteAll: () => selectedObjects.forEach((obj) => onDeleteObject(obj.id)), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:63:8", "data-matrix-name": "MultiSelectPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "63", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "MultiSelectPanel", "data-component-content": "%7B%22objects%22%3A%22%5BIdentifier%5D%22%2C%22onDeleteAll%22%3A%22%5BArrowFunctionExpression%5D%22%7D" });
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:72:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "72", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-between", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:73:10", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "73", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20items-center%20justify-between%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:74:12", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "74", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "div", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:75:14", "data-matrix-name": "h3", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "75", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "h3", "data-component-content": "%7B%22className%22%3A%22text-sm%20font-semibold%20text-gray-800%22%7D", children: selectedObject.type === "image" ? "Image" : selectedObject.type === "rectangle" ? "Rectangle" : selectedObject.type === "circle" ? "Circle" : selectedObject.type === "triangle" ? "Triangle" : selectedObject.type === "text" ? "Text" : selectedObject.type === "arrow" ? "Arrow" : selectedObject.type === "line" ? "Line" : selectedObject.type === "chart" ? "Chart" : selectedObject.type === "fraction" ? "Fraction" : selectedObject.type === "freehand" ? "Freehand" : "Properties" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 capitalize", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:88:14", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "88", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-400%20capitalize%22%7D", children: selectedObject.type })
-      ] }) }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ImageSection, { object: selectedObject, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:93:8", "data-matrix-name": "ImageSection", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "93", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ImageSection", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(TransformSection, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), onPublish: handlePublish, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:94:8", "data-matrix-name": "TransformSection", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "94", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "TransformSection", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%2C%22onPublish%22%3A%22%5BIdentifier%5D%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(RotationSection, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), onPublish: handlePublish, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:95:8", "data-matrix-name": "RotationSection", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "95", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "RotationSection", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%2C%22onPublish%22%3A%22%5BIdentifier%5D%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ActionSection, { object: selectedObject, onDelete: () => {
-        onDeleteObject(selectedObject.id);
-        handlePublish();
-      }, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:96:8", "data-matrix-name": "ActionSection", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "96", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ActionSection", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onDelete%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
-      selectedObject.type !== "image" && /* @__PURE__ */ jsxRuntimeExports.jsx(PositionSizePanel, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:98:10", "data-matrix-name": "PositionSizePanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "98", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "PositionSizePanel", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 p-4 overflow-auto", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:100:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "100", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20p-4%20overflow-auto%22%7D", children: [
-        selectedObject.type === "rectangle" && /* @__PURE__ */ jsxRuntimeExports.jsx(ShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:101:50", "data-matrix-name": "ShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "101", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "circle" && /* @__PURE__ */ jsxRuntimeExports.jsx(ShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:102:47", "data-matrix-name": "ShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "102", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "triangle" && /* @__PURE__ */ jsxRuntimeExports.jsx(ShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:103:49", "data-matrix-name": "ShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "103", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "polygon" && /* @__PURE__ */ jsxRuntimeExports.jsx(ShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:104:48", "data-matrix-name": "ShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "104", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "geoshape" && /* @__PURE__ */ jsxRuntimeExports.jsx(GeoShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:105:49", "data-matrix-name": "GeoShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "105", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "GeoShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "geopoint" && /* @__PURE__ */ jsxRuntimeExports.jsx(GeoPointProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:106:49", "data-matrix-name": "GeoPointProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "106", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "GeoPointProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "geosegment" && /* @__PURE__ */ jsxRuntimeExports.jsx(GeoSegmentProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:107:51", "data-matrix-name": "GeoSegmentProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "107", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "GeoSegmentProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "geoangle" && /* @__PURE__ */ jsxRuntimeExports.jsx(GeoAngleProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:108:49", "data-matrix-name": "GeoAngleProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "108", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "GeoAngleProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "text" && /* @__PURE__ */ jsxRuntimeExports.jsx(TextProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:109:45", "data-matrix-name": "TextProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "109", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "TextProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "arrow" && /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:110:46", "data-matrix-name": "ArrowProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "110", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ArrowProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "line" && /* @__PURE__ */ jsxRuntimeExports.jsx(LineProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:111:45", "data-matrix-name": "LineProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "111", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "LineProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "chart" && /* @__PURE__ */ jsxRuntimeExports.jsx(ChartProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:112:46", "data-matrix-name": "ChartProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "112", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ChartProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "fraction" && /* @__PURE__ */ jsxRuntimeExports.jsx(FractionProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:113:49", "data-matrix-name": "FractionProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "113", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "FractionProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
-        selectedObject.type === "freehand" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:114:49", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "114", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-400%22%7D", children: "Select Pen tool to configure." })
-      ] })
-    ] });
-  })();
-  if (!isVisible2 || panelContent === null) return null;
-  if (isMobile) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(MobileBottomSheet, { open: isVisible2, onOpenChange: (open2) => {
-    }, title: mode2 === "freehand" ? "Pen Settings" : selectedObjects.length > 1 ? `${selectedObjects.length} objects` : (selectedObject == null ? void 0 : selectedObject.type) ?? "Properties", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:125:6", "data-matrix-name": "MobileBottomSheet", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "125", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "MobileBottomSheet", "data-component-content": "%7B%22open%22%3A%22%5BIdentifier%5D%22%2C%22onOpenChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22title%22%3A%22%5BConditionalExpression%5D%22%7D", children: panelContent });
+  const createUpdater = reactExports.useCallback((objId) => {
+    return (updates) => {
+      onUpdateObject(objId, updates);
+    };
+  }, [onUpdateObject]);
+  if (mode2 === "freehand") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(PenSettingsPanel, { penSettings, setPenSettings, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:64:11", "data-matrix-name": "PenSettingsPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "64", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "PenSettingsPanel", "data-component-content": "%7B%22penSettings%22%3A%22%5BIdentifier%5D%22%2C%22setPenSettings%22%3A%22%5BIdentifier%5D%22%7D" });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-80 bg-white border-l border-gray-200 flex flex-col overflow-y-auto overflow-x-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx:145:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/PropertiesPanel.tsx", "data-component-line": "145", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-80%20bg-white%20border-l%20border-gray-200%20flex%20flex-col%20overflow-y-auto%20overflow-x-hidden%22%7D", children: panelContent });
+  if (mode2 === "highlighter") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(HighlighterSettingsPanel, { highlighterSettings, setHighlighterSettings, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:69:6", "data-matrix-name": "HighlighterSettingsPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "69", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "HighlighterSettingsPanel", "data-component-content": "%7B%22highlighterSettings%22%3A%22%5BIdentifier%5D%22%2C%22setHighlighterSettings%22%3A%22%5BIdentifier%5D%22%7D" });
+  }
+  if (selectedObjects.length === 0) {
+    return null;
+  }
+  if (selectedObjects.length > 1) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(MultiSelectPanel, { objects: selectedObjects, onDeleteAll: () => selectedObjects.forEach((obj) => onDeleteObject(obj.id)), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:82:6", "data-matrix-name": "MultiSelectPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "82", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "MultiSelectPanel", "data-component-content": "%7B%22objects%22%3A%22%5BIdentifier%5D%22%2C%22onDeleteAll%22%3A%22%5BArrowFunctionExpression%5D%22%7D" });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-80 bg-white border-l border-gray-200 flex flex-col overflow-y-auto overflow-x-hidden", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:90:4", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "90", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22w-80%20bg-white%20border-l%20border-gray-200%20flex%20flex-col%20overflow-y-auto%20overflow-x-hidden%22%7D", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:92:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "92", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22p-4%20border-b%20border-gray-200%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:93:8", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "93", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "div", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-800", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:94:10", "data-matrix-name": "h3", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "94", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "h3", "data-component-content": "%7B%22className%22%3A%22text-sm%20font-semibold%20text-gray-800%22%7D", children: TYPE_LABELS[selectedObject.type] || "Properties" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 capitalize", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:97:10", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "97", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-xs%20text-gray-400%20capitalize%22%7D", children: selectedObject.type })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ImageSection, { object: selectedObject, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:102:6", "data-matrix-name": "ImageSection", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "102", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ImageSection", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%7D" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 p-4 overflow-auto", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:105:6", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "105", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex-1%20p-4%20overflow-auto%22%7D", children: [
+      selectedObject.type === "rectangle" && /* @__PURE__ */ jsxRuntimeExports.jsx(ShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:107:10", "data-matrix-name": "ShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "107", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "circle" && /* @__PURE__ */ jsxRuntimeExports.jsx(ShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:110:10", "data-matrix-name": "ShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "110", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "triangle" && /* @__PURE__ */ jsxRuntimeExports.jsx(ShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:113:10", "data-matrix-name": "ShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "113", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "polygon" && /* @__PURE__ */ jsxRuntimeExports.jsx(ShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:116:10", "data-matrix-name": "ShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "116", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "geoshape" && /* @__PURE__ */ jsxRuntimeExports.jsx(GeoShapeProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:119:10", "data-matrix-name": "GeoShapeProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "119", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "GeoShapeProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "geopoint" && /* @__PURE__ */ jsxRuntimeExports.jsx(GeoPointProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:122:10", "data-matrix-name": "GeoPointProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "122", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "GeoPointProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "geosegment" && /* @__PURE__ */ jsxRuntimeExports.jsx(GeoSegmentProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:125:10", "data-matrix-name": "GeoSegmentProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "125", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "GeoSegmentProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "geoangle" && /* @__PURE__ */ jsxRuntimeExports.jsx(GeoAngleProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:128:10", "data-matrix-name": "GeoAngleProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "128", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "GeoAngleProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "text" && /* @__PURE__ */ jsxRuntimeExports.jsx(TextProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:131:10", "data-matrix-name": "TextProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "131", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "TextProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "arrow" && /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:134:10", "data-matrix-name": "ArrowProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "134", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ArrowProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "line" && /* @__PURE__ */ jsxRuntimeExports.jsx(LineProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:137:10", "data-matrix-name": "LineProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "137", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "LineProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "chart" && /* @__PURE__ */ jsxRuntimeExports.jsx(ChartProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:140:10", "data-matrix-name": "ChartProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "140", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "ChartProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "fraction" && /* @__PURE__ */ jsxRuntimeExports.jsx(FractionProperties, { object: selectedObject, onUpdate: createUpdater(selectedObject.id), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:143:10", "data-matrix-name": "FractionProperties", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "143", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "FractionProperties", "data-component-content": "%7B%22object%22%3A%22%5BIdentifier%5D%22%2C%22onUpdate%22%3A%22%5BCallExpression%5D%22%7D" }),
+      selectedObject.type === "freehand" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx:146:10", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/properties/PropertiesPanel.tsx", "data-component-line": "146", "data-component-file": "PropertiesPanel.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-400%22%7D", children: "Select Pen tool to configure." })
+    ] })
+  ] });
 };
 const templates = [
   // Fractions templates
@@ -55912,6 +52559,81 @@ const IMPLICIT_MULT_VARS = [
   "t"
 ];
 const DEFAULT_EQUIVALENCE_VARS = ["x", "y", "z", "a", "b", "c", "k", "m", "n", "t"];
+function protectLatex(state) {
+  const placeholders = [];
+  const text2 = state.text.replace(/\\[a-zA-Z]+(\{[^{}]*\})+/g, (match2) => {
+    const idx = placeholders.length;
+    placeholders.push(match2);
+    return `\0LATEX${idx}\0`;
+  });
+  return { text: text2, latexPlaceholders: placeholders };
+}
+function normalizeUnicode(state) {
+  let text2 = state.text;
+  text2 = text2.replace(/\n/g, " ");
+  text2 = text2.replace(/²/g, "^2").replace(/³/g, "^3");
+  return { ...state, text: text2 };
+}
+function normalizeNumbers(input) {
+  if (!input || typeof input !== "string") return "";
+  let result = input;
+  result = result.replace(/(\d),(\d)/g, "$1.$2");
+  result = result.replace(
+    new RegExp("(?<![a-zA-Z])([-+]?∞|[-+]?inf|[-+]?Inf)(?![a-zA-Z])", "g"),
+    (match2) => match2.startsWith("-") ? "-Infinity" : "Infinity"
+  );
+  return result;
+}
+function normalizeNumbersStage(state) {
+  return { ...state, text: normalizeNumbers(state.text) };
+}
+function normalizeOperators(state) {
+  let text2 = state.text;
+  text2 = text2.replace(/\b1([a-zA-Z])/g, "$1");
+  text2 = text2.replace(/([a-zA-Z0-9_^{}])\s*[+\-]\s*0\b/g, "$1");
+  text2 = text2.replace(/-\s*-\s*/g, "+ ");
+  text2 = text2.replace(/\+\s*-\s*/g, "− ");
+  return { ...state, text: text2 };
+}
+function normalizeFunctions(state) {
+  let text2 = state.text;
+  text2 = text2.replace(/\bsqrt\(([^()]*)\)/g, "\\sqrt{$1}");
+  text2 = text2.replace(/log_\{?([\w\d]+)\}?\s*\((.*?)\)/g, "\\log_{$1}($2)");
+  text2 = text2.replace(/\bln\((.*?)\)/g, "\\ln($1)");
+  text2 = text2.replace(/\blg\((.*?)\)/g, "\\lg($1)");
+  return { ...state, text: text2 };
+}
+function convertFractions(input) {
+  if (!input || typeof input !== "string") return input ?? "";
+  const placeholders = [];
+  let result = input.replace(/\\frac\{[^}]*\}\{[^}]*\}/g, (match2) => {
+    const idx = placeholders.length;
+    placeholders.push(match2);
+    return `\0FRAC${idx}\0`;
+  });
+  result = result.replace(
+    /([a-zA-Z0-9_^{}]+)\/([a-zA-Z0-9_^{}]+)/g,
+    "\\frac{$1}{$2}"
+  );
+  result = result.replace(/\x00FRAC(\d+)\x00/g, (_, idx) => placeholders[Number(idx)]);
+  return result;
+}
+function convertFractionsStage(state) {
+  return { ...state, text: convertFractions(state.text) };
+}
+function normalizeSpacing(state) {
+  let text2 = state.text;
+  text2 = text2.replace(/⋅/g, "\\cdot").replace(/\s*\*\s*/g, " \\cdot ");
+  text2 = text2.replace(/<=/g, "\\le ").replace(/>=/g, "\\ge ");
+  return { ...state, text: text2 };
+}
+function restoreLatex(state) {
+  const text2 = state.text.replace(
+    /\x00LATEX(\d+)\x00/g,
+    (_, idx) => state.latexPlaceholders[Number(idx)]
+  );
+  return { ...state, text: text2 };
+}
 function processAbs(text2, format2) {
   let result = "";
   const stack = [];
@@ -55936,9 +52658,22 @@ function processAbs(text2, format2) {
   }
   return result;
 }
+function normalizeMathExpression$1(text2) {
+  if (!text2 || typeof text2 !== "string") return "";
+  let state = { text: text2, latexPlaceholders: [] };
+  state = protectLatex(state);
+  state = normalizeUnicode(state);
+  state = normalizeNumbersStage(state);
+  state = normalizeOperators(state);
+  state = normalizeFunctions(state);
+  state = convertFractionsStage(state);
+  state = normalizeSpacing(state);
+  state = restoreLatex(state);
+  return processAbs(state.text, "KaTeX").trim();
+}
 function toMathJSExpression(text2) {
   if (!text2 || typeof text2 !== "string") return "";
-  let result = text2.trim();
+  let result = text2;
   result = result.replace(/≤/g, "<=").replace(/≥/g, ">=").replace(/≠/g, "!=");
   result = result.replace(/⋅/g, "*").replace(/\\cdot/g, "*");
   result = result.replace(/\\le/g, "<=").replace(/\\ge/g, ">=").replace(/\\neq/g, "!=");
@@ -55960,18 +52695,6 @@ function toMathJSExpression(text2) {
     result = result.replace(varDigitRegex, `$1*$2`);
   });
   return result;
-}
-function normalizeMathExpression$1(text2) {
-  if (!text2 || typeof text2 !== "string") return "";
-  let result = text2;
-  result = processAbs(result, "KaTeX");
-  result = result.replace(/⋅/g, "\\cdot").replace(/\s*\*\s*/g, " \\cdot ");
-  result = result.replace(/<=/g, "\\le ").replace(/>=/g, "\\ge ");
-  result = result.replace(/log_\{?([\w\d]+)\}?\s*\((.*?)\)/g, "\\log_{$1}($2)");
-  result = result.replace(/\bln\((.*?)\)/g, "\\ln($1)");
-  result = result.replace(/\blg\((.*?)\)/g, "\\lg($1)");
-  result = result.replace(/(\S)\s*([+\-*/^=])\s*(\S)/g, "$1 $2 $3");
-  return result.trim();
 }
 function normalizeMathFragments(text2) {
   if (!text2 || typeof text2 !== "string") return text2 ?? "";
@@ -56642,7 +53365,7 @@ function lazy(object, prop, valueResolver) {
       }
       return _value;
     },
-    set: function set2(value) {
+    set: function set(value) {
       _value = value;
       _uninitialized = false;
     },
@@ -94293,20 +91016,20 @@ var createStirlingS2 = /* @__PURE__ */ factory(name$G, dependencies$G, (_ref) =>
         throw new TypeError("k must be less than or equal to n in function stirlingS2");
       }
       var big = !(isNumber(n) && isNumber(k));
-      var cache2 = big ? bigCache : smallCache;
+      var cache = big ? bigCache : smallCache;
       var make = big ? bignumber2 : number2;
       var nn = number2(n);
       var nk = number2(k);
-      if (cache2[nn] && cache2[nn].length > nk) {
-        return cache2[nn][nk];
+      if (cache[nn] && cache[nn].length > nk) {
+        return cache[nn][nk];
       }
       for (var m = 0; m <= nn; ++m) {
-        if (!cache2[m]) {
-          cache2[m] = [m === 0 ? make(1) : make(0)];
+        if (!cache[m]) {
+          cache[m] = [m === 0 ? make(1) : make(0)];
         }
         if (m === 0) continue;
-        var row2 = cache2[m];
-        var prev = cache2[m - 1];
+        var row2 = cache[m];
+        var prev = cache[m - 1];
         for (var i = row2.length; i <= m && i <= nk; ++i) {
           if (i === m) {
             row2[i] = 1;
@@ -94315,7 +91038,7 @@ var createStirlingS2 = /* @__PURE__ */ factory(name$G, dependencies$G, (_ref) =>
           }
         }
       }
-      return cache2[nn][nk];
+      return cache[nn][nk];
     }
   });
 });
@@ -96354,15 +93077,15 @@ var createDerivative = /* @__PURE__ */ factory(name$v, dependencies$v, (_ref) =>
     var options = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {
       simplify: true
     };
-    var cache2 = /* @__PURE__ */ new Map();
+    var cache = /* @__PURE__ */ new Map();
     var variableName = variable.name;
     function isConstCached(node) {
-      var cached = cache2.get(node);
+      var cached = cache.get(node);
       if (cached !== void 0) {
         return cached;
       }
       var res2 = _isConst(isConstCached, node, variableName);
-      cache2.set(node, res2);
+      cache.set(node, res2);
       return res2;
     }
     var res = _derivative(expr, isConstCached);
@@ -101341,13 +98064,13 @@ function checkEquivalence(expr1, expr2, variables, options) {
     validPointsUsed: validResults.length
   };
 }
-const BOUNDARY_REGEX = /([(\[])\s*(-Infinity|[\d.-]+)\s*;\s*([\d.-]+|\+Infinity)\s*([)\]])/;
+const BOUNDARY_REGEX = /([(\[])\s*(-Infinity|[\d.-]+)\s*;\s*([\d.-]+|\+?Infinity)\s*([)\]])/;
 function parseSingleInterval(input) {
   const match2 = input.trim().match(BOUNDARY_REGEX);
   if (!match2) return null;
   const [, startBracket, startValStr, endValStr, endBracket] = match2;
   const startValue = startValStr === "-Infinity" ? "-Infinity" : parseFloat(startValStr);
-  const endValue = endValStr === "+Infinity" ? "+Infinity" : parseFloat(endValStr);
+  const endValue = endValStr === "+Infinity" || endValStr === "Infinity" ? "+Infinity" : parseFloat(endValStr);
   if (typeof startValue === "number" && typeof endValue === "number" && startValue > endValue) {
     return null;
   }
@@ -101363,7 +98086,8 @@ function parseSingleInterval(input) {
   };
 }
 function parseIntervalSet(input) {
-  const parts = input.split(/\cup/g);
+  const normalized = normalizeNumbers(input);
+  const parts = normalized.split(/\cup/g);
   return parts.map((part) => parseSingleInterval(part.trim())).filter((interval) => interval !== null);
 }
 function isPointInInterval(point, interval) {
@@ -101374,8 +98098,8 @@ function isPointInInterval(point, interval) {
   const isBeforeEnd = end.value === "+Infinity" || (end.inclusive ? point <= endValue : point < endValue);
   return isAfterStart && isBeforeEnd;
 }
-function isPointInIntervalSet(point, set2) {
-  return set2.some((interval) => isPointInInterval(point, interval));
+function isPointInIntervalSet(point, set) {
+  return set.some((interval) => isPointInInterval(point, interval));
 }
 function intervalSetsEqual(set1, set2) {
   const testPoints = /* @__PURE__ */ new Set();
@@ -122871,7 +119595,7 @@ const LinearFunction = ({
     }, 50);
     return () => clearInterval(interval);
   }, [animating, animationType]);
-  const reset2 = () => {
+  const reset = () => {
     setK(1);
     setB(0);
     setAnimating(false);
@@ -122951,7 +119675,7 @@ const LinearFunction = ({
             animating ? /* @__PURE__ */ jsxRuntimeExports.jsx(Pause, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx:234:31", "data-matrix-name": "Pause", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx", "data-component-line": "234", "data-component-file": "LinearFunction.tsx", "data-component-name": "Pause", "data-component-content": "%7B%22size%22%3A18%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx:234:53", "data-matrix-name": "Play", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx", "data-component-line": "234", "data-component-file": "LinearFunction.tsx", "data-component-name": "Play", "data-component-content": "%7B%22size%22%3A18%7D" }),
             animating ? "Пауза" : "Анимация"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx:237:16", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx", "data-component-line": "237", "data-component-file": "LinearFunction.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx:237:16", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx", "data-component-line": "237", "data-component-file": "LinearFunction.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx:241:18", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LinearFunction.tsx", "data-component-line": "241", "data-component-file": "LinearFunction.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
             "Сброс"
           ] })
@@ -123042,7 +119766,7 @@ const QuadraticFunction = ({
     }, 50);
     return () => clearInterval(interval);
   }, [animating]);
-  const reset2 = () => {
+  const reset = () => {
     setA(1);
     setB(0);
     setC(0);
@@ -123129,7 +119853,7 @@ const QuadraticFunction = ({
             animating ? /* @__PURE__ */ jsxRuntimeExports.jsx(Pause, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx:246:29", "data-matrix-name": "Pause", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx", "data-component-line": "246", "data-component-file": "QuadraticFunction.tsx", "data-component-name": "Pause", "data-component-content": "%7B%22size%22%3A18%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx:246:51", "data-matrix-name": "Play", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx", "data-component-line": "246", "data-component-file": "QuadraticFunction.tsx", "data-component-name": "Play", "data-component-content": "%7B%22size%22%3A18%7D" }),
             animating ? "Пауза" : "Анимация"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx:249:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx", "data-component-line": "249", "data-component-file": "QuadraticFunction.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx:249:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx", "data-component-line": "249", "data-component-file": "QuadraticFunction.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx:253:16", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/QuadraticFunction.tsx", "data-component-line": "253", "data-component-file": "QuadraticFunction.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
             "Сброс"
           ] })
@@ -123199,7 +119923,7 @@ const ExponentialFunction = () => {
     }, 50);
     return () => clearInterval(interval);
   }, [animating]);
-  const reset2 = () => {
+  const reset = () => {
     setA(1);
     setB(2);
     setC(0);
@@ -123280,7 +120004,7 @@ const ExponentialFunction = () => {
             animating ? /* @__PURE__ */ jsxRuntimeExports.jsx(Pause, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx:191:49", "data-matrix-name": "Pause", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx", "data-component-line": "191", "data-component-file": "ExponentialFunction.tsx", "data-component-name": "Pause", "data-component-content": "%7B%22size%22%3A18%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx:191:71", "data-matrix-name": "Play", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx", "data-component-line": "191", "data-component-file": "ExponentialFunction.tsx", "data-component-name": "Play", "data-component-content": "%7B%22size%22%3A18%7D" }),
             animating ? "Пауза" : "Анимация"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx:194:32", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx", "data-component-line": "194", "data-component-file": "ExponentialFunction.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx:194:32", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx", "data-component-line": "194", "data-component-file": "ExponentialFunction.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx:198:36", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ExponentialFunction.tsx", "data-component-line": "198", "data-component-file": "ExponentialFunction.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
             "Сброс"
           ] })
@@ -123349,7 +120073,7 @@ const LogarithmicFunction = () => {
     }, 50);
     return () => clearInterval(interval);
   }, [animating]);
-  const reset2 = () => {
+  const reset = () => {
     setA(1);
     setB(2);
     setC(0);
@@ -123425,7 +120149,7 @@ const LogarithmicFunction = () => {
             animating ? /* @__PURE__ */ jsxRuntimeExports.jsx(Pause, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx:188:49", "data-matrix-name": "Pause", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx", "data-component-line": "188", "data-component-file": "LogarithmicFunction.tsx", "data-component-name": "Pause", "data-component-content": "%7B%22size%22%3A18%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx:188:71", "data-matrix-name": "Play", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx", "data-component-line": "188", "data-component-file": "LogarithmicFunction.tsx", "data-component-name": "Play", "data-component-content": "%7B%22size%22%3A18%7D" }),
             animating ? "Пауза" : "Анимация"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx:191:32", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx", "data-component-line": "191", "data-component-file": "LogarithmicFunction.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx:191:32", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx", "data-component-line": "191", "data-component-file": "LogarithmicFunction.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx:195:36", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/LogarithmicFunction.tsx", "data-component-line": "195", "data-component-file": "LogarithmicFunction.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
             "Сброс"
           ] })
@@ -123554,7 +120278,7 @@ const DerivativeExplorer = () => {
     }, 100);
     return () => clearInterval(interval);
   }, [animating]);
-  const reset2 = () => {
+  const reset = () => {
     setA(0.1);
     setB(0);
     setC(-1);
@@ -123652,7 +120376,7 @@ const DerivativeExplorer = () => {
             animating ? /* @__PURE__ */ jsxRuntimeExports.jsx(Pause, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx:306:45", "data-matrix-name": "Pause", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx", "data-component-line": "306", "data-component-file": "DerivativeExplorer.tsx", "data-component-name": "Pause", "data-component-content": "%7B%22size%22%3A18%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx:306:67", "data-matrix-name": "Play", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx", "data-component-line": "306", "data-component-file": "DerivativeExplorer.tsx", "data-component-name": "Play", "data-component-content": "%7B%22size%22%3A18%7D" }),
             animating ? "Пауза" : "Анимация"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx:309:28", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx", "data-component-line": "309", "data-component-file": "DerivativeExplorer.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx:309:28", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx", "data-component-line": "309", "data-component-file": "DerivativeExplorer.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx:313:32", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/DerivativeExplorer.tsx", "data-component-line": "313", "data-component-file": "DerivativeExplorer.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
             "Сброс"
           ] })
@@ -123707,7 +120431,7 @@ const PythagoreanTheorem = ({
       }
     }, 2e3);
   };
-  const reset2 = () => {
+  const reset = () => {
     setA(3);
     setB(4);
     setAnimationStep(0);
@@ -123864,7 +120588,7 @@ const PythagoreanTheorem = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/PythagoreanTheorem.tsx:336:16", "data-matrix-name": "Play", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/PythagoreanTheorem.tsx", "data-component-line": "336", "data-component-file": "PythagoreanTheorem.tsx", "data-component-name": "Play", "data-component-content": "%7B%22size%22%3A18%7D" }),
             "Показать доказательство"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/PythagoreanTheorem.tsx:339:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/PythagoreanTheorem.tsx", "data-component-line": "339", "data-component-file": "PythagoreanTheorem.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/PythagoreanTheorem.tsx:339:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/PythagoreanTheorem.tsx", "data-component-line": "339", "data-component-file": "PythagoreanTheorem.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/PythagoreanTheorem.tsx:343:16", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/PythagoreanTheorem.tsx", "data-component-line": "343", "data-component-file": "PythagoreanTheorem.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
             "Сброс"
           ] })
@@ -123938,7 +120662,7 @@ const VectorOperations = () => {
   while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
   const sweepFlag = angleDiff > 0 ? 0 : 1;
   const largeArcFlag = 0;
-  const reset2 = () => {
+  const reset = () => {
     setV1x(3);
     setV1y(2);
     setV2x(1);
@@ -124098,7 +120822,7 @@ const VectorOperations = () => {
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/VectorOperations.tsx:331:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/VectorOperations.tsx", "data-component-line": "331", "data-component-file": "VectorOperations.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/VectorOperations.tsx:331:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/VectorOperations.tsx", "data-component-line": "331", "data-component-file": "VectorOperations.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/VectorOperations.tsx:335:28", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/VectorOperations.tsx", "data-component-line": "335", "data-component-file": "VectorOperations.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Сброс"
         ] })
@@ -124147,7 +120871,7 @@ const TrigonometricCircle = ({
       }
     };
   }, [animating, animationDirection]);
-  const reset2 = () => {
+  const reset = () => {
     setAngle(45);
     setAnimating(false);
   };
@@ -124259,7 +120983,7 @@ const TrigonometricCircle = ({
             animating ? /* @__PURE__ */ jsxRuntimeExports.jsx(Pause, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx:350:29", "data-matrix-name": "Pause", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx", "data-component-line": "350", "data-component-file": "TrigonometricCircle.tsx", "data-component-name": "Pause", "data-component-content": "%7B%22size%22%3A18%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx:350:51", "data-matrix-name": "Play", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx", "data-component-line": "350", "data-component-file": "TrigonometricCircle.tsx", "data-component-name": "Play", "data-component-content": "%7B%22size%22%3A18%7D" }),
             animating ? "Пауза" : "Анимация"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx:353:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx", "data-component-line": "353", "data-component-file": "TrigonometricCircle.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx:353:14", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx", "data-component-line": "353", "data-component-file": "TrigonometricCircle.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx:357:16", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricCircle.tsx", "data-component-line": "357", "data-component-file": "TrigonometricCircle.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
             "Сброс"
           ] })
@@ -124320,7 +121044,7 @@ const ProbabilityTree = () => {
   const pnotAnotBC = pNotAandNotB * pC_notAnotB;
   const pnotAnotBnotC = pNotAandNotB * pNotC_notAnotB;
   const total = hasThirdLevel ? pABC + pABnotC + pAnotBC + pAnotBnotC + pnotABC + pnotABnotC + pnotAnotBC + pnotAnotBnotC : pAandB + pAandNotB + pNotAandB + pNotAandNotB;
-  const reset2 = () => {
+  const reset = () => {
     setPa(0.6);
     setPb(0.7);
     setPbA(0.7);
@@ -124745,7 +121469,7 @@ const ProbabilityTree = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx:533:32", "data-matrix-name": "Plus", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx", "data-component-line": "533", "data-component-file": "ProbabilityTree.tsx", "data-component-name": "Plus", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Добавить событие"
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx:538:24", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx", "data-component-line": "538", "data-component-file": "ProbabilityTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx:539:28", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx", "data-component-line": "539", "data-component-file": "ProbabilityTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex-1%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx:538:24", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx", "data-component-line": "538", "data-component-file": "ProbabilityTree.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22flex%20gap-2%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx:539:28", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx", "data-component-line": "539", "data-component-file": "ProbabilityTree.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex-1%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx:543:32", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ProbabilityTree.tsx", "data-component-line": "543", "data-component-file": "ProbabilityTree.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Сброс"
         ] }) })
@@ -124759,7 +121483,7 @@ const TrigonometricFunctions = () => {
   const [frequency, setFrequency] = reactExports.useState(1);
   const [phase, setPhase] = reactExports.useState(0);
   const instructions = ["Выберите тригонометрическую функцию для отображения", "Измените амплитуду A (высоту волны)", "Измените частоту B (количество периодов)", "Измените фазу C (горизонтальный сдвиг)", "Нули, максимумы и минимумы отмечены на графике"];
-  const reset2 = () => {
+  const reset = () => {
     setFunctionType("sin");
     setAmplitude(1);
     setFrequency(1);
@@ -125010,7 +121734,7 @@ const TrigonometricFunctions = () => {
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricFunctions.tsx:367:32", "data-matrix-name": "span", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricFunctions.tsx", "data-component-line": "367", "data-component-file": "TrigonometricFunctions.tsx", "data-component-name": "span", children: "Минимумы" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricFunctions.tsx:371:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricFunctions.tsx", "data-component-line": "371", "data-component-file": "TrigonometricFunctions.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricFunctions.tsx:371:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricFunctions.tsx", "data-component-line": "371", "data-component-file": "TrigonometricFunctions.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricFunctions.tsx:375:28", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigonometricFunctions.tsx", "data-component-line": "375", "data-component-file": "TrigonometricFunctions.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Сброс"
         ] })
@@ -125233,7 +121957,7 @@ const FunctionIntersections = () => {
     }
     return intersections;
   }, [func1, func2]);
-  const reset2 = () => {
+  const reset = () => {
     setFunc1({
       type: "linear",
       k: 1,
@@ -125390,7 +122114,7 @@ const FunctionIntersections = () => {
             ")"
           ] }, i)) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionIntersections.tsx:330:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionIntersections.tsx", "data-component-line": "330", "data-component-file": "FunctionIntersections.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionIntersections.tsx:330:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionIntersections.tsx", "data-component-line": "330", "data-component-file": "FunctionIntersections.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionIntersections.tsx:334:28", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionIntersections.tsx", "data-component-line": "334", "data-component-file": "FunctionIntersections.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Сброс"
         ] })
@@ -125406,7 +122130,7 @@ const InequalitySystems = () => {
   const [b2, setB2] = reactExports.useState(3);
   const [sign2, setSign2] = reactExports.useState("<");
   const instructions = ["Настройте параметры двух линейных неравенств", "Измените коэффициенты a и b для каждой прямой", "Выберите знак неравенства (>, <, ≥, ≤)", "Синяя область — первое неравенство", "Зелёная область — второе неравенство", "Тёмная область — пересечение (решение системы)"];
-  const reset2 = () => {
+  const reset = () => {
     setA1(1);
     setB1(2);
     setSign1(">");
@@ -125583,7 +122307,7 @@ const InequalitySystems = () => {
             "Сплошная линия — нестрогое неравенство (≥ или ≤)"
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/InequalitySystems.tsx:345:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/InequalitySystems.tsx", "data-component-line": "345", "data-component-file": "InequalitySystems.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/InequalitySystems.tsx:345:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/InequalitySystems.tsx", "data-component-line": "345", "data-component-file": "InequalitySystems.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/InequalitySystems.tsx:349:28", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/InequalitySystems.tsx", "data-component-line": "349", "data-component-file": "InequalitySystems.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Сброс"
         ] })
@@ -125595,7 +122319,7 @@ const ParallelLines = () => {
   const [transversalAngle, setTransversalAngle] = reactExports.useState(30);
   const [highlight, setHighlight] = reactExports.useState("none");
   const instructions = ["Измените угол наклона секущей прямой", "Выберите тип углов для подсветки", "Соответственные углы равны (одинаковый цвет)", "Накрест лежащие углы равны (одинаковый цвет)", "Односторонние углы в сумме дают 180°"];
-  const reset2 = () => {
+  const reset = () => {
     setTransversalAngle(30);
     setHighlight("none");
   };
@@ -125775,7 +122499,7 @@ const ParallelLines = () => {
           ] }),
           highlight === "none" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ParallelLines.tsx:370:32", "data-matrix-name": "div", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ParallelLines.tsx", "data-component-line": "370", "data-component-file": "ParallelLines.tsx", "data-component-name": "div", "data-component-content": "%7B%22className%22%3A%22text-gray-600%22%7D", children: "Выберите тип углов для подсветки и изучения их свойств." })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ParallelLines.tsx:376:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ParallelLines.tsx", "data-component-line": "376", "data-component-file": "ParallelLines.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ParallelLines.tsx:376:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ParallelLines.tsx", "data-component-line": "376", "data-component-file": "ParallelLines.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ParallelLines.tsx:380:28", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/ParallelLines.tsx", "data-component-line": "380", "data-component-file": "ParallelLines.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Сброс"
         ] })
@@ -125789,7 +122513,7 @@ const TriangleSimilarity = () => {
   const [sideC, setSideC] = reactExports.useState(80);
   const [similarityRatio, setSimilarityRatio] = reactExports.useState(1.5);
   const instructions = ["Измените стороны исходного треугольника", "Настройте коэффициент подобия k", "Наблюдайте, как изменяется подобный треугольник", "Углы подобных треугольников равны", "Стороны подобных треугольников пропорциональны"];
-  const reset2 = () => {
+  const reset = () => {
     setSideA(100);
     setSideB(120);
     setSideC(80);
@@ -125979,7 +122703,7 @@ const TriangleSimilarity = () => {
             similarityRatio.toFixed(2)
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TriangleSimilarity.tsx:232:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TriangleSimilarity.tsx", "data-component-line": "232", "data-component-file": "TriangleSimilarity.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TriangleSimilarity.tsx:232:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TriangleSimilarity.tsx", "data-component-line": "232", "data-component-file": "TriangleSimilarity.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TriangleSimilarity.tsx:233:28", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TriangleSimilarity.tsx", "data-component-line": "233", "data-component-file": "TriangleSimilarity.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Сброс"
         ] })
@@ -126068,7 +122792,7 @@ const FunctionTransformations = () => {
     if (transformedPoints.length === 0) return "";
     return transformedPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
   }, [transformedPoints]);
-  const reset2 = () => {
+  const reset = () => {
     setC(0);
     setA(0);
     setK(1);
@@ -126147,7 +122871,7 @@ const FunctionTransformations = () => {
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "range", min: "-3", max: "3", step: "0.1", value: d, onChange: (e2) => setD(parseFloat(e2.target.value)), onMouseDown: (e2) => e2.stopPropagation(), className: "w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionTransformations.tsx:247:32", "data-matrix-name": "input", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionTransformations.tsx", "data-component-line": "247", "data-component-file": "FunctionTransformations.tsx", "data-component-name": "input", "data-component-content": "%7B%22type%22%3A%22range%22%2C%22min%22%3A%22-3%22%2C%22max%22%3A%223%22%2C%22step%22%3A%220.1%22%2C%22value%22%3A%22%5BIdentifier%5D%22%2C%22onChange%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22onMouseDown%22%3A%22%5BArrowFunctionExpression%5D%22%2C%22className%22%3A%22w-full%20h-2%20bg-gray-200%20rounded-lg%20appearance-none%20cursor-pointer%20accent-indigo-600%22%7D" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "w-full flex items-center justify-center gap-2 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionTransformations.tsx:261:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionTransformations.tsx", "data-component-line": "261", "data-component-file": "FunctionTransformations.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "w-full flex items-center justify-center gap-2 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionTransformations.tsx:261:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionTransformations.tsx", "data-component-line": "261", "data-component-file": "FunctionTransformations.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionTransformations.tsx:265:28", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionTransformations.tsx", "data-component-line": "265", "data-component-file": "FunctionTransformations.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Сброс"
         ] }),
@@ -126295,7 +123019,7 @@ const FunctionAnalysis = () => {
     if (derivativePoints.length === 0) return "";
     return derivativePoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
   }, [derivativePoints]);
-  const reset2 = () => {
+  const reset = () => {
     setA(1);
     setB(0);
     setC(-3);
@@ -126427,7 +123151,7 @@ const FunctionAnalysis = () => {
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-600", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionAnalysis.tsx:423:32", "data-matrix-name": "p", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionAnalysis.tsx", "data-component-line": "423", "data-component-file": "FunctionAnalysis.tsx", "data-component-name": "p", "data-component-content": "%7B%22className%22%3A%22text-sm%20text-gray-600%22%7D", children: convexity })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "w-full flex items-center justify-center gap-2 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionAnalysis.tsx:428:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionAnalysis.tsx", "data-component-line": "428", "data-component-file": "FunctionAnalysis.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "w-full flex items-center justify-center gap-2 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionAnalysis.tsx:428:24", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionAnalysis.tsx", "data-component-line": "428", "data-component-file": "FunctionAnalysis.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22w-full%20flex%20items-center%20justify-center%20gap-2%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionAnalysis.tsx:432:28", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/FunctionAnalysis.tsx", "data-component-line": "432", "data-component-file": "FunctionAnalysis.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
           "Сброс"
         ] }),
@@ -126497,7 +123221,7 @@ const TrigCircleGraph = () => {
       }]);
     }
   }, [theta, func, isPlaying]);
-  const reset2 = () => {
+  const reset = () => {
     setIsPlaying(false);
     setTheta(0);
     setTrail([]);
@@ -126601,7 +123325,7 @@ const TrigCircleGraph = () => {
             isPlaying ? /* @__PURE__ */ jsxRuntimeExports.jsx(Pause, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx:359:45", "data-matrix-name": "Pause", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx", "data-component-line": "359", "data-component-file": "TrigCircleGraph.tsx", "data-component-name": "Pause", "data-component-content": "%7B%22size%22%3A18%7D" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx:359:67", "data-matrix-name": "Play", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx", "data-component-line": "359", "data-component-file": "TrigCircleGraph.tsx", "data-component-name": "Play", "data-component-content": "%7B%22size%22%3A18%7D" }),
             isPlaying ? "Пауза" : "Старт"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset2, className: "flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx:363:28", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx", "data-component-line": "363", "data-component-file": "TrigCircleGraph.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: reset, className: "flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200", "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx:363:28", "data-matrix-name": "button", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx", "data-component-line": "363", "data-component-file": "TrigCircleGraph.tsx", "data-component-name": "button", "data-component-content": "%7B%22onClick%22%3A%22%5BIdentifier%5D%22%2C%22className%22%3A%22flex%20items-center%20gap-2%20px-4%20py-2%20bg-gray-100%20text-gray-700%20rounded-lg%20hover%3Abg-gray-200%22%7D", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 18, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx:367:32", "data-matrix-name": "RotateCcw", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/components/interactive/TrigCircleGraph.tsx", "data-component-line": "367", "data-component-file": "TrigCircleGraph.tsx", "data-component-name": "RotateCcw", "data-component-content": "%7B%22size%22%3A18%7D" }),
             "Сброс"
           ] }),
@@ -127024,7 +123748,7 @@ function AppContent() {
         renderMainContent(),
         !["interactive", "challenge", "projects"].includes(state.mode) && /* @__PURE__ */ jsxRuntimeExports.jsx(PageSwitcher, { pages: state.pages, activePageId: state.activePageId, onSwitch: switchPage, onAdd: addPage, onRemove: removePage, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:226:78", "data-matrix-name": "PageSwitcher", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "226", "data-component-file": "App.tsx", "data-component-name": "PageSwitcher", "data-component-content": "%7B%22pages%22%3A%22%5BMemberExpression%5D%22%2C%22activePageId%22%3A%22%5BMemberExpression%5D%22%2C%22onSwitch%22%3A%22%5BIdentifier%5D%22%2C%22onAdd%22%3A%22%5BIdentifier%5D%22%2C%22onRemove%22%3A%22%5BIdentifier%5D%22%7D" })
       ] }),
-      !zenMode && !["interactive", "challenge", "library", "projects"].includes(state.mode) && (selectedObjects.length > 0 || ["freehand", "shape", "text"].includes(state.mode)) && /* @__PURE__ */ jsxRuntimeExports.jsx(PropertiesPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:228:185", "data-matrix-name": "PropertiesPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "228", "data-component-file": "App.tsx", "data-component-name": "PropertiesPanel" })
+      !zenMode && !["interactive", "challenge", "library", "projects"].includes(state.mode) && (selectedObjects.length > 0 || ["freehand", "highlighter", "shape", "text"].includes(state.mode)) && /* @__PURE__ */ jsxRuntimeExports.jsx(PropertiesPanel, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:228:200", "data-matrix-name": "PropertiesPanel", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "228", "data-component-file": "App.tsx", "data-component-name": "PropertiesPanel" })
     ] }),
     showWelcome && /* @__PURE__ */ jsxRuntimeExports.jsx(WelcomeScreen, { onClose: () => setShowWelcome(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:230:22", "data-matrix-name": "WelcomeScreen", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "230", "data-component-file": "App.tsx", "data-component-name": "WelcomeScreen", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
     showExportModal && /* @__PURE__ */ jsxRuntimeExports.jsx(ExportModal, { onClose: () => setShowExportModal(false), "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx:231:26", "data-matrix-name": "ExportModal", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/App.tsx", "data-component-line": "231", "data-component-file": "App.tsx", "data-component-name": "ExportModal", "data-component-content": "%7B%22onClose%22%3A%22%5BArrowFunctionExpression%5D%22%7D" }),
@@ -127048,4 +123772,4 @@ const queryClient = new QueryClient({
   }
 });
 clientExports.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.StrictMode, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:18:2", "data-matrix-name": "StrictMode", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "18", "data-component-file": "main.tsx", "data-component-name": "StrictMode", children: /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:19:4", "data-matrix-name": "QueryClientProvider", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "19", "data-component-file": "main.tsx", "data-component-name": "QueryClientProvider", "data-component-content": "%7B%22client%22%3A%22%5BIdentifier%5D%22%7D", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorBoundary, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, { "data-matrix-id": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx:21:8", "data-matrix-name": "App", "data-component-path": "C:/Users/Timur/Desktop/\\u043F\\u0440\\u043E\\u043A\\u0435\\u0442/mathviz-architect/src/main.tsx", "data-component-line": "21", "data-component-file": "main.tsx", "data-component-name": "App" }) }) }) }));
-//# sourceMappingURL=index-CXfZeowZ.js.map
+//# sourceMappingURL=index-DzPnfK2b.js.map
