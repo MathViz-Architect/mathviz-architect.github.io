@@ -24,7 +24,7 @@ interface EditorContextValue {
   updateObjectDirect: (id: string, updates: Partial<AnyCanvasObject>) => void;
   executeCommand: (command: import('@/lib/commands').Command) => void;
   setObjectsFn: () => (objects: AnyCanvasObject[]) => void;
-  addObject: (obj: AnyCanvasObject) => void;
+  addObject: (obj: AnyCanvasObject, skipSelection?: boolean) => void;
   removeObject: (id: string) => void;
   selectObject: (id: string | null, multi?: boolean) => void;
   selectMultiple: (ids: string[]) => void;
@@ -49,7 +49,7 @@ interface EditorContextValue {
   handleZoomReset: () => void;
   handleToggleGrid: () => void;
   handleToggleGridWeight: () => void;
-  handleAddObject: (obj: AnyCanvasObject) => void;
+  handleAddObject: (obj: AnyCanvasObject, skipSelection?: boolean) => void;
   handleDeleteObject: (id: string) => void;
   handleSelectTemplate: (template: Template) => void;
   handleToggleVisibility: () => void;
@@ -67,8 +67,10 @@ interface EditorContextValue {
   setInteractiveModuleId: (moduleId: string | null) => void;
   penSettings: { width: number; color: string };
   setPenSettings: (settings: Partial<{ width: number; color: string }>) => void;
-  shapeType: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad';
-  setShapeType: (type: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad') => void;
+  highlighterSettings: { width: number; color: string };
+  setHighlighterSettings: (settings: Partial<{ width: number; color: string }>) => void;
+  shapeType: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'trapezoid' | 'rhombus' | 'parallelogram' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad';
+  setShapeType: (type: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'trapezoid' | 'rhombus' | 'parallelogram' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad') => void;
   /**
    * Применяет состояние холста от удалённого участника (Yjs).
    * Обновляет только objects/pages/activePageId.
@@ -96,11 +98,16 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [gridWeight, setGridWeight] = useState<'thin' | 'bold'>('thin');
   const [interactiveModuleId, setInteractiveModuleId] = useState<string | null>(null);
   const [penSettings, setPenSettingsState] = useState<{ width: number; color: string }>({ width: 3, color: '#374151' });
-  const [shapeType, setShapeType] = useState<'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad'>('rectangle');
+  const [highlighterSettings, setHighlighterSettingsState] = useState<{ width: number; color: string }>({ width: 28, color: '#FAFF00' });
+  const [shapeType, setShapeType] = useState<'rectangle' | 'circle' | 'triangle' | 'polygon' | 'trapezoid' | 'rhombus' | 'parallelogram' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad'>('rectangle');
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setPenSettings = useCallback((settings: Partial<{ width: number; color: string }>) => {
     setPenSettingsState(prev => ({ ...prev, ...settings }));
+  }, []);
+
+  const setHighlighterSettings = useCallback((settings: Partial<{ width: number; color: string }>) => {
+    setHighlighterSettingsState(prev => ({ ...prev, ...settings }));
   }, []);
 
   const MIN_ZOOM = 0.3;
@@ -112,8 +119,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const handleToggleGrid = useCallback(() => setShowGrid(g => !g), []);
   const handleToggleGridWeight = useCallback(() => setGridWeight(w => w === 'thin' ? 'bold' : 'thin'), []);
 
-  const handleAddObject = useCallback((obj: AnyCanvasObject) => {
-    appState.addObject(obj);
+  const handleAddObject = useCallback((obj: AnyCanvasObject, skipSelection = false) => {
+    appState.addObject(obj, skipSelection);
   }, [appState]);
 
   const handleDeleteObject = useCallback((id: string) => {
@@ -263,6 +270,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setInteractiveModuleId,
       penSettings,
       setPenSettings,
+      highlighterSettings,
+      setHighlighterSettings,
       shapeType,
       setShapeType,
       loadRemoteState,

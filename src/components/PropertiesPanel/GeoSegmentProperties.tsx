@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnyCanvasObject } from '@/lib/types';
-import { ColorPicker } from './ColorPicker';
+import { ColorPalette } from './ColorPalette';
+import { StrokeWidthSlider } from './StrokeWidthSlider';
 
 interface GeoSegmentPropertiesProps {
   object: AnyCanvasObject;
@@ -18,21 +19,19 @@ export const GeoSegmentProperties: React.FC<GeoSegmentPropertiesProps> = ({ obje
 
   return (
     <>
-      <ColorPicker
+      <ColorPalette
         label="Цвет"
         value={data.color || '#374151'}
         onChange={(value) => handleUpdateData('color', value)}
+        allowTransparent={false}
+        disabled={object.locked === true}
       />
-      <div className="mb-3">
-        <label className="block text-xs text-gray-500 mb-1">Толщина</label>
-        <input
-          type="number"
-          value={data.strokeWidth || 2}
-          onChange={(e) => handleUpdateData('strokeWidth', parseInt(e.target.value) || 1)}
-          className="w-full px-2 py-1 text-sm border rounded"
-          min={1} max={20}
-        />
-      </div>
+      <StrokeWidthSlider
+        label="Толщина"
+        value={data.strokeWidth || 2}
+        onChange={(value) => handleUpdateData('strokeWidth', value)}
+        disabled={object.locked === true}
+      />
       <div className="mb-3">
         <label className="flex items-center gap-2 cursor-pointer">
           <input

@@ -8,7 +8,7 @@ import { AnyCanvasObject } from '@/lib/types';
 
 interface UseHighlighterToolOptions {
     penSettings: { width: number; color: string };
-    onAddObject: (obj: AnyCanvasObject) => void;
+    onAddObject: (obj: AnyCanvasObject, skipSelection?: boolean) => void;
     publishState: () => void;
     /** Current app mode — used to abort drawing on tool switch */
     mode: string;
@@ -76,7 +76,7 @@ export function useHighlighterTool({ penSettings, onAddObject, publishState, mod
             data: { points: pts, color: penRef.current.color, width: penRef.current.width },
         };
         console.log('[highlighter] CREATE OBJECT', pts.length, 'pts at', minX, minY);
-        onAddObject(newPath);
+        onAddObject(newPath, true); // skipSelection: keep tool panel visible
         publishState();
     }, [onAddObject, publishState]);
 

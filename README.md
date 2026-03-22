@@ -63,7 +63,7 @@
 | 🎨 **Интуитивная панель инструментов** | Пресеты цвета и толщины, единая кнопка "Поделиться" |
 | 🖼️ **Вставка изображений** | Ctrl+V для вставки изображений из буфера обмена с мгновенным предпросмотром (Optimistic UI) |
 | 📐 **Resize изображений** | Drag угловых handles для изменения размера с сохранением пропорций (Shift) |
-| 🔄 **Properties Panel** | Современная панель с Transform, Rotation, Aspect Lock, Preview |
+| 🎨 **Панель свойств** | Визуальные пресеты цвета и толщины для всех типов объектов — без лишних технических параметров |
 | 📱 **Мобильная адаптация** | Responsive layout для всех модулей, компактная клавиатура, Bottom Sheet панель свойств, pointer events для touch/stylus |
 | 🔄 **Rotation pivot** | Вращение вокруг центра объекта (Figma-подобное поведение) |
 | 🔍 **Viewport culling** | Рендерятся только объекты в текущем viewport — производительность не деградирует при 500+ объектах |
@@ -156,7 +156,7 @@ pnpm run dev:electron     # desktop (Electron)
 | **DOM over SVG** | CSS Grid решает позиционирование без ручных координат |
 | **Simple layouts over algorithms** | Никакой топологической сортировки и graph layout |
 | **Data-driven curriculum** | Темы, шаблоны, зависимости описываются данными, не кодом |
-| **Components under 300 lines** | Превышение = сигнал к декомпозиции. Успешно реализовано: PropertiesPanel декомпозирован на 14 специализированных компонентов (ColorPicker, ShapeProperties, GeoShapeProperties, TextProperties, ArrowProperties, LineProperties, ChartProperties, FractionProperties, PenSettingsPanel и др.), а также новые: TransformSection, RotationSection, ImageSection, ActionSection |
+| **Components under 300 lines** | Превышение = сигнал к декомпозиции. Успешно реализовано: PropertiesPanel декомпозирован на 14 специализированных компонентов (ColorPalette, StrokeWidthSlider, ShapeProperties, GeoShapeProperties, TextProperties, ArrowProperties, LineProperties, ChartProperties, FractionProperties, PenSettingsPanel и др.), а также ImageSection |
 | **Zero unnecessary dependencies** | Новая библиотека только при явной необходимости |
 | **Refs-first state** | Критические данные доступны синхронно через refs, без ожидания рендера React |
 
@@ -220,11 +220,22 @@ src/
 │   ├── Canvas.tsx               # Холст рисования (pointer events, touch-action: none)
 │   ├── PropertiesPanel.tsx       # Панель свойств (sidebar на десктопе / bottom sheet на мобильном)
 │   ├── MobileBottomSheet.tsx     # vaul-based bottom sheet для мобильных
-│   ├── properties/              # Декомпозированные компоненты панели
-│   │   ├── TransformSection.tsx  # X, Y, Width, Height + aspect lock
-│   │   ├── RotationSection.tsx   # Slider + input + reset
-│   │   ├── ImageSection.tsx      # Preview для изображений
-│   │   └── ActionSection.tsx     # Duplicate, Delete, Front, Back
+│   ├── properties/              # Хост-компонент панели свойств
+│   │   └── ImageSection.tsx      # Preview для изображений
+│   ├── PropertiesPanel/         # Специализированные компоненты свойств
+│   │   ├── ColorPalette.tsx      # Сетка 4×2 пресетов цвета + transparent
+│   │   ├── StrokeWidthSlider.tsx # Ползунок толщины 1–10
+│   │   ├── ShapeProperties.tsx   # Заливка, цвет контура, толщина
+│   │   ├── LineProperties.tsx    # Цвет линии, толщина
+│   │   ├── ArrowProperties.tsx   # Цвет стрелки, толщина
+│   │   ├── GeoShapeProperties.tsx
+│   │   ├── GeoSegmentProperties.tsx
+│   │   ├── GeoAngleProperties.tsx
+│   │   ├── GeoPointProperties.tsx
+│   │   ├── TextProperties.tsx
+│   │   ├── FractionProperties.tsx
+│   │   ├── ChartProperties.tsx
+│   │   └── PenSettingsPanel.tsx
 │   ├── canvas/
 │   │   ├── ObjectRenderer.tsx    # Рендер объектов
 │   │   ├── ImageResizeHandles.tsx # Угловые handles для resize
@@ -245,7 +256,7 @@ src/
 │   ├── curriculum.ts            # Классы → предметы → темы
 │   ├── topicGraph.ts            # Граф зависимостей (prerequisites)
 │   ├── math/
-│   │   └── normalization.ts     # normalizeMathExpression (1x→x, 1/2→\frac{1}{2})
+│   │   └── normalization.ts     # normalizeMathExpression pipeline + normalizeNumbers (единый слой нормализации чисел)
 │   ├── templates/               # Шаблоны задач
 │   ├── supabase.ts              # Supabase клиент
 │   ├── sync/
@@ -459,14 +470,15 @@ type AnswerType =
 
 ### Properties Panel
 
-Панель свойств поддерживает:
+Панель свойств отображает только визуальные параметры выбранного объекта — без технических координат и размеров:
 
 | Секция | Описание |
 |--------|----------|
 | **Image Preview** | Миниатюра для изображений |
-| **Transform** | X, Y, Width, Height + lock соотношения сторон |
-| **Rotation** | Slider + input + reset кнопка |
-| **Actions** | Duplicate, Delete, Bring to Front, Send to Back |
+| **ColorPalette** | Сетка 4×2 пресетов цвета + transparent (SVG-диагональ) |
+| **StrokeWidthSlider** | Ползунок толщины 1–10 с числовым индикатором |
+
+Метки на русском языке: "Заливка", "Цвет контура", "Цвет линии", "Цвет стрелки", "Толщина".
 
 **Mobile Bottom Sheet:**
 
@@ -703,8 +715,37 @@ The system now supports answers in the form of interval unions, like `(-Infinity
 
 #### Upgraded Token Pipeline & Keyboard
 
--   **Normalization**: The token pipeline (`src/lib/math/normalization.ts`) now correctly handles complex structures like `log_a(b)`, `sin^2(x)`, and nested absolute values `|x|`, converting them to distinct formats for MathJS evaluation and KaTeX rendering.
+-   **Normalization pipeline** (`src/lib/math/normalization.ts`): единственный источник истины для нормализации. Все стадии выполняются строго по порядку:
+
+    | # | Стадия | Что делает |
+    |---|--------|-----------|
+    | 1 | `protectLatex` | Защищает `\cmd{}` блоки плейсхолдерами — последующие стадии их не трогают |
+    | 2 | `normalizeUnicode` | `\n` → пробел, `²³` → `^2 ^3` |
+    | 3 | `normalizeNumbers` | Десятичная запятая → точка; все формы бесконечности → `Infinity`/`-Infinity` |
+    | 4 | `normalizeOperators` | `1x` → `x`, `x+0` → `x`, `--` → `+`, `+-` → `−` |
+    | 5 | `normalizeFunctions` | `sqrt()` → `\sqrt{}`, `ln/lg/log_` → LaTeX *(single pass, без рекурсии)* |
+    | 6 | `convertFractions` | `a/b` → `\frac{a}{b}` |
+    | 7 | `normalizeSpacing` | `*` → `\cdot`, `<=` → `\le`, `>=` → `\ge` |
+    | 8 | `restoreLatex` | Восстанавливает защищённые LaTeX блоки |
+    | 9 | `processAbs` | `\|x\|` → `\left\|x\right\|` |
+
+-   **`normalizeNumbers`** — экспортируемая функция, используется напрямую в `intervals.ts` и `equivalence.ts`:
+    - `3,14` → `3.14` (только между цифрами, не затрагивает `;`, `(`, `)`, `[`, `]`)
+    - `∞`, `+∞`, `inf`, `+inf` → `Infinity`; `-∞`, `-inf` → `-Infinity`
+    - Идемпотентна: повторное применение не меняет результат
+    - Работает только вне LaTeX-блоков (вызывается после `protectLatex`, до `restoreLatex`)
+
+-   **Архитектурное правило:** вся нормализация чисел и бесконечностей — только через `normalizeNumbers`. Локальные `replace`-хаки в `intervals.ts` и `equivalence.ts` удалены.
+
+-   **`normalizeFunctions`** — single-pass контракт: каждый паттерн (`sqrt`, `log`, `ln`, `lg`) применяется ровно один раз через `.replace()`, без циклов и рекурсии.
+
 -   **New Keyboard Layout**: The virtual math keyboard (`src/components/challenge/MathKeyboard.tsx`) includes a new row with 10 buttons for senior-class functions and symbols: `log`, `ln`, `lg`, `|x|`, `arcsin`, `arccos`, `arctan`, `∪`, `∈`, `∞`.
+
+#### Parser Features (v3.3+)
+
+-   **Input normalization**: Expressions are automatically simplified — `1x` → `x`, `x+0` → `x`. Double signs are collapsed: `--` → `+`, `+-` → `-`. Unicode superscripts are converted: `x²` → `x^2`.
+-   **Auto fraction formatting**: Simple slash fractions like `1/2` or `x^2/y` are automatically converted to `\frac{}{}` LaTeX. Parenthesized fractions like `(x+1)/(y-1)` are left as-is for safety.
+-   **Interval & decimal validation**: Strict interval syntax validation. Decimal separator is flexible: `3,14` is treated as `3.14` via `normalizeNumbers` — the single source of truth for numeric normalization across the entire engine (`normalizeMathExpression`, `parseIntervalSet`, `compareExpressions`).
 
 ---
 
@@ -1106,6 +1147,7 @@ Kaspersky и некоторые другие антивирусы перехва
 - [x] **Properties Panel refactoring** — декомпозиция на TransformSection, RotationSection, ImageSection, ActionSection
 - [x] **Image resize handles** — drag угловых handles для изменения размера
 - [x] **Performance optimization** — React.memo для ObjectRenderer, кастомный comparison для предотвращения cascade re-renders
+- [x] **Properties Panel visual controls** — `ColorPalette` (сетка 4×2, transparent-свотч с SVG-диагональю) и `StrokeWidthSlider` (1–10) заменили `ColorPicker` и числовые инпуты; метки на русском; удалены координаты, размеры, кнопка удаления и секции Transform/Rotation/Actions
 - [x] **PropertiesPanel decomposition** — декомпозиция на 14 специализированных компонентов (все менее 300 строк)
 - [x] **Browser zoom fix** — нативный wheel listener с `passive: false` предотвращает зум браузера при Ctrl+Scroll
 - [x] **Enhanced PenSettingsPanel** — пресеты цвета (6 цветов), пресеты толщины (3 кнопки с иконками), live preview

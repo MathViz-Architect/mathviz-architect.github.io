@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnyCanvasObject } from '@/lib/types';
-import { ColorPicker } from './ColorPicker';
+import { ColorPalette } from './ColorPalette';
 
 interface TextPropertiesProps {
   object: AnyCanvasObject;
@@ -57,10 +57,12 @@ export const TextProperties: React.FC<TextPropertiesProps> = ({ object, onUpdate
           <option value="right">По правому краю</option>
         </select>
       </div>
-      <ColorPicker
+      <ColorPalette
         label="Цвет текста"
         value={data?.fill || '#1F2937'}
         onChange={(value) => handleUpdateData('fill', value)}
+        allowTransparent={false}
+        disabled={object.locked === true}
       />
     </>
   );

@@ -1,4 +1,6 @@
 
+import { normalizeNumbers } from '../math/normalization';
+
 export type BoundaryValue = number | '-Infinity' | '+Infinity';
 
 export interface IntervalBoundary {
@@ -13,7 +15,7 @@ export interface Interval {
 
 export type IntervalSet = Interval[];
 
-const BOUNDARY_REGEX = /([(\[])\s*(-Infinity|[\d.-]+)\s*;\s*([\d.-]+|\+Infinity)\s*([)\]])/;
+const BOUNDARY_REGEX = /([(\[])\s*(-Infinity|[\d.-]+)\s*;\s*([\d.-]+|\+?Infinity)\s*([)\]])/;
 
 /**
  * Парсит строковое представление одного интервала, например "(-Infinity; -2]".
@@ -27,7 +29,7 @@ function parseSingleInterval(input: string): Interval | null {
   const [, startBracket, startValStr, endValStr, endBracket] = match;
 
   const startValue = startValStr === '-Infinity' ? '-Infinity' : parseFloat(startValStr);
-  const endValue = endValStr === '+Infinity' ? '+Infinity' : parseFloat(endValStr);
+  const endValue = (endValStr === '+Infinity' || endValStr === 'Infinity') ? '+Infinity' : parseFloat(endValStr);
 
   if (typeof startValue === 'number' && typeof endValue === 'number' && startValue > endValue) {
     return null; // Некорректный интервал, начало больше конца
@@ -53,7 +55,9 @@ function parseSingleInterval(input: string): Interval | null {
  * @returns {IntervalSet} - Массив интервалов.
  */
 export function parseIntervalSet(input: string): IntervalSet {
-  const parts = input.split(/\cup/g);
+  const normalized = normalizeNumbers(input);
+
+  const parts = normalized.split(/\cup/g);
   return parts
     .map(part => parseSingleInterval(part.trim()))
     .filter((interval): interval is Interval => interval !== null);

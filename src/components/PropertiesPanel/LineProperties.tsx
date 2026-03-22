@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnyCanvasObject } from '@/lib/types';
-import { ColorPicker } from './ColorPicker';
+import { ColorPalette } from './ColorPalette';
+import { StrokeWidthSlider } from './StrokeWidthSlider';
 
 interface LinePropertiesProps {
   object: AnyCanvasObject;
@@ -25,25 +26,26 @@ export const LineProperties: React.FC<LinePropertiesProps> = ({ object, onUpdate
     });
   };
 
+  const disabled = object.locked === true;
+
   return (
     <>
-      <ColorPicker
+      <ColorPalette
         label="Цвет линии"
         value={data?.color || '#374151'}
         onChange={(value) => handleUpdateData('color', value)}
+        allowTransparent={false}
+        disabled={disabled}
       />
-      <div className="mb-3">
-        <label className="block text-xs text-gray-500 mb-1">Толщина линии</label>
-        <input
-          type="number"
+      <div className="mt-3">
+        <StrokeWidthSlider
+          label="Толщина"
           value={data?.strokeWidth || 2}
-          onChange={(e) => handleUpdateData('strokeWidth', parseInt(e.target.value))}
-          className="w-full px-2 py-1 text-sm border rounded"
-          min={1}
-          max={20}
+          onChange={(value) => handleUpdateData('strokeWidth', value)}
+          disabled={disabled}
         />
       </div>
-      <div className="mb-3">
+      <div className="mb-3 mt-3">
         <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
           <input
             type="checkbox"

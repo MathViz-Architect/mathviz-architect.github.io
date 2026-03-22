@@ -1,6 +1,6 @@
-export { ColorPicker } from './ColorPicker';
 export { PositionSizePanel } from './PositionSizePanel';
 export { PenSettingsPanel } from './PenSettingsPanel';
+export { HighlighterSettingsPanel } from './HighlighterSettingsPanel';
 export { ShapeProperties } from './ShapeProperties';
 export { GeoShapeProperties } from './GeoShapeProperties';
 export { GeoPointProperties } from './GeoPointProperties';

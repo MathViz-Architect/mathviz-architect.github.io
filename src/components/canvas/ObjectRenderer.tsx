@@ -552,7 +552,7 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
           <path d={path} stroke="transparent" strokeWidth={Math.max((d.width ?? 28) * 3, 10)} fill="none" />
           <path
             d={path}
-            stroke={d.color || '#FBBF24'}
+            stroke={d.color || '#FAFF00'}
             strokeWidth={d.width ?? 28}
             opacity={hlOpacity}
             style={{ mixBlendMode: 'multiply' }}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnyCanvasObject } from '@/lib/types';
-import { ColorPicker } from './ColorPicker';
+import { ColorPalette } from './ColorPalette';
 
 interface GeoAnglePropertiesProps {
   object: AnyCanvasObject;
@@ -21,10 +21,12 @@ export const GeoAngleProperties: React.FC<GeoAnglePropertiesProps> = ({ object, 
 
   return (
     <>
-      <ColorPicker
+      <ColorPalette
         label="Цвет"
         value={data.color || '#7C3AED'}
         onChange={(value) => handleUpdateData('color', value)}
+        allowTransparent={false}
+        disabled={object.locked === true}
       />
       <div className="mb-3">
         <label className="block text-xs text-gray-500 mb-1">Радиус дуги (px)</label>

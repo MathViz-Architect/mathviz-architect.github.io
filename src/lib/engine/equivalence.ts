@@ -1,5 +1,6 @@
 import * as math from 'mathjs';
 import { DEFAULT_EQUIVALENCE_VARS } from '../math/constants';
+import { normalizeNumbers } from '../math/normalization';
 
 /**
  * Результат сравнения двух математических выражений на эквивалентность.
@@ -163,6 +164,9 @@ export function checkEquivalence(
  * Используется в тестах и в answerValidator для case 'expression'.
  */
 export function compareExpressions(expr1: string, expr2: string): boolean {
-  const result = checkEquivalence(expr1, expr2);
+  // Normalize comma as decimal separator before comparison
+  const e1 = normalizeNumbers(expr1);
+  const e2 = normalizeNumbers(expr2);
+  const result = checkEquivalence(e1, e2);
   return result.isEquivalent && result.confidence >= 0.99;
 }

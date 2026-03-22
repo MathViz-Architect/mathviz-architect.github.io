@@ -87,12 +87,14 @@ export function useAppState() {
   const setObjectsFn = useCallback(() => setObjects, [setObjects]);
 
   // Add object to canvas
-  const addObject = useCallback((object: AnyCanvasObject) => {
+  // skipSelection: true — used by drawing tools (freehand, highlighter) to avoid
+  // switching the right panel away from tool settings after each stroke.
+  const addObject = useCallback((object: AnyCanvasObject, skipSelection = false) => {
     const command = new AddObjectCommand(objectsRef.current, object, setObjects);
     historyRef.current.execute(command);
     setState((prev) => ({
       ...prev,
-      selectedObjectIds: [object.id],
+      selectedObjectIds: skipSelection ? prev.selectedObjectIds : [object.id],
     }));
   }, [setObjects]);
 

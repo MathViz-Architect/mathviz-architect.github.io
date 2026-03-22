@@ -18,6 +18,52 @@ import { useFreehandTool } from './canvas/tools/useFreehandTool';
 import { useHighlighterTool } from './canvas/tools/useHighlighterTool';
 import { useViewportCulling } from './canvas/useViewportCulling';
 
+export function createShapeObject(
+  shapeType: string,
+  sx: number,
+  sy: number,
+  w: number,
+  h: number
+): AnyCanvasObject {
+  const id = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  switch (shapeType) {
+    case 'circle':
+      return { id, type: 'circle', x: sx, y: sy, width: w, height: w, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: 'transparent', stroke: '#374151', strokeWidth: 2 } };
+    case 'triangle':
+      return { id, type: 'triangle', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: 'transparent', stroke: '#374151', strokeWidth: 2 } };
+    case 'polygon': {
+      const points = [
+        { x: 0.5, y: 0 },
+        { x: 1, y: 0.38 },
+        { x: 0.81, y: 1 },
+        { x: 0.19, y: 1 },
+        { x: 0, y: 0.38 },
+      ];
+      return { id, type: 'polygon', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { points, fill: 'transparent', stroke: '#374151', strokeWidth: 2 } };
+    }
+    case 'trapezoid': {
+      const points = [{ x: 0.2, y: 0 }, { x: 0.8, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+      return { id, type: 'polygon', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { points, fill: 'transparent', stroke: '#374151', strokeWidth: 2 } };
+    }
+    case 'rhombus': {
+      const points = [{ x: 0.5, y: 0 }, { x: 1, y: 0.5 }, { x: 0.5, y: 1 }, { x: 0, y: 0.5 }];
+      return { id, type: 'polygon', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { points, fill: 'transparent', stroke: '#374151', strokeWidth: 2 } };
+    }
+    case 'parallelogram': {
+      const points = [{ x: 0.25, y: 0 }, { x: 1, y: 0 }, { x: 0.75, y: 1 }, { x: 0, y: 1 }];
+      return { id, type: 'polygon', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { points, fill: 'transparent', stroke: '#374151', strokeWidth: 2 } };
+    }
+    case 'geoshape-circle':
+      return { id, type: 'geoshape', x: sx, y: sy, width: w, height: w, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'circle', radius: Math.round(w / 2), stroke: '#374151', strokeWidth: 2 } };
+    case 'geoshape-triangle':
+      return { id, type: 'geoshape', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'triangle', sideA: Math.round(w), sideB: Math.round(w), sideC: Math.round(w), stroke: '#374151', strokeWidth: 2 } };
+    case 'geoshape-quad':
+      return { id, type: 'geoshape', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'quadrilateral', sideAB: Math.round(w), sideBC: Math.round(h), sideCD: Math.round(w), sideDA: Math.round(h), stroke: '#374151', strokeWidth: 2 } };
+    default:
+      return { id, type: 'rectangle', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: 'transparent', stroke: '#374151', strokeWidth: 2, cornerRadius: 0 } };
+  }
+}
+
 export const Canvas: React.FC = () => {
   const CANVAS_WIDTH = 2000;
   const CANVAS_HEIGHT = 2000;
@@ -27,6 +73,7 @@ export const Canvas: React.FC = () => {
     state, zoom, setZoom, showGrid, gridWeight, selectObject: onSelectObject, selectMultiple: onSelectMultiple,
     updateObject: onUpdateObject, updateObjectDirect, executeCommand, setObjectsFn, handleAddObject: onAddObject, handleDeleteObject: onDeleteObject,
     moveObjects: onMoveObjects, penSettings, shapeType, getCanvasSnapshot,
+    highlighterSettings,
   } = useEditorContext();
 
   const { roomState, canEdit, publishLocalChange, updateCursor } = useCollaborationContext();
@@ -43,7 +90,7 @@ export const Canvas: React.FC = () => {
   // ─── Tool hooks ─────────────────────────────────────────────────────────────
   // mode is passed so tools can self-abort on tool switch mid-stroke
   const freehand = useFreehandTool({ penSettings, onAddObject, publishState, mode });
-  const highlighter = useHighlighterTool({ penSettings, onAddObject, publishState, mode });
+  const highlighter = useHighlighterTool({ penSettings: highlighterSettings, onAddObject, publishState, mode });
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -414,14 +461,14 @@ export const Canvas: React.FC = () => {
   };
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
+    console.log('[Pointer Debug]', e.pointerType, e.button, e.pressure);
     if (e.button === 1 || (isSpacePressed && e.buttons > 0 && e.button === 0)) { setIsPanning(true); setPanStart({ x: e.clientX, y: e.clientY }); e.preventDefault(); e.stopPropagation(); return; }
     if (isSpacePressed) return;
-    // Unified input detection: pen, touch, or left-button mouse (covers styluses
-    // that report as 'mouse' but with pressure > 0)
     const isDrawingInput =
-      e.pointerType === 'pen' ||
-      e.pointerType === 'touch' ||
-      (e.pointerType === 'mouse' && e.button === 0);
+      (e.pointerType === 'pen') ||
+      (e.pointerType === 'touch') ||
+      (e.pointerType === 'mouse' && e.button === 0) ||
+      (e.pointerType === 'mouse' && e.button === -1); // stylus on some tablets reports mouse+button=-1
     if (!isDrawingInput) return;
     if (!canEdit) return;
     console.log('[canvas] DOWN', e.pointerType, 'pressure:', e.pressure);
@@ -560,27 +607,7 @@ export const Canvas: React.FC = () => {
       const sx = Math.min(shapeDrawStart.x, shapeDrawEnd.x), sy = Math.min(shapeDrawStart.y, shapeDrawEnd.y), w = Math.abs(shapeDrawEnd.x - shapeDrawStart.x), h = Math.abs(shapeDrawEnd.y - shapeDrawStart.y);
       setIsDrawingShape(false); setShapeDrawStart(null); setShapeDrawEnd(null);
       if (w > 5 && h > 5) {
-        const id = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        let newShape: AnyCanvasObject;
-        switch (shapeType) {
-          case 'circle': newShape = { id, type: 'circle', x: sx, y: sy, width: w, height: w, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: '#10B981', stroke: '#047857', strokeWidth: 2 } }; break;
-          case 'triangle': newShape = { id, type: 'triangle', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: '#F59E0B', stroke: '#D97706', strokeWidth: 2 } }; break;
-          case 'polygon': {
-            const points = [
-              { x: 0.5, y: 0 },
-              { x: 1, y: 0.38 },
-              { x: 0.81, y: 1 },
-              { x: 0.19, y: 1 },
-              { x: 0, y: 0.38 },
-            ];
-            newShape = { id, type: 'polygon', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { points, fill: '#F59E0B', stroke: '#D97706', strokeWidth: 2 } };
-            break;
-          }
-          case 'geoshape-circle': newShape = { id, type: 'geoshape', x: sx, y: sy, width: w, height: w, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'circle', radius: Math.round(w / 2), stroke: '#374151', strokeWidth: 2 } }; break;
-          case 'geoshape-triangle': newShape = { id, type: 'geoshape', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'triangle', sideA: Math.round(w), sideB: Math.round(w), sideC: Math.round(w), stroke: '#374151', strokeWidth: 2 } }; break;
-          case 'geoshape-quad': newShape = { id, type: 'geoshape', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { shapeKind: 'quadrilateral', sideAB: Math.round(w), sideBC: Math.round(h), sideCD: Math.round(w), sideDA: Math.round(h), stroke: '#374151', strokeWidth: 2 } }; break;
-          default: newShape = { id, type: 'rectangle', x: sx, y: sy, width: w, height: h, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: '#4F46E5', stroke: '#312E81', strokeWidth: 2, cornerRadius: 0 } };
-        }
+        const newShape = createShapeObject(shapeType, sx, sy, w, h);
         onAddObject(newShape); onSelectObject(newShape.id);
       }
       publishState(); return;
@@ -623,7 +650,7 @@ export const Canvas: React.FC = () => {
       case 'fraction': newObject = { type: 'fraction', x: x - 75, y: y - 75, width: 150, height: 150, data: { numerator: 1, denominator: 2, fill: '#4F46E5', stroke: '#312E81', strokeWidth: 2, showLabels: true } }; break;
       case 'chart': newObject = { type: 'rectangle', x: x - 50, y: y - 75, width: 100, height: 150, data: { fill: '#10B981', stroke: '#047857', strokeWidth: 2, cornerRadius: 4 } }; break;
       case 'arrow': newObject = { type: 'arrow', x: x - 75, y: y - 10, width: 150, height: 20, data: { stroke: '#374151', strokeWidth: 2, arrowHead: 'end' } }; break;
-      default: newObject = { type: 'rectangle', x: x - 50, y: y - 30, width: 100, height: 60, data: { fill: '#4F46E5', stroke: '#312E81', strokeWidth: 2, cornerRadius: 0 } };
+      default: newObject = { type: 'rectangle', x: x - 50, y: y - 30, width: 100, height: 60, data: { fill: 'transparent', stroke: '#374151', strokeWidth: 2, cornerRadius: 0 } };
     }
     onAddObject({ id: `obj_${Date.now()}`, rotation: 0, opacity: 1, visible: true, locked: false, ...newObject } as AnyCanvasObject);
     publishState();
@@ -681,7 +708,7 @@ export const Canvas: React.FC = () => {
             {canEdit && isDrawingArrow && arrowStart && arrowEnd && (calculateDistance(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y) > 5) && (() => { const angle = calculateArrowAngle(arrowStart.x, arrowStart.y, arrowEnd.x, arrowEnd.y); const head = calculateArrowHeadPoints(arrowEnd.x, arrowEnd.y, angle, 15, 'forward'); return <g opacity={0.5}><line x1={arrowStart.x} y1={arrowStart.y} x2={arrowEnd.x} y2={arrowEnd.y} stroke="#374151" strokeWidth={2} strokeDasharray="5,5" /><polygon points={`${arrowEnd.x},${arrowEnd.y} ${head.point1X},${head.point1Y} ${head.point2X},${head.point2Y}`} fill="#374151" /></g>; })()}
             {canEdit && isDrawingLine && lineStart && lineEnd && (calculateDistance(lineStart.x, lineStart.y, lineEnd.x, lineEnd.y) > 5) && <line x1={lineStart.x} y1={lineStart.y} x2={lineEnd.x} y2={lineEnd.y} stroke="#374151" strokeWidth={2} strokeDasharray="5,5" strokeLinecap="round" opacity={0.6} />}
             {canEdit && isMarqueeSelecting && marqueeStart && marqueeEnd && <rect x={Math.min(marqueeStart.x, marqueeEnd.x)} y={Math.min(marqueeStart.y, marqueeEnd.y)} width={Math.abs(marqueeEnd.x - marqueeStart.x)} height={Math.abs(marqueeEnd.y - marqueeStart.y)} fill="rgba(59,130,246,0.1)" stroke="#3b82f6" strokeDasharray="4,4" strokeWidth={1} />}
-            {canEdit && isDrawingShape && shapeDrawStart && shapeDrawEnd && (() => { const x = Math.min(shapeDrawStart.x, shapeDrawEnd.x), y = Math.min(shapeDrawStart.y, shapeDrawEnd.y), w = Math.abs(shapeDrawEnd.x - shapeDrawStart.x), h = Math.abs(shapeDrawEnd.y - shapeDrawStart.y); const p = { fill: 'rgba(79,70,229,0.08)', stroke: '#4F46E5', strokeWidth: 1.5, strokeDasharray: '6,3', style: { pointerEvents: 'none' } as React.CSSProperties }; if (shapeType === 'circle') return <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} {...p} />; if (shapeType === 'triangle') return <polygon points={`${x + w / 2},${y} ${x + w},${y + h} ${x},${y + h}`} {...p} />; if (shapeType === 'polygon') { const pts = [[x + w * 0.5, y], [x + w, y + h * 0.38], [x + w * 0.81, y + h], [x + w * 0.19, y + h], [x, y + h * 0.38]].map(([px, py]) => `${px},${py}`).join(' '); return <polygon points={pts} {...p} />; } return <rect x={x} y={y} width={w} height={h} {...p} />; })()}
+            {canEdit && isDrawingShape && shapeDrawStart && shapeDrawEnd && (() => { const x = Math.min(shapeDrawStart.x, shapeDrawEnd.x), y = Math.min(shapeDrawStart.y, shapeDrawEnd.y), w = Math.abs(shapeDrawEnd.x - shapeDrawStart.x), h = Math.abs(shapeDrawEnd.y - shapeDrawStart.y); const p = { fill: 'rgba(79,70,229,0.08)', stroke: '#4F46E5', strokeWidth: 1.5, strokeDasharray: '6,3', style: { pointerEvents: 'none' } as React.CSSProperties }; if (shapeType === 'circle') return <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} {...p} />; if (shapeType === 'triangle') return <polygon points={`${x + w / 2},${y} ${x + w},${y + h} ${x},${y + h}`} {...p} />; if (shapeType === 'polygon') { const pts = [[x + w * 0.5, y], [x + w, y + h * 0.38], [x + w * 0.81, y + h], [x + w * 0.19, y + h], [x, y + h * 0.38]].map(([px, py]) => `${px},${py}`).join(' '); return <polygon points={pts} {...p} />; } if (shapeType === 'trapezoid') { const pts = [[x + w * 0.2, y], [x + w * 0.8, y], [x + w, y + h], [x, y + h]].map(([px, py]) => `${px},${py}`).join(' '); return <polygon points={pts} {...p} />; } if (shapeType === 'rhombus') { const pts = [[x + w * 0.5, y], [x + w, y + h * 0.5], [x + w * 0.5, y + h], [x, y + h * 0.5]].map(([px, py]) => `${px},${py}`).join(' '); return <polygon points={pts} {...p} />; } if (shapeType === 'parallelogram') { const pts = [[x + w * 0.25, y], [x + w, y], [x + w * 0.75, y + h], [x, y + h]].map(([px, py]) => `${px},${py}`).join(' '); return <polygon points={pts} {...p} />; } return <rect x={x} y={y} width={w} height={h} {...p} />; })()}
             {canEdit && mode === 'geosegment' && segmentStep === 1 && segmentPointAId && segmentPreview && (() => { const ptA = objects.find(o => o.id === segmentPointAId); if (!ptA) return null; return <line x1={ptA.x + ptA.width / 2} y1={ptA.y + ptA.height / 2} x2={segmentPreview.x} y2={segmentPreview.y} stroke="#374151" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" opacity={0.5} />; })()}
             {canEdit && mode === 'geoangle' && anglePreview && (() => { if (angleStep === 1 && anglePointAId) { const ptA = objects.find(o => o.id === anglePointAId); if (!ptA) return null; return <line x1={ptA.x + ptA.width / 2} y1={ptA.y + ptA.height / 2} x2={anglePreview.x} y2={anglePreview.y} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" opacity={0.5} />; } if (angleStep === 2 && anglePointAId && anglePointBId) { const ptA = objects.find(o => o.id === anglePointAId), ptB = objects.find(o => o.id === anglePointBId); if (!ptA || !ptB) return null; return <g opacity={0.5}><line x1={ptA.x + ptA.width / 2} y1={ptA.y + ptA.height / 2} x2={ptB.x + ptB.width / 2} y2={ptB.y + ptB.height / 2} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" /><line x1={ptB.x + ptB.width / 2} y1={ptB.y + ptB.height / 2} x2={anglePreview.x} y2={anglePreview.y} stroke="#7C3AED" strokeWidth={2} strokeDasharray="6,4" strokeLinecap="round" /></g>; } return null; })()}
             {canEdit && snapTarget && ['geosegment', 'geoangle', 'geopoint'].includes(mode) && <circle cx={snapTarget.x} cy={snapTarget.y} r={snapTarget.snapped ? 11 : 5} fill={snapTarget.snapped ? 'rgba(16,185,129,0.12)' : 'none'} stroke={snapTarget.snapped ? '#10B981' : '#7C3AED'} strokeWidth={snapTarget.snapped ? 3 : 1.5} strokeDasharray={snapTarget.snapped ? undefined : '3,3'} opacity={snapTarget.snapped ? 1 : 0.7} style={{ pointerEvents: 'none' }} />}

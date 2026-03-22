@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnyCanvasObject } from '@/lib/types';
-import { ColorPicker } from './ColorPicker';
+import { ColorPalette } from './ColorPalette';
+import { StrokeWidthSlider } from './StrokeWidthSlider';
 
 interface ArrowPropertiesProps {
   object: AnyCanvasObject;
@@ -20,37 +21,26 @@ export const ArrowProperties: React.FC<ArrowPropertiesProps> = ({ object, onUpda
     });
   };
 
+  const disabled = object.locked === true;
+
   return (
     <>
-      <div className="mb-3">
-        <label className="block text-xs text-gray-500 mb-1">Длина стрелки</label>
-        <input
-          type="range"
-          value={object.width}
-          onChange={(e) => onUpdate({ width: parseInt(e.target.value) })}
-          className="w-full"
-          min={50}
-          max={500}
-        />
-        <span className="text-xs text-gray-400">{Math.round(object.width)}px</span>
-      </div>
-      <ColorPicker
+      <ColorPalette
         label="Цвет стрелки"
         value={data?.stroke || '#374151'}
         onChange={(value) => handleUpdateData('stroke', value)}
+        allowTransparent={false}
+        disabled={disabled}
       />
-      <div className="mb-3">
-        <label className="block text-xs text-gray-500 mb-1">Толщина линии</label>
-        <input
-          type="number"
+      <div className="mt-3">
+        <StrokeWidthSlider
+          label="Толщина"
           value={data?.strokeWidth || 2}
-          onChange={(e) => handleUpdateData('strokeWidth', parseInt(e.target.value))}
-          className="w-full px-2 py-1 text-sm border rounded"
-          min={1}
-          max={20}
+          onChange={(value) => handleUpdateData('strokeWidth', value)}
+          disabled={disabled}
         />
       </div>
-      <div className="mb-3">
+      <div className="mb-3 mt-3">
         <label className="block text-xs text-gray-500 mb-1">Наконечник</label>
         <select
           value={data?.arrowHead || 'end'}

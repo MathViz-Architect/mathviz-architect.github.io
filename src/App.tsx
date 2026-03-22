@@ -5,7 +5,7 @@ import { useImageUpload } from './hooks/useImageUpload';
 import { ToolSidebar } from './components/ToolSidebar';
 import { TopBar } from './components/TopBar';
 import { Canvas } from './components/Canvas';
-import { PropertiesPanel } from './components/PropertiesPanel';
+import { PropertiesPanel } from './components/properties/PropertiesPanel';
 import { TemplateLibrary } from './components/TemplateLibrary';
 import { InteractiveLibrary } from './components/interactive/InteractiveLibrary';
 import { ChallengeMode } from './components/challenge/ChallengeMode';
@@ -225,7 +225,7 @@ function AppContent() {
           {renderMainContent()}
           {!['interactive', 'challenge', 'projects'].includes(state.mode) && (<PageSwitcher pages={state.pages} activePageId={state.activePageId} onSwitch={switchPage} onAdd={addPage} onRemove={removePage} />)}
         </div>
-        {!zenMode && !['interactive', 'challenge', 'library', 'projects'].includes(state.mode) && (selectedObjects.length > 0 || ['freehand', 'shape', 'text'].includes(state.mode)) && (<PropertiesPanel />)}
+        {!zenMode && !['interactive', 'challenge', 'library', 'projects'].includes(state.mode) && (selectedObjects.length > 0 || ['freehand', 'highlighter', 'shape', 'text'].includes(state.mode)) && (<PropertiesPanel />)}
       </div>
       {showWelcome && <WelcomeScreen onClose={() => setShowWelcome(false)} />}
       {showExportModal && <ExportModal onClose={() => setShowExportModal(false)} />}

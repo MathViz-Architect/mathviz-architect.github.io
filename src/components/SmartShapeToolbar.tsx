@@ -26,11 +26,36 @@ export const SmartShapeToolbar: React.FC<SmartShapeToolbarProps> = ({ disabled =
 
   const stats = useMemo(() => {
     if (!obj) return null;
-    if (obj.type === 'rectangle') { const s = rectStats(obj.width, obj.height); return { kind: 'rectangle' as const, rows: [{ label: 'Ш', value: Math.round(obj.width), key: 'width' as const }, { label: 'В', value: Math.round(obj.height), key: 'height' as const }], info: [{ label: 'P', value: `${Math.round(s.perimeter)} px` }, { label: 'S', value: `${Math.round(s.area)} px²` }]}; }
-    if (obj.type === 'circle') { const r = obj.width / 2; const s = circleStats(r); return { kind: 'circle' as const, rows: [{ label: 'R', value: Math.round(r), key: 'width' as const, factor: 2 }], info: [{ label: 'C', value: `${(s.perimeter).toFixed(1)} px` }, { label: 'S', value: `${Math.round(s.area)} px²` }]}; }
+    if (obj.type === 'rectangle') { const s = rectStats(obj.width, obj.height); return { kind: 'rectangle' as const, rows: [{ label: 'Ш', value: Math.round(obj.width), key: 'width' as const }, { label: 'В', value: Math.round(obj.height), key: 'height' as const }], info: [{ label: 'P', value: `${Math.round(s.perimeter)} px` }, { label: 'S', value: `${Math.round(s.area)} px²` }] }; }
+    if (obj.type === 'circle') { const r = obj.width / 2; const s = circleStats(r); return { kind: 'circle' as const, rows: [{ label: 'R', value: Math.round(r), key: 'width' as const, factor: 2 }], info: [{ label: 'C', value: `${(s.perimeter).toFixed(1)} px` }, { label: 'S', value: `${Math.round(s.area)} px²` }] }; }
+    if (obj.type === 'triangle') {
+      const base = obj.width, h = obj.height;
+      const area = Math.round(0.5 * base * h);
+      const leg = Math.round(Math.sqrt((base / 2) ** 2 + h ** 2));
+      const P = Math.round(base + leg * 2);
+      return { kind: 'triangle' as const, rows: [{ label: 'a', value: Math.round(base), key: 'width' as const }, { label: 'h', value: Math.round(h), key: 'height' as const }], info: [{ label: 'P≈', value: `${P} px` }, { label: 'S', value: `${area} px²` }] };
+    }
+    if (obj.type === 'polygon') {
+      const shapeKind = (obj.data as { shapeType?: string }).shapeType ?? 'polygon';
+      const w = obj.width, h = obj.height;
+      const pts = (obj.data as { points?: { x: number; y: number }[] }).points ?? [];
+      let area = 0, perim = 0;
+      if (pts.length >= 3) {
+        const abs = pts.map(p => ({ x: p.x * w, y: p.y * h }));
+        for (let i = 0; i < abs.length; i++) {
+          const j = (i + 1) % abs.length;
+          area += abs[i].x * abs[j].y - abs[j].x * abs[i].y;
+          const dx = abs[j].x - abs[i].x, dy = abs[j].y - abs[i].y;
+          perim += Math.sqrt(dx * dx + dy * dy);
+        }
+        area = Math.abs(area) / 2;
+      }
+      const label = shapeKind === 'trapezoid' ? 'Трапеция' : shapeKind === 'rhombus' ? 'Ромб' : shapeKind === 'parallelogram' ? 'Параллелограмм' : 'Многоугольник';
+      return { kind: 'polygon' as const, label, rows: [{ label: 'Ш', value: Math.round(w), key: 'width' as const }, { label: 'В', value: Math.round(h), key: 'height' as const }], info: [{ label: 'P', value: `${Math.round(perim)} px` }, { label: 'S', value: `${Math.round(area)} px²` }] };
+    }
     if (obj.type === 'geoshape') {
       const d = obj.data as Record<string, unknown>;
-      if (d.shapeKind === 'circle') { const r = (d.radius as number) ?? 80; const s = circleStats(r); return { kind: 'geo-circle' as const, rows: [{ label: 'R', value: Math.round(r), key: 'radius' as 'radius' }], info: [{ label: 'C', value: `${(s.perimeter).toFixed(1)} px` }, { label: 'S', value: `${Math.round(s.area)} px²` }]}; }
+      if (d.shapeKind === 'circle') { const r = (d.radius as number) ?? 80; const s = circleStats(r); return { kind: 'geo-circle' as const, rows: [{ label: 'R', value: Math.round(r), key: 'radius' as 'radius' }], info: [{ label: 'C', value: `${(s.perimeter).toFixed(1)} px` }, { label: 'S', value: `${Math.round(s.area)} px²` }] }; }
       if (d.shapeKind === 'triangle') {
         const a = (d.sideA as number) ?? 100, b = (d.sideB as number) ?? 100, c = (d.sideC as number) ?? 100;
         const valid = isValidTriangle(a, b, c); const area = valid ? triangleArea(a, b, c) : 0;
@@ -38,7 +63,7 @@ export const SmartShapeToolbar: React.FC<SmartShapeToolbarProps> = ({ disabled =
       }
       if (d.shapeKind === 'quadrilateral') {
         const ab = (d.sideAB as number) ?? 160, bc = (d.sideBC as number) ?? 120, cd = (d.sideCD as number) ?? 160, da = (d.sideDA as number) ?? 120;
-        return { kind: 'geo-quad' as const, rows: [{ label: 'AB', value: Math.round(ab), key: 'sideAB' as 'sideAB' }, { label: 'BC', value: Math.round(bc), key: 'sideBC' as 'sideBC' }, { label: 'CD', value: Math.round(cd), key: 'sideCD' as 'sideCD' }, { label: 'DA', value: Math.round(da), key: 'sideDA' as 'sideDA' }], info: [{ label: 'P', value: `${ab + bc + cd + da} px` }]};
+        return { kind: 'geo-quad' as const, rows: [{ label: 'AB', value: Math.round(ab), key: 'sideAB' as 'sideAB' }, { label: 'BC', value: Math.round(bc), key: 'sideBC' as 'sideBC' }, { label: 'CD', value: Math.round(cd), key: 'sideCD' as 'sideCD' }, { label: 'DA', value: Math.round(da), key: 'sideDA' as 'sideDA' }], info: [{ label: 'P', value: `${ab + bc + cd + da} px` }] };
       }
     }
     return null;

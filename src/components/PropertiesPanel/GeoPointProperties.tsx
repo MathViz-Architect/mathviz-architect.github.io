@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnyCanvasObject } from '@/lib/types';
-import { ColorPicker } from './ColorPicker';
+import { ColorPalette } from './ColorPalette';
 
 interface GeoPointPropertiesProps {
   object: AnyCanvasObject;
@@ -18,10 +18,12 @@ export const GeoPointProperties: React.FC<GeoPointPropertiesProps> = ({ object, 
 
   return (
     <>
-      <ColorPicker
+      <ColorPalette
         label="Цвет"
         value={data?.color || '#1D4ED8'}
         onChange={(value) => handleUpdateData('color', value)}
+        allowTransparent={false}
+        disabled={object.locked === true}
       />
       <div className="mb-3">
         <label className="block text-xs text-gray-500 mb-1">Метка</label>

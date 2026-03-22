@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { AnyCanvasObject } from '@/lib/types';
-import { ColorPicker } from './ColorPicker';
+import { ColorPalette } from './ColorPalette';
 
 interface ChartPropertiesProps {
   object: AnyCanvasObject;
@@ -96,10 +96,11 @@ export const ChartProperties: React.FC<ChartPropertiesProps> = ({ object, onUpda
                     className="w-full px-2 py-1 text-xs border rounded"
                     min={0}
                   />
-                  <ColorPicker
+                  <ColorPalette
                     label=""
                     value={sector.color}
                     onChange={(value) => handleSectorChange(index, 'color', value)}
+                    allowTransparent={false}
                   />
                 </div>
               </div>
@@ -150,10 +151,11 @@ export const ChartProperties: React.FC<ChartPropertiesProps> = ({ object, onUpda
                     className="w-full px-2 py-1 text-xs border rounded"
                     min={0}
                   />
-                  <ColorPicker
+                  <ColorPalette
                     label=""
                     value={column.color}
                     onChange={(value) => handleSectorChange(index, 'color', value)}
+                    allowTransparent={false}
                   />
                 </div>
               </div>

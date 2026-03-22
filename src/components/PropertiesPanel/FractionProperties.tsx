@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnyCanvasObject } from '@/lib/types';
-import { ColorPicker } from './ColorPicker';
+import { ColorPalette } from './ColorPalette';
 
 interface FractionPropertiesProps {
   object: AnyCanvasObject;
@@ -45,10 +45,12 @@ export const FractionProperties: React.FC<FractionPropertiesProps> = ({ object, 
           min={1}
         />
       </div>
-      <ColorPicker
+      <ColorPalette
         label="Заливка"
         value={data?.fill || '#4F46E5'}
         onChange={(value) => handleUpdateData('fill', value)}
+        allowTransparent={true}
+        disabled={object.locked === true}
       />
       <div className="mb-3">
         <label className="flex items-center gap-2">

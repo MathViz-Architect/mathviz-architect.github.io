@@ -51,8 +51,10 @@ interface EditorContextValue {
   setInteractiveModuleId: (moduleId: string | null) => void;
   penSettings: { width: number; color: string };
   setPenSettings: (settings: Partial<{ width: number; color: string }>) => void;
-  shapeType: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad';
-  setShapeType: (type: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad') => void;
+  highlighterSettings: { width: number; color: string };
+  setHighlighterSettings: (settings: Partial<{ width: number; color: string }>) => void;
+  shapeType: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad' | 'trapezoid' | 'rhombus' | 'parallelogram';
+  setShapeType: (type: 'rectangle' | 'circle' | 'triangle' | 'polygon' | 'geoshape-circle' | 'geoshape-triangle' | 'geoshape-quad' | 'trapezoid' | 'rhombus' | 'parallelogram') => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -63,11 +65,16 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const [showGrid, setShowGrid] = useState(true);
   const [interactiveModuleId, setInteractiveModuleId] = useState<string | null>(null);
   const [penSettings, setPenSettingsState] = useState<{ width: number; color: string }>({ width: 3, color: '#374151' });
+  const [highlighterSettings, setHighlighterSettingsState] = useState<{ width: number; color: string }>({ width: 28, color: '#FAFF00' });
   const [shapeType, setShapeType] = useState<EditorContextValue['shapeType']>('rectangle');
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const setPenSettings = useCallback((settings: Partial<{ width: number; color: string }>) => {
     setPenSettingsState(prev => ({ ...prev, ...settings }));
+  }, []);
+
+  const setHighlighterSettings = useCallback((settings: Partial<{ width: number; color: string }>) => {
+    setHighlighterSettingsState(prev => ({ ...prev, ...settings }));
   }, []);
 
   const handleZoomIn = useCallback(() => setZoom(z => Math.min(z + 0.1, 2.0)), []);
@@ -254,6 +261,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setInteractiveModuleId,
       penSettings,
       setPenSettings,
+      highlighterSettings,
+      setHighlighterSettings,
       shapeType,
       setShapeType,
     }}>

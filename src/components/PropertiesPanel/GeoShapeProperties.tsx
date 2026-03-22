@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnyCanvasObject } from '@/lib/types';
-import { ColorPicker } from './ColorPicker';
+import { ColorPalette } from './ColorPalette';
+import { StrokeWidthSlider } from './StrokeWidthSlider';
 
 interface GeoShapePropertiesProps {
   object: AnyCanvasObject;
@@ -30,22 +31,26 @@ export const GeoShapeProperties: React.FC<GeoShapePropertiesProps> = ({ object, 
 
   return (
     <div className="space-y-4">
-      <ColorPicker
-        label="Цвет линии"
+      <ColorPalette
+        label="Заливка"
+        value={(data as { fill?: string }).fill || 'transparent'}
+        onChange={(value) => handleUpdateData('fill', value)}
+        allowTransparent={true}
+        disabled={object.locked === true}
+      />
+      <ColorPalette
+        label="Цвет контура"
         value={data.stroke || '#374151'}
         onChange={(value) => handleUpdateData('stroke', value)}
+        allowTransparent={false}
+        disabled={object.locked === true}
       />
-
-      <div className="mb-3">
-        <label className="block text-xs font-medium text-gray-500 mb-1">Толщина линии</label>
-        <input
-          type="number"
-          value={data.strokeWidth || 2}
-          onChange={(e) => handleUpdateData('strokeWidth', parseInt(e.target.value) || 1)}
-          className="w-full px-2 py-1 text-sm border rounded"
-          min={1} max={10}
-        />
-      </div>
+      <StrokeWidthSlider
+        label="Толщина"
+        value={data.strokeWidth || 2}
+        onChange={(value) => handleUpdateData('strokeWidth', value)}
+        disabled={object.locked === true}
+      />
 
       {data.shapeKind === 'circle' && (
         <div>
