@@ -70,6 +70,9 @@ export const SmartShapeToolbar: React.FC<SmartShapeToolbarProps> = ({ disabled =
   }, [obj]);
 
   if (!obj || !stats || disabled) return null;
+  // Regular shapes (rectangle, circle, triangle, polygon) show all info in the right panel already
+  const GEO_KINDS = ['geo-circle', 'geo-triangle', 'geo-quad'];
+  if (!GEO_KINDS.includes(stats.kind)) return null;
 
   const toolbarX = (obj.x + obj.width / 2) * zoom;
   const toolbarY = obj.y * zoom - 12;

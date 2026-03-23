@@ -244,7 +244,7 @@ export interface Tool {
   createObject: () => Partial<AnyCanvasObject>;
 }
 
-export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser' | 'projects' | 'geopoint' | 'geosegment' | 'geoangle' | 'freehand' | 'highlighter';
+export type AppMode = 'select' | 'draw' | 'text' | 'shape' | 'library' | 'challenge' | 'interactive' | 'fraction' | 'chart' | 'arrow' | 'line' | 'eraser' | 'projects' | 'geopoint' | 'geosegment' | 'geoangle' | 'freehand' | 'highlighter' | 'smart-pencil';
 
 export interface AppState {
   mode: AppMode;
@@ -281,6 +281,7 @@ export type AnswerType =
   | 'text'         // ✅ реализовано
   | 'expression'   // ✅ MathJS: symbolically equivalent expressions (x1=2, x2=5)
   | 'interval'     // ✅ MathJS: intervals like [2; +inf) or (-3; 5]
+  | 'comparison'   // ✅ реализовано: знаки "<", ">", "="
   | 'set';         // 🔜 зарезервировано
 
 export interface DifficultyConfig {

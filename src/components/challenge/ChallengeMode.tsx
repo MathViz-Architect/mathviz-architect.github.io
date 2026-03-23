@@ -418,15 +418,23 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   // Generate problem when a template is selected or problemKey changes
   React.useEffect(() => {
     if (!activeTemplate) return;
-    
+
     // Reset generatedProblem before generating new problem
     setGeneratedProblem(null);
     setIsGenerating(true);
-    
+
     // Use setTimeout to avoid blocking the main thread
     const timeoutId = setTimeout(() => {
       try {
         const problem = generateProblem(activeTemplate, currentDifficultyRef.current);
+        console.log('[DEBUG] answer:', JSON.stringify(problem.answer), 'type:', problem.answer_type, 'params:', JSON.stringify(problem.params));
+        console.log('[CURRENT PARAMS]', JSON.stringify(problem.params));
+        console.log('[PARAMS HAS sum]', 'sum' in problem.params, '| HAS c_val:', 'c_val' in problem.params, '| HAS c (OLD):', 'c' in problem.params);
+        // Проверяем источник шаблона: локальный .ts или Supabase (через useProblems)
+        const isLocalTemplate = problemTemplates.some(t => t.id === activeTemplate.id);
+        console.log(`[TEMPLATE SOURCE] id=${activeTemplate.id} | source=${isLocalTemplate ? 'LOCAL (src/lib/templates)' : 'SUPABASE (useProblems)'}`);
+        const d1params = Object.keys((activeTemplate.difficulties as any)?.[1]?.parameters ?? {});
+        console.log(`[TEMPLATE PARAMS KEYS at difficulty 1]: [${d1params.join(', ')}]`);
         setGeneratedProblem(problem);
       } catch (error) {
         console.error('Error generating problem:', error);
@@ -434,7 +442,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         setIsGenerating(false);
       }
     }, 0);
-    
+
     return () => clearTimeout(timeoutId);
   }, [activeTemplate, problemKey]);
 
@@ -536,7 +544,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
       if (isCorrect) {
         setResult('correct');
         setMistakeFeedback(null);
-        
+
         // Update streak and session progress
         const newStreak = currentStreak + 1;
         setCurrentStreak(newStreak);
@@ -679,7 +687,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         setAchievementMessage(null);
         setFractionNumerator('');
         setFractionDenominator('');
-        
+
         // Reset session progress if completed 10 tasks
         if (sessionProgress >= 10) {
           setSessionProgress(0);
@@ -746,7 +754,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
   // If a template is selected, show the template-based challenge interface
   if (activeTemplate && generatedProblem) {
     const isSimpleProblem = activeTemplate.problemType === 'numeric' && generatedProblem.answer_type === 'number';
-    
+
     return (
       <div className="h-full overflow-auto bg-gray-50 p-4 sm:p-6">
         {/* Back button */}
@@ -763,7 +771,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
         <div className={`max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden`}>
           {/* Session Progress Bar */}
           <div className="h-2 bg-gray-200 rounded-t-2xl overflow-hidden">
-            <div 
+            <div
               className="h-full bg-green-500 rounded-full transition-all duration-500"
               style={{ width: `${(sessionProgress / 10) * 100}%` }}
             />
@@ -856,7 +864,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                       : 'Показать подсказку'
                   }
                 </button>
-                
+
                 {/* Hint Penalty UI */}
                 <div className="mt-1">
                   {hintsUsed === 0 && (
@@ -866,7 +874,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                     <p className="text-xs text-amber-500">Следующая подсказка: 0 баллов за задачу</p>
                   )}
                 </div>
-                
+
                 {showHint && (
                   <div className="mt-2 space-y-2">
                     {generatedProblem.hints && generatedProblem.hints.length > 0 && (
@@ -917,7 +925,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                     <div className="flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 bg-gray-50 rounded-xl">
                       {/* Comparison UI Logic from previous version */}
                       <div className="text-center">
-                         {generatedProblem.params.d || generatedProblem.params.d1 ? (
+                        {generatedProblem.params.d || generatedProblem.params.d1 ? (
                           <div className="flex flex-col items-center">
                             <div className="text-2xl sm:text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2">
                               {generatedProblem.params.a}
@@ -949,7 +957,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                         ))}
                       </div>
                       <div className="text-center">
-                         {generatedProblem.params.d || generatedProblem.params.d2 ? (
+                        {generatedProblem.params.d || generatedProblem.params.d2 ? (
                           <div className="flex flex-col items-center">
                             <div className="text-2xl sm:text-3xl font-bold text-gray-800 border-b-2 border-gray-800 px-2">
                               {generatedProblem.params.b}
@@ -962,6 +970,29 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                           <div className="text-2xl sm:text-3xl font-bold text-gray-800">{generatedProblem.params.b}</div>
                         )}
                       </div>
+                    </div>
+                  );
+                }
+
+                if (problemType === 'text' && activeTemplate.topic === 'pythagoreanTheorem') {
+                  return (
+                    <div className="space-y-2">
+                      {['да', 'нет'].map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => {
+                            setUserAnswer(option);
+                            if (result === 'incorrect') setResult(null);
+                          }}
+                          className={`w-full px-4 py-3 rounded-lg border-2 transition-all text-left ${userAnswer === option
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+                            }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
                     </div>
                   );
                 }
@@ -994,11 +1025,11 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
                 }
 
                 // Default to MathInputField for all other problem types
-                const placeholder = 
-                      answerType === 'coordinate' ? 'Например: (3; 4)' :
-                      answerType === 'interval' ? 'Например: [-5; 10)' :
+                const placeholder =
+                  answerType === 'coordinate' ? 'Например: (3; 4)' :
+                    answerType === 'interval' ? 'Например: [-5; 10)' :
                       answerType === 'fraction' ? 'Например: 3/4' :
-                      'Введите число или выражение...';
+                        'Введите число или выражение...';
 
                 return (
                   <div className="flex flex-col gap-3">
@@ -1030,7 +1061,8 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
               {/* Check button for comparison, text problems */}
               {result !== 'correct' && (
                 activeTemplate.problemType === 'comparison' ||
-                (activeTemplate.problemType === 'text' && activeTemplate.topic === 'triangles')
+                (activeTemplate.problemType === 'text' && activeTemplate.topic === 'triangles') ||
+                (activeTemplate.problemType === 'text' && activeTemplate.topic === 'pythagoreanTheorem')
               ) && (
                   <button
                     onClick={handleCheck}
@@ -1531,7 +1563,7 @@ export const ChallengeMode: React.FC<ChallengeModeProps> = ({ onClose }) => {
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="font-medium text-gray-800">{template.section}</div>
+                  <div className="font-medium text-gray-800">{template.topic_title}</div>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? 'bg-green-100 text-green-700' : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? 'bg-yellow-100 text-yellow-700' : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
                       {Math.min(...Object.keys(template.difficulties).map(Number)) === 1 ? 'Легко' : Math.min(...Object.keys(template.difficulties).map(Number)) === 2 ? 'Средне' : Math.min(...Object.keys(template.difficulties).map(Number)) === 3 ? 'Сложно' : 'Олимпиадное'}

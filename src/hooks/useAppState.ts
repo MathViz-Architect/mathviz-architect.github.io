@@ -412,10 +412,11 @@ export function useAppState() {
   // Copy selected objects to clipboard
   const copyToClipboard = useCallback(() => {
     const selected = objectsRef.current.filter(obj =>
-      state.selectedObjectIds.includes(obj.id)
+      stateRef.current.selectedObjectIds.includes(obj.id)
     );
+    console.log('[clipboard] copy', selected.length, 'objects');
     clipboardRef.current = cloneObjects(selected);
-  }, [state.selectedObjectIds]);
+  }, []);
 
   // Paste objects from clipboard with offset
   const pasteFromClipboard = useCallback(() => {
@@ -438,11 +439,17 @@ export function useAppState() {
     });
 
     if (newObjects.length > 0) {
-      const commands = newObjects.map(obj =>
-        new AddObjectCommand(objectsRef.current, obj, setObjects)
-      );
-      const batchCommand = new BatchCommand(commands, 'Вставить');
-      historyRef.current.execute(batchCommand);
+      // Snapshot once — undo restores exactly this state.
+      // BatchCommand с отдельными AddObjectCommand не подходит: каждая команда
+      // захватывает одинаковый objectsRef.current и при execute() перезаписывает
+      // друг друга, оставляя только последний объект.
+      const baseObjects = objectsRef.current;
+      const command: Command = {
+        description: 'Вставить',
+        execute() { setObjects([...baseObjects, ...newObjects]); },
+        undo() { setObjects(baseObjects); },
+      };
+      historyRef.current.execute(command);
 
       setState(prev => ({
         ...prev,
@@ -463,7 +470,7 @@ export function useAppState() {
   // Duplicate selected objects
   const duplicateSelected = useCallback(() => {
     const selected = objectsRef.current.filter(obj =>
-      state.selectedObjectIds.includes(obj.id)
+      stateRef.current.selectedObjectIds.includes(obj.id)
     );
 
     if (selected.length === 0) return;
@@ -483,18 +490,20 @@ export function useAppState() {
     });
 
     if (newObjects.length > 0) {
-      const commands = newObjects.map(obj =>
-        new AddObjectCommand(objectsRef.current, obj, setObjects)
-      );
-      const batchCommand = new BatchCommand(commands, 'Дублировать');
-      historyRef.current.execute(batchCommand);
+      const baseObjects = objectsRef.current;
+      const command: Command = {
+        description: 'Дублировать',
+        execute() { setObjects([...baseObjects, ...newObjects]); },
+        undo() { setObjects(baseObjects); },
+      };
+      historyRef.current.execute(command);
 
       setState(prev => ({
         ...prev,
         selectedObjectIds: newObjects.map(obj => obj.id),
       }));
     }
-  }, [state.selectedObjectIds]);
+  }, [setObjects]);
 
   return {
     state,

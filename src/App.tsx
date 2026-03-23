@@ -135,7 +135,7 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedObjects, removeObject, undo, redo, setMode, canEdit, selectAll, copyToClipboard, pasteFromClipboard, duplicateSelected]);
 
-  // Handle paste for images
+  // Handle paste for images — only when clipboard actually contains an image file
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       if (!canEdit) return;
@@ -143,6 +143,14 @@ function AppContent() {
       const activeTag = document.activeElement?.tagName.toLowerCase();
       const isEditing = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
       if (isEditing) return;
+
+      // Only trigger image upload when the clipboard actually has image data.
+      // This prevents the image handler from firing on Ctrl+V when the user
+      // is pasting canvas objects (handled by the keydown → pasteFromClipboard path).
+      const hasImage = Array.from(e.clipboardData?.items ?? []).some(
+        (item) => item.type.startsWith('image/')
+      );
+      if (!hasImage) return;
 
       handlePasteImage();
     };
@@ -225,7 +233,7 @@ function AppContent() {
           {renderMainContent()}
           {!['interactive', 'challenge', 'projects'].includes(state.mode) && (<PageSwitcher pages={state.pages} activePageId={state.activePageId} onSwitch={switchPage} onAdd={addPage} onRemove={removePage} />)}
         </div>
-        {!zenMode && !['interactive', 'challenge', 'library', 'projects'].includes(state.mode) && (selectedObjects.length > 0 || ['freehand', 'highlighter', 'shape', 'text'].includes(state.mode)) && (<PropertiesPanel />)}
+        {!zenMode && !['interactive', 'challenge', 'library', 'projects'].includes(state.mode) && (selectedObjects.length > 0 || ['freehand', 'highlighter', 'smart-pencil', 'shape', 'text'].includes(state.mode)) && (<PropertiesPanel />)}
       </div>
       {showWelcome && <WelcomeScreen onClose={() => setShowWelcome(false)} />}
       {showExportModal && <ExportModal onClose={() => setShowExportModal(false)} />}

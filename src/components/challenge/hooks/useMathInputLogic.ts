@@ -75,6 +75,8 @@ const getOpeningParen = (text: string, closePos: number): number => {
   return -1;
 };
 
+// ⚠️ Legacy normalization — DO NOT USE outside MathInput logic.
+// Will be removed in PR-5. Use lib/math/normalization + katexAdapter instead.
 export const normalizeMathExpression = (text: string): string => {
   if (!text.trim()) return '';
   let result = text;

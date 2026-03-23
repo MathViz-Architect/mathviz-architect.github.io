@@ -19,6 +19,7 @@ export const grade5Templates: ProblemTemplate[] = [
                     b: { type: 'int', min: 10, max: 99 },
                 },
                 answer_formula: 'a > b ? ">" : a < b ? "<" : "="',
+                answer_type: 'comparison',
                 hint: 'Сравните числа поразрядно: десятки, затем единицы',
             },
             2: {
@@ -28,6 +29,7 @@ export const grade5Templates: ProblemTemplate[] = [
                     b: { type: 'int', min: 100, max: 999 },
                 },
                 answer_formula: 'a > b ? ">" : a < b ? "<" : "="',
+                answer_type: 'comparison',
                 hint: 'Сравните числа поразрядно: сотни, десятки, единицы',
             },
         },
@@ -1486,7 +1488,7 @@ export const grade5Templates: ProblemTemplate[] = [
                 },
                 answer_formula: 'a > b ? ">" : "<"',
                 constraints: ['a != b', 'a < d', 'b < d'],
-                answer_type: 'number',
+                answer_type: 'comparison',
                 hint: 'При одинаковых знаменателях сравнивайте числители.',
                 solution: [
                     { explanation: 'Знаменатели одинаковые ({d}), сравниваем числители:' },
@@ -1503,7 +1505,7 @@ export const grade5Templates: ProblemTemplate[] = [
                 },
                 answer_formula: 'a < b ? ">" : "<"',
                 constraints: ['a != b'],
-                answer_type: 'number',
+                answer_type: 'comparison',
                 hint: 'При одинаковых числителях: чем больше знаменатель, тем меньше дробь.',
                 solution: [
                     { explanation: 'Числители одинаковые ({n}). Сравниваем знаменатели:' },
@@ -1520,7 +1522,7 @@ export const grade5Templates: ProblemTemplate[] = [
                 },
                 answer_formula: '2 * a > b ? ">" : "<"',
                 constraints: ['a < b', '2 * a != b'],
-                answer_type: 'number',
+                answer_type: 'comparison',
                 hint: 'Дробь больше 1/2, если числитель больше половины знаменателя.',
                 solution: [
                     { explanation: 'Половина от {b} равна {b}/2.' },

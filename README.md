@@ -52,7 +52,7 @@
 | 📊 **Интервалы и выражения** | Поддержка ответов в виде числовых промежутков [2; +∞), (-3; 5] и алгебраических выражений |
 | 💡 **Система подсказок** | Динамическая помощь с прогрессивным раскрытием, влияет на алгоритм адаптивности |
 | 🔬 **Визуальные модули** | 18 интерактивных объяснений: функции, геометрия, тригонометрия |
-| 🖊️ **Canvas-редактор** | Геометрические фигуры, точки, отрезки, углы, свободный рисунок, маркер-выделитель — с живой геометрией |
+| 🖊️ **Canvas-редактор** | Геометрические фигуры, точки, отрезки, углы, свободный рисунок, маркер-выделитель, умный карандаш с Ink-to-Shape — с живой геометрией и умными привязками (вершины, середины, пересечения, on-path) |
 | 🤝 **Совместная работа** | Room-based холст в реальном времени — учитель делится ссылкой, ученик заходит без регистрации |
 | 👩‍🏫 **Управление доской** | Три режима: лекция, совместная работа, ответ у доски |
 | 👤 **Система ролей** | Teacher/Student на основе владения комнатой |
@@ -63,7 +63,7 @@
 | 🎨 **Интуитивная панель инструментов** | Пресеты цвета и толщины, единая кнопка "Поделиться" |
 | 🖼️ **Вставка изображений** | Ctrl+V для вставки изображений из буфера обмена с мгновенным предпросмотром (Optimistic UI) |
 | 📐 **Resize изображений** | Drag угловых handles для изменения размера с сохранением пропорций (Shift) |
-| 🎨 **Панель свойств** | Визуальные пресеты цвета и толщины для всех типов объектов — без лишних технических параметров |
+| 🎨 **Панель свойств** | Визуальные пресеты цвета и толщины для всех типов объектов — без лишних технических параметров. При активном инструменте рисования (Карандаш, Выделитель) панель зафиксирована и не исчезает после каждого штриха |
 | 📱 **Мобильная адаптация** | Responsive layout для всех модулей, компактная клавиатура, Bottom Sheet панель свойств, pointer events для touch/stylus |
 | 🔄 **Rotation pivot** | Вращение вокруг центра объекта (Figma-подобное поведение) |
 | 🔍 **Viewport culling** | Рендерятся только объекты в текущем viewport — производительность не деградирует при 500+ объектах |
@@ -310,7 +310,7 @@ type AnswerType =
   | 'number'      // Числовой ответ
   | 'fraction'    // Дробь (3/4)
   | 'coordinate'  // Координаты (3, 4)
-  | 'expression'  // Алгебраическое выражение (x1=2, x2=5)
+  | 'expression'  // Алгебраическое выражение (x1=2, x2=5) или иррациональное (sqrt(89))
   | 'interval'     // Интервал [2; +inf), (-3; 5]
   | 'canvas_action'; // Экспериментальный: действие на холсте
 ```
@@ -325,6 +325,9 @@ type AnswerType =
 | LaTeX-дроби в `result` | `\\frac{{a}}{{b}}` | `a + "/" + b` |
 | Логика вычислений | в `answer_formula` | в строках `template`/`result` |
 | Строковая конкатенация | ❌ запрещена | `"" + "\\frac" + ...` |
+| Иррациональный ответ (sqrt) | `result: 'sqrt({sum})'` | `result: 'Math.sqrt(a*a + b*b)'` |
+| Текстовый ответ (да/нет) | `answer_type: 'text'` + `result: '{answer}'` | `result: '{isRight} === 1 ? "да" : "нет"'` |
+| Гарантированно валидные данные | `type: 'choice'` из пифагоровых троек | широкие диапазоны `int` + constraint |
 
 **Ключевые ограничения:**
 
@@ -332,6 +335,9 @@ type AnswerType =
 - ❗ `answer_formula` предназначен **только** для вычисления числового ответа. Не используйте его для построения строк с LaTeX.
 - LaTeX-дроби всегда пишутся как `\\frac{числитель}{знаменатель}` — никогда как `числитель/знаменатель` в `result`.
 - Вся логика (условия, ветвления, вычисления) выносится в `parameters`, а не в строки шаблона.
+- Для иррациональных ответов используйте `answer_type: 'expression'`. Промежуточные суммы (`sum`, `diff`, `dsum`) выносятся в `expression`-параметры — движок вычисляет их до рендеринга, LaTeX получает готовые числа: `$\\sqrt{{sum}}$` → `$\\sqrt{89}$`.
+- Для текстовых ответов (`"да"`/`"нет"`) используйте `answer_type: 'text'` и `result: '{answer}'` — специальный placeholder подставляет результат `answer_formula` напрямую.
+- Для задач где constraint выполняется редко (например пифагоровы тройки) используйте `type: 'choice'` с индексом и expression-параметрами для вычисления сторон — это гарантирует валидные данные за 0 итераций вместо 100.
 
 ### Weight-based Assessment (Система весов)
 
@@ -373,6 +379,14 @@ type AnswerType =
 | 3 ошибок подряд | difficulty −1 (сбрасывает счётчик) |
 | Accuracy > 80% (10 задач) | difficulty +1 (если streak не сработал) |
 | Accuracy < 40% (10 задач) | difficulty −1 (если streak не сработал) |
+
+### Компоненты движка задач
+
+**`variantGenerator.ts`** — генерирует варианты задач из шаблонов. Все промежуточные вычисления (`a²`, `b²`, `sum`, `c_val`) выносятся в `parameters` типа `expression` и вычисляются до рендеринга. Ответы типа `Math.sqrt(N)` автоматически конвертируются: точный квадрат → целое число, иррациональный → строка `"sqrt(N)"`.
+
+**`answerValidator.ts`** — валидирует ответы. Для ответов типа `sqrt(N)` поддерживает числовое сравнение через `math.evaluate` независимо от переданного `answerType` — `"sqrt(89)"` и `9.434...` считаются эквивалентными.
+
+**`MathText.tsx`** — рендерит текст с LaTeX через KaTeX. Поддерживает сырые LaTeX-команды (`\sqrt{N}`, `\frac{a}{b}`) вне `$...$` блоков — автоматически сплиттит строку и рендерит их как inline math.
 
 ---
 
@@ -470,7 +484,7 @@ type AnswerType =
 
 ### Properties Panel
 
-Панель свойств отображает только визуальные параметры выбранного объекта — без технических координат и размеров:
+Панель свойств отображает только визуальные параметры выбранного объекта — без технических координат и размеров. Если активен инструмент рисования (`freehand`, `highlighter`), панель показывает настройки инструмента и остаётся видимой после каждого штриха — рисование не сбрасывает контекст на "Выберите объект".
 
 | Секция | Описание |
 |--------|----------|
@@ -522,6 +536,7 @@ type AnswerType =
 |-----|-----------|-------------------|
 | `useFreehandTool` | Свободный рисунок | refs-first state, точки, `onMouseDown/Move/Up`, `finalize()`, `abort()`, overlay, поддержка tap/drag/stylus |
 | `useHighlighterTool` | Выделитель | то же, что `useFreehandTool`; создаёт `HighlighterObject` вместо `FreehandPathObject` |
+| `useSmartPencilTool` | Умный карандаш | то же, что `useFreehandTool` + stroke smoothing pipeline + Ink-to-Shape detection |
 
 Оба хука используют единую модель ввода: `isDrawingRef` (не React state) как авторитетный флаг, `finalize()` для фиксации штриха и `abort()` для отмены без создания объекта. Overlay управляется внутри хука — Canvas не хранит его.
 
@@ -580,6 +595,61 @@ Pointer capture (`setPointerCapture`) удерживает события даж
 - Overlay не может существовать без активного рисования
 - Pointer capture всегда освобождается
 - Состояние рисования не может "застрять"
+
+---
+
+### ✏️ Smart Pencil / Ink-to-Shape
+
+Инструмент умного карандаша (`useSmartPencilTool.ts`) расширяет свободный рисунок автоматическим распознаванием геометрических фигур после завершения штриха.
+
+**Stroke smoothing pipeline:**
+
+```
+rawPoints → downsample → rdpSimplify → chaikinSmooth → FreehandPathObject
+```
+
+**Ink-to-Shape pipeline:**
+
+```
+rawPoints → detectShape → [line | circle | rectangle | polygon] → CanvasObject
+                       ↓ confidence < 0.65
+                    FreehandPathObject (fallback)
+```
+
+**Поддерживаемые фигуры:**
+
+| Фигура | Алгоритм | Тип объекта |
+|--------|----------|-------------|
+| Line | RMS-отклонение от прямой / длина штриха < 3.5% | `line` |
+| Circle | Замкнутость + stdDev/meanRadius < 0.35 | `circle` |
+| Rectangle | Direction clustering: H/V сегменты ≥ 72%, замкнутость | `rectangle` |
+| Triangle | `extractPolygon` → 3 вершины + площадь > порога | `polygon` (label: `triangle`) |
+| Diamond (Rhombus) | 4 вершины + все стороны равны + углы ≠ 90° | `polygon` (label: `diamond`) |
+| Parallelogram | 4 вершины + обе пары сторон параллельны + ≠ прямоугольник | `polygon` (label: `parallelogram`) |
+| Trapezoid | 4 вершины + ровно одна пара параллельных сторон | `polygon` (label: `trapezoid`) |
+
+**Архитектура (`useSmartPencilTool.ts`):**
+
+| Функция | Описание |
+|---------|----------|
+| `rdpSimplify` | Ramer–Douglas–Peucker упрощение точек |
+| `chaikinSmooth` | Corner-cutting сглаживание (1–2 итерации) |
+| `extractPolygon` | RDP с адаптивным epsilon (2.5% периметра), возвращает 3–6 вершин |
+| `analyzePolygon` | Углы в вершинах, длины сторон, направления, флаг замкнутости |
+| `detectLine` | RMS-метрика масштабируется от размера штриха |
+| `detectCircle` | Проверка замкнутости + равномерность радиусов |
+| `detectRectangleFast` | Direction clustering для axis-aligned прямоугольников |
+| `detectPolygonShapes` | Запускает все polygon-классификаторы, возвращает лучший |
+| `detectShape` | Собирает всех кандидатов, возвращает с наибольшим confidence |
+
+**Confidence system:**
+
+- Каждый детектор возвращает `confidence` от 0 до 1
+- `detectShape` выбирает кандидата с наибольшим confidence
+- Если `confidence < 0.65` → fallback в freehand
+- Fallback гарантирован: если объект не создан по любой причине — всегда создаётся `FreehandPathObject`
+
+**Polygon-фигуры** сохраняются с `type: 'polygon'` и `data.label` = kind (`triangle`, `diamond`, `parallelogram`, `trapezoid`), что позволяет рендереру и панели свойств различать их.
 
 ---
 
@@ -1050,6 +1120,9 @@ Problem Engine покрыт юнит-тестами (Vitest). Запуск: `pnp
 | **Offline canvas** | Canvas-изменения не сохраняются в offline-очередь (в отличие от прогресса). При работе без комнаты используется autosave в localStorage. |
 | **validateAnswer — fraction parsing** | ~~`parseFraction()` использует `parseFloat()` как первый шаг~~ — исправлено в v3.2.1. Используется строгий `parseStrictFractionValue`: только `parseFractionToRational` для строк с `/`, только точное decimal-regex для чисел. |
 | **validateAnswer — unicode minus** | Unicode минус (U+2212, `−`) в дробях не поддерживается — `parseFractionToRational` ожидает ASCII дефис (U+002D). Задокументировано в тестах. |
+| **expression params ordering** | ~~`expression`-параметры, зависящие от других `expression`-параметров, вычислялись в неправильном порядке~~ — исправлено в v3.2.2. Итеративный алгоритм N+1 проходов в `evaluateExpressionParams` гарантирует корректный порядок. |
+| **sqrt answer validation** | ~~`answer_type: 'expression'` с `Math.sqrt(N)` в `answer_formula` хранил ответ как число, а не строку — `sqrt(89)` не принималось~~ — исправлено в v3.2.2. Ответ конвертируется в `'sqrt(N)'` при генерации. |
+| **solution steps raw expressions** | ~~`result` в solution steps с `Math.sqrt(a*a + b*b)` отображался как сырая строка~~ — исправлено в v3.2.2. Используйте `result: 'sqrt({a*a + b*b})'` — движок вычислит `{...}` через `evaluateExpressionPlaceholders`. |
 
 ---
 
@@ -1137,6 +1210,7 @@ Kaspersky и некоторые другие антивирусы перехва
 - [x] **MathText парсер** — parseMathText разбивает текст по разделителям $...$ и $$...$$
 - [x] **MathText нормализация** — normalizeMathExpression исправляет 1x→x, +-+→-, :→÷
 - [x] **Авто-конвертация дробей** — 1/2 → \frac{1}{2}, a/b → \frac{a}{b}, x^2/y → \frac{x^2}{y}
+- [x] **Иррациональные ответы (v3.2.2)** — `answer_type: 'expression'` принимает `sqrt(89)` символически и численно; `evaluateExpressionPlaceholders` вычисляет `{a*a + b*b}` в solution steps; итеративный `evaluateExpressionParams` исправляет порядок зависимых expression-параметров
 - [x] **Система подсказок** — прогрессивное раскрытие + веса ответов
 - [x] **Weight-based Assessment** — 0/50%/0% вес ответа в зависимости от подсказок
 - [x] **expression / interval answer types** — интервалы [2; +∞), выражения x1=2
@@ -1275,16 +1349,20 @@ const handleCanvasPointerCancel = (e: React.PointerEvent) => {
 
 ## 📍 Snapping System
 
-Централизованная логика привязки геометрических инструментов к существующим точкам.
+Централизованная логика привязки геометрических инструментов с четырьмя уровнями приоритетов.
 
 **API (`src/lib/geometry/snapping.ts`):**
 
 ```typescript
+export type SnapKind = 'point' | 'intersection' | 'midpoint' | 'on-path';
+
 export interface SnapResult {
     x: number;
     y: number;
     snapped: boolean;
-    targetId?: string;
+    targetId?: string;   // id geopoint при kind='point'
+    kind?: SnapKind;
+    sourceIds?: string[]; // id сегментов (1 для midpoint/on-path, 2 для intersection)
 }
 
 export function getSnapPoint(
@@ -1295,10 +1373,22 @@ export function getSnapPoint(
 ): SnapResult
 ```
 
-- Ищет ближайший `geopoint` в радиусе `radius`
-- Возвращает центр точки при совпадении, иначе исходные координаты с `snapped: false`
-- Заменяет устаревшую `findNearbyPoint` во всех инструментах (`geopoint`, `geosegment`, `geoangle`)
-- `snapTarget` state расширен полем `targetId?: string`
+**Приоритеты привязки (от высшего к низшему):**
+
+| Приоритет | Kind | Описание |
+|-----------|------|---------|
+| 1 | `point` | Существующая вершина `geopoint` |
+| 2 | `intersection` | Пересечение двух `geosegment` |
+| 3 | `midpoint` | Середина `geosegment` |
+| 4 | `on-path` | Ближайшая точка на `geosegment` |
+
+**Оптимизация пересечений:** перед O(n²) перебором пар применяется bounding-box фильтр — рассматриваются только сегменты, чей AABB пересекает зону `radius × 2` вокруг курсора. На типичных чертежах (10–30 сегментов) это сводит реальное число пар к единицам.
+
+**Математика (`src/math-core/geometry.ts`):**
+- `getPointSegmentProjection(P, A, B)` — проекция точки на отрезок, возвращает `{x, y, t}` где `t ∈ [0,1]`
+- `getSegmentIntersection(A, B, C, D)` — пересечение через определители Крамера, `null` при параллельных/невзаимных отрезках
+
+**Поведение при клике:** для `kind = 'on-path' | 'midpoint' | 'intersection'` создаётся новый `geopoint` в snap-координатах (статическое создание, без динамической привязки к родительскому сегменту).
 
 **Визуальная обратная связь:**
 
@@ -1307,7 +1397,9 @@ export function getSnapPoint(
 | Snapped | 11 | 3, зелёный | зелёный |
 | Unsnapped | 5 | 1, пунктир | серый |
 
-**Файлы:** `src/lib/geometry/snapping.ts`, `src/components/Canvas.tsx`
+> Визуальная дифференциация по `kind` (иконки для midpoint/intersection/on-path) — следующий шаг.
+
+**Файлы:** `src/lib/geometry/snapping.ts`, `src/math-core/geometry.ts`, `src/components/Canvas.tsx`
 
 ---
 
@@ -1361,10 +1453,82 @@ class ClearCanvasCommand implements Command {
 
 ---
 
+## 🖊️ Smart Pencil — Ink-to-Shape
+
+Инструмент "Умный карандаш" распознаёт нарисованные от руки фигуры и заменяет их идеальными геометрическими объектами.
+
+**Pipeline:** `downsample → RDP simplify → Chaikin smooth → shape detection`
+
+**Поддерживаемые фигуры:**
+
+| Фигура | Алгоритм |
+|--------|---------|
+| Линия | RMS-отклонение от прямой < 3.5% длины |
+| Окружность | Центр bounding box + равномерность радиусов + угловое покрытие ≥ 270° |
+| Прямоугольник | Direction clustering (H/V сегменты) + проверка замкнутости |
+| Треугольник, Ромб, Параллелограмм, Трапеция | `extractPolygon → analyzePolygon → классификатор` |
+
+**Ключевые детали реализации:**
+
+- Confidence-based detection — фигура создаётся только при уверенности ≥ 0.65, иначе fallback в freehand
+- `detectCircle` использует центр bounding box (не центроид) — устойчив к неравномерной плотности точек при рисовании
+- Polygon-объекты хранят вершины в нормализованных координатах `[0..1]` относительно bounding box — требование `ObjectRenderer`
+- Отдельный `CIRCLE_CLOSURE_THRESHOLD = 0.30` (мягче общего `0.20`) — круги часто не замыкаются точно
+
+**Файлы:** `src/components/canvas/tools/useSmartPencilTool.ts`
+
+---
+
+## 📐 Геометрические характеристики в сантиметрах
+
+Панель свойств фигур отображает все размеры в сантиметрах вместо пикселей.
+
+**Конвертация:** `1 см = 40 px` (клетка сетки = 20 px, 2 клетки = 1 см)
+
+Затронутые фигуры: rectangle, circle, triangle, polygon (трапеция, ромб, параллелограмм).
+Тултип над фигурой (SmartShapeToolbar) скрыт для обычных фигур — все характеристики доступны в правой панели. Тултип с интерактивными инпутами сохранён только для `geoshape`.
+
+**Файлы:** `src/components/PropertiesPanel/ShapeProperties.tsx`, `src/components/canvas/SmartShapeToolbar.tsx`
+
+---
+
+## 🔲 Resize фигур и текста
+
+Resize через угловые и боковые ручки распространён на все типы объектов (ранее работал только для изображений).
+
+**Поддерживаемые типы:** `rectangle`, `circle`, `triangle`, `polygon`, `text`, `image`
+
+Константа `RESIZABLE_TYPES` централизует список — добавить новый тип достаточно в одном месте.
+Для `text` при resize пересчитывается `fontSize` пропорционально изменению высоты (минимум 8px).
+
+**Файлы:** `src/components/Canvas.tsx`, `src/components/canvas/ObjectRenderer.tsx`
+
+---
+
+## 📋 Копирование объектов (Ctrl+C / Ctrl+V)
+
+Внутренний clipboard для копирования и вставки canvas-объектов.
+
+**Поведение:**
+- Ctrl+C — копирует выделенные объекты во внутренний буфер (не системный clipboard)
+- Ctrl+V — вставляет со смещением +20px, объекты становятся выделенными
+- Ctrl+D — дублирует выделенные объекты
+- Двойной клик по фигуре — дублирует её на месте со смещением
+
+**Реализация:** `copyToClipboard` читает `stateRef.current.selectedObjectIds` (не `state`) — нет stale closure. Обработчики зарегистрированы в `Canvas.tsx` где доступен `publishState` для синхронизации через Yjs.
+
+Ctrl+V для изображений из системного буфера обмена работает параллельно — `handlePaste` в `App.tsx` срабатывает только если в `ClipboardEvent` есть реальный `image/*` тип.
+
+**Файлы:** `src/hooks/useAppState.ts`, `src/components/Canvas.tsx`, `src/App.tsx`
+
+---
+
 ## 🗺️ Known Next Steps (TODO)
 
-- **Snapping:** расширить на линии, середины отрезков, пересечения
-- **`pointercancel`:** добавить обработчик для корректного завершения жеста при системных прерываниях
-- **Image interaction:** стабилизировать resize при быстрых движениях стилуса
+- **Architecture:** Проведение рефакторинга системы нормализации математики и декомпозиция Canvas (см. [REFACTORING_PLAN.md](./REFACTORING_PLAN.md))
+- ~~**Ctrl+C/V:** разобраться почему keydown не перехватывается в некоторых сценариях~~ ✅ Исправлено — refs-based keyboard listener, стабильная подписка без gap
+- ~~**Snapping:** расширить на линии, середины отрезков, пересечения~~ ✅ Реализовано — `SnapKind` с 4 уровнями приоритетов, bounding-box фильтр для O(n²)
+- ~~**`pointercancel`:** добавить обработчик для корректного завершения жеста при системных прерываниях~~ ✅ Реализовано
+- ~~**Image interaction:** стабилизировать resize при быстрых движениях стилуса~~ ✅ Исправлено — rAF throttling + resizeStartPosRef
 - **Yjs batching:** добавить throttle/debounce для `publishLocalChange` при массовых операциях
 - **Polygon:** поддержка произвольного числа вершин через интерактивное добавление точек

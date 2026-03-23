@@ -1,5 +1,35 @@
 import { TRIG_FUNCTIONS, IMPLICIT_MULT_VARS } from './constants';
 
+// ─── Idempotency marker ───────────────────────────────────────────────────────
+
+/**
+ * Transparent string prefix that marks an already-normalised expression.
+ * Rules:
+ *   - Added by normalizeMathExpression at the END of the pipeline.
+ *   - Checked at the START of normalizeMathExpression — if present, skip pipeline.
+ *   - Stripped by stripMarker() at the render boundary (MathText → KaTeX).
+ *   - Never passed to KaTeX directly.
+ */
+const NORM_MARKER = '__NORM_v1__:';
+
+/** Returns true when the string has already been through normalizeMathExpression. */
+export function isNormalized(str: string): boolean {
+    return typeof str === 'string' && str.startsWith(NORM_MARKER);
+}
+
+/** Wraps a normalised string with the idempotency marker. */
+export function markNormalized(str: string): string {
+    return NORM_MARKER + str;
+}
+
+/**
+ * Removes the idempotency marker before passing the string to a renderer
+ * (KaTeX, MathJS, etc.).  Safe to call on unmarked strings — returns as-is.
+ */
+export function stripMarker(str: string): string {
+    return str.startsWith(NORM_MARKER) ? str.slice(NORM_MARKER.length) : str;
+}
+
 // ─── Pipeline state ───────────────────────────────────────────────────────────
 
 interface PipelineState {
@@ -15,7 +45,7 @@ interface PipelineState {
  */
 function protectLatex(state: PipelineState): PipelineState {
     const placeholders: string[] = [];
-    const text = state.text.replace(/\\[a-zA-Z]+(\{[^{}]*\})+/g, (match) => {
+    const text = state.text.replace(/\\[a-zA-Z]+(\{[^{}]*\})*/g, (match) => {
         const idx = placeholders.length;
         placeholders.push(match);
         return `\x00LATEX${idx}\x00`;
@@ -75,10 +105,16 @@ function normalizeNumbersStage(state: PipelineState): PipelineState {
 /**
  * Simplifies trivial coefficients and sign combinations:
  *   1x → x, x+0 → x, -- → +, +- → −
+ *
+ * The coefficient rule uses a negative lookbehind to avoid firing inside
+ * LaTeX brace groups (e.g. x^{1n}, \log_{1k}) or on multi-digit numbers
+ * (e.g. 10x, 12x). Only a bare leading `1` before a letter is stripped.
  */
 function normalizeOperators(state: PipelineState): PipelineState {
     let text = state.text;
-    text = text.replace(/\b1([a-zA-Z])/g, '$1');
+    // Only strip `1` when it is NOT preceded by `{`, a digit, or `\`
+    // This prevents corrupting x^{1n}, \log_{10}, 10x, 12x, etc.
+    text = text.replace(/(?<![{0-9\\])1([a-zA-Z])/g, '$1');
     text = text.replace(/([a-zA-Z0-9_^{}])\s*[+\-]\s*0\b/g, '$1');
     text = text.replace(/-\s*-\s*/g, '+ ');
     text = text.replace(/\+\s*-\s*/g, '− ');
@@ -161,30 +197,50 @@ function restoreLatex(state: PipelineState): PipelineState {
 // ─── Absolute value helper (shared) ──────────────────────────────────────────
 
 /**
- * Handles vertical bars | for absolute values using a stack-based approach.
+ * Handles vertical bars | for absolute values using a stack-based approach
+ * with one-character look-ahead to resolve `||` ambiguity.
+ *
+ * Opening rule: `|` is opening when:
+ *   - it is the first character, OR
+ *   - preceded by whitespace / operator / open-paren / comma, OR
+ *   - preceded by another `|` AND the next character starts an expression
+ *     (letter, digit, open-paren, minus) — look-ahead resolves `||x||` vs `|x||y|`
+ *
+ * Unbalanced bars (no matching open/close) are left as-is.
  */
 function processAbs(text: string, format: 'KaTeX' | 'MathJS'): string {
     let result = '';
     const stack: ('abs' | 'other')[] = [];
 
     for (let i = 0; i < text.length; i++) {
-        if (text[i] === '|') {
-            const prevChar = text[i - 1] || '';
-            const isOpening = i === 0 || /[\s(+\-*/^=]/.test(prevChar);
-
-            if (isOpening) {
-                stack.push('abs');
-                result += format === 'KaTeX' ? '\\left| ' : 'abs(';
-            } else {
-                if (stack.length > 0) {
-                    stack.pop();
-                    result += format === 'KaTeX' ? ' \\right|' : ')';
-                } else {
-                    result += '|';
-                }
-            }
-        } else {
+        if (text[i] !== '|') {
             result += text[i];
+            continue;
+        }
+
+        const prevChar = text[i - 1] ?? '';
+        const nextChar = text[i + 1] ?? '';
+
+        // Determine if this `|` opens or closes an absolute value.
+        // When prevChar is `|`, use look-ahead: if the next char starts an
+        // expression (letter, digit, `(`, `-`) this is an opening bar;
+        // otherwise (end of string, space, operator, another `|`) it is closing.
+        const isOpening =
+            i === 0 ||
+            /[\s(+\-*/^=,]/.test(prevChar) ||
+            (prevChar === '|' && /[\w\d(-]/.test(nextChar));
+
+        if (isOpening) {
+            stack.push('abs');
+            result += format === 'KaTeX' ? '\\left|' : 'abs(';
+        } else {
+            if (stack.length > 0) {
+                stack.pop();
+                result += format === 'KaTeX' ? '\\right|' : ')';
+            } else {
+                // Unbalanced closing bar — leave as-is
+                result += '|';
+            }
         }
     }
 
@@ -200,15 +256,18 @@ function processAbs(text: string, format: 'KaTeX' | 'MathJS'): string {
  *   1. protectLatex      — shield existing \cmd{} blocks with placeholders
  *   2. normalizeUnicode  — newlines → spaces, ² ³ → ^2 ^3
  *   3. normalizeNumbers  — DecimalComma → dot, InfinityVariants → Infinity
- *   4. normalizeOperators — 1x→x, x+0→x, --→+, +-→−
+ *   4. normalizeOperators — 1x→x (safe), x+0→x, --→+, +-→−
  *   5. normalizeFunctions — sqrt()→\sqrt{}, ln/lg/log_
  *   6. convertFractions  — a/b → \frac{a}{b}
  *   7. normalizeSpacing  — * → \cdot, <= → \le, >= → \ge
  *   8. restoreLatex      — put original LaTeX blocks back
- *   9. processAbs        — |x| → \left|x\right|
+ *   9. processAbs        — |x| → \left|x\right| (nested-aware)
  */
 export function normalizeMathExpression(text: string): string {
     if (!text || typeof text !== 'string') return '';
+
+    // Idempotency guard: already normalised — skip pipeline, return as-is.
+    if (isNormalized(text)) return text;
 
     let state: PipelineState = { text, latexPlaceholders: [] };
 
@@ -222,7 +281,7 @@ export function normalizeMathExpression(text: string): string {
     state = restoreLatex(state);
 
     // processAbs operates on the final string (needs full context after restore)
-    return processAbs(state.text, 'KaTeX').trim();
+    return markNormalized(processAbs(state.text, 'KaTeX').trim());
 }
 
 // ─── MathJS conversion ────────────────────────────────────────────────────────

@@ -13,9 +13,11 @@ import { SNAP_RADIUS } from '@/lib/geometry';
 import { getSnapPoint } from '@/lib/geometry/snapping';
 import { ResizeHandle, calculateResize, getHandleCursor } from '@/lib/canvas/resizeImage';
 import { useAppState } from '@/hooks/useAppState';
+import { generateId } from '@/hooks/useAppState';
 import { ResizeObjectCommand } from '@/lib/commands';
 import { useFreehandTool } from './canvas/tools/useFreehandTool';
 import { useHighlighterTool } from './canvas/tools/useHighlighterTool';
+import { useSmartPencilTool } from './canvas/tools/useSmartPencilTool';
 import { useViewportCulling } from './canvas/useViewportCulling';
 
 export function createShapeObject(
@@ -25,7 +27,7 @@ export function createShapeObject(
   w: number,
   h: number
 ): AnyCanvasObject {
-  const id = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  const id = generateId();
   switch (shapeType) {
     case 'circle':
       return { id, type: 'circle', x: sx, y: sy, width: w, height: w, rotation: 0, opacity: 1, visible: true, locked: false, data: { fill: 'transparent', stroke: '#374151', strokeWidth: 2 } };
@@ -73,7 +75,7 @@ export const Canvas: React.FC = () => {
     state, zoom, setZoom, showGrid, gridWeight, selectObject: onSelectObject, selectMultiple: onSelectMultiple,
     updateObject: onUpdateObject, updateObjectDirect, executeCommand, setObjectsFn, handleAddObject: onAddObject, handleDeleteObject: onDeleteObject,
     moveObjects: onMoveObjects, penSettings, shapeType, getCanvasSnapshot,
-    highlighterSettings,
+    highlighterSettings, copyToClipboard, pasteFromClipboard,
   } = useEditorContext();
 
   const { roomState, canEdit, publishLocalChange, updateCursor } = useCollaborationContext();
@@ -91,6 +93,7 @@ export const Canvas: React.FC = () => {
   // mode is passed so tools can self-abort on tool switch mid-stroke
   const freehand = useFreehandTool({ penSettings, onAddObject, publishState, mode });
   const highlighter = useHighlighterTool({ penSettings: highlighterSettings, onAddObject, publishState, mode });
+  const smartPencil = useSmartPencilTool({ penSettings, onAddObject, publishState, mode });
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -140,10 +143,15 @@ export const Canvas: React.FC = () => {
   // Resize state for images
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<ResizeHandle | null>(null);
-  const [resizeStartPos, setResizeStartPos] = useState<Point | null>(null);
+  const resizeStartPosRef = useRef<Point | null>(null);
   const [resizeObjectId, setResizeObjectId] = useState<string | null>(null);
   const resizeObjectRef = useRef<AnyCanvasObject | null>(null);
   const resizeOriginalRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const resizeRafRef = useRef<number | null>(null);
+  // Refs mirror for resize — avoids stale closure in handleImageResizeMove useCallback
+  const resizeHandleRef = useRef<ResizeHandle | null>(null);
+  const resizeObjectIdRef = useRef<string | null>(null);
+  const isResizingRef = useRef(false);
 
   const handleEraserDelete = (x: number, y: number) => {
     if (!onDeleteObject) return;
@@ -168,7 +176,7 @@ export const Canvas: React.FC = () => {
     const snap = getSnapPoint(objects, x, y, SNAP_RADIUS);
     if (snap.snapped && snap.targetId) return snap.targetId;
     const R = 5;
-    const newPoint: AnyCanvasObject = { id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, type: 'geopoint', x: snap.x - R, y: snap.y - R, width: R * 2, height: R * 2, rotation: 0, opacity: 1, visible: true, locked: false, data: { color: '#1D4ED8', radius: R, label: nextPointLabel() } };
+    const newPoint: AnyCanvasObject = { id: generateId(), type: 'geopoint', x: snap.x - R, y: snap.y - R, width: R * 2, height: R * 2, rotation: 0, opacity: 1, visible: true, locked: false, data: { color: '#1D4ED8', radius: R, label: nextPointLabel() } };
     onAddObject(newPoint);
     return newPoint.id;
   };
@@ -185,7 +193,7 @@ export const Canvas: React.FC = () => {
       const ax = pointA.x + pointA.width / 2, ay = pointA.y + pointA.height / 2;
       const pointB = objects.find(o => o.id === pointBId);
       const bx = pointB ? pointB.x + pointB.width / 2 : x, by = pointB ? pointB.y + pointB.height / 2 : y;
-      const segment: AnyCanvasObject = { id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, type: 'geosegment', x: Math.min(ax, bx), y: Math.min(ay, by), width: Math.abs(bx - ax), height: Math.abs(by - ay), rotation: 0, opacity: 1, visible: true, locked: false, data: { pointAId: segmentPointAId, pointBId, color: '#374151', strokeWidth: 2, showPoints: true } };
+      const segment: AnyCanvasObject = { id: generateId(), type: 'geosegment', x: Math.min(ax, bx), y: Math.min(ay, by), width: Math.abs(bx - ax), height: Math.abs(by - ay), rotation: 0, opacity: 1, visible: true, locked: false, data: { pointAId: segmentPointAId, pointBId, color: '#374151', strokeWidth: 2, showPoints: true } };
       onAddObject(segment);
       setSegmentStep(0); setSegmentPointAId(null); setSegmentPreview(null); setSnapTarget(null);
       publishState();
@@ -207,7 +215,7 @@ export const Canvas: React.FC = () => {
       const ptB = objects.find(o => o.id === anglePointBId);
       if (!ptB) { setAngleStep(0); return; }
       const bx = ptB.x + ptB.width / 2, by = ptB.y + ptB.height / 2;
-      const angle: AnyCanvasObject = { id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, type: 'geoangle', x: bx - 30, y: by - 30, width: 60, height: 60, rotation: 0, opacity: 1, visible: true, locked: false, data: { pointAId: anglePointAId, pointBId: anglePointBId, pointCId, color: '#7C3AED', arcRadius: 25, showLabel: true } };
+      const angle: AnyCanvasObject = { id: generateId(), type: 'geoangle', x: bx - 30, y: by - 30, width: 60, height: 60, rotation: 0, opacity: 1, visible: true, locked: false, data: { pointAId: anglePointAId, pointBId: anglePointBId, pointCId, color: '#7C3AED', arcRadius: 25, showLabel: true } };
       onAddObject(angle);
       setAngleStep(0); setAnglePointAId(null); setAnglePointBId(null); setAnglePreview(null); setSnapTarget(null);
       publishState();
@@ -232,13 +240,52 @@ export const Canvas: React.FC = () => {
   useEffect(() => { if (mode !== 'geosegment') { setSegmentStep(0); setSegmentPointAId(null); setSegmentPreview(null); setSnapTarget(null); } }, [mode]);
   useEffect(() => { if (mode !== 'geoangle') { setAngleStep(0); setAnglePointAId(null); setAnglePointBId(null); setAnglePreview(null); setSnapTarget(null); } }, [mode]);
 
+  // Refs for keyboard handler — avoids re-subscribing on every render and
+  // eliminates the gap between removeEventListener / addEventListener.
+  const editingTextIdRef = useRef<string | null>(null);
+  editingTextIdRef.current = editingTextId;
+  const isPanningRef = useRef(false);
+  isPanningRef.current = isPanning;
+  const copyToClipboardRef = useRef(copyToClipboard);
+  copyToClipboardRef.current = copyToClipboard;
+  const pasteFromClipboardRef = useRef(pasteFromClipboard);
+  pasteFromClipboardRef.current = pasteFromClipboard;
+  const publishStateRef = useRef(publishState);
+  publishStateRef.current = publishState;
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.code === 'Space' && !editingTextId) { e.preventDefault(); setIsSpacePressed(true); } };
-    const handleKeyUp = (e: KeyboardEvent) => { if (e.code === 'Space') { setIsSpacePressed(false); if (isPanning) { setIsPanning(false); setPanStart(null); } } };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !editingTextIdRef.current) { e.preventDefault(); setIsSpacePressed(true); }
+
+      // Ctrl+C / Ctrl+V — handled here because Canvas has access to publishState
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        const tag = (document.activeElement?.tagName ?? '').toLowerCase();
+        const isEditing = tag === 'input' || tag === 'textarea' || (e.target as HTMLElement).isContentEditable;
+        if (isEditing) return;
+
+        if (e.key.toLowerCase() === 'c') {
+          e.preventDefault();
+          copyToClipboardRef.current();
+          return;
+        }
+        if (e.key.toLowerCase() === 'v') {
+          e.preventDefault();
+          pasteFromClipboardRef.current();
+          publishStateRef.current();
+          return;
+        }
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setIsSpacePressed(false);
+        if (isPanningRef.current) { setIsPanning(false); setPanStart(null); }
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
-  }, [editingTextId, isPanning]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Wheel zoom/pan handler with passive: false to prevent browser zoom
   const handleWheelNative = useCallback((e: WheelEvent) => {
@@ -295,7 +342,7 @@ export const Canvas: React.FC = () => {
   }, []);
 
   const handleObjectPointerDown = (e: React.PointerEvent, objectId: string) => {
-    if (!canEdit || mode === 'line' || mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser' || mode === 'freehand' || mode === 'highlighter') return;
+    if (!canEdit || mode === 'line' || mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser' || mode === 'freehand' || mode === 'highlighter' || mode === 'smart-pencil') return;
     e.stopPropagation();
     const obj = objects.find((o) => o.id === objectId);
     if (obj?.locked) return;
@@ -315,11 +362,13 @@ export const Canvas: React.FC = () => {
 
   // Resize handlers for images
   const handleImageResizeStart = useCallback((handle: ResizeHandle, e: React.PointerEvent) => {
-    if (!canEdit || mode === 'line' || mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser' || mode === 'freehand' || mode === 'highlighter') return;
+    if (!canEdit || mode === 'line' || mode === 'geosegment' || mode === 'geoangle' || mode === 'geopoint' || mode === 'eraser' || mode === 'freehand' || mode === 'highlighter' || mode === 'smart-pencil') return;
+
+    const RESIZABLE_TYPES = ['image', 'rectangle', 'circle', 'triangle', 'polygon', 'text'];
 
     const objectId = selectedObjectIds.find(id => {
       const obj = objects.find(o => o.id === id);
-      return obj?.type === 'image';
+      return obj && RESIZABLE_TYPES.includes(obj.type);
     });
 
     if (!objectId) return;
@@ -334,51 +383,79 @@ export const Canvas: React.FC = () => {
 
     setIsResizing(true);
     setResizeHandle(handle);
-    setResizeStartPos({ x, y });
+    resizeStartPosRef.current = { x, y };
     setResizeObjectId(objectId);
     resizeObjectRef.current = { ...obj };
     resizeOriginalRef.current = { x: obj.x, y: obj.y, width: obj.width, height: obj.height };
+    // Keep refs in sync so handleImageResizeMove never reads stale closure values
+    isResizingRef.current = true;
+    resizeHandleRef.current = handle;
+    resizeObjectIdRef.current = objectId;
   }, [canEdit, mode, selectedObjectIds, objects, canvasSize]);
 
   const handleImageResizeMove = useCallback((x: number, y: number, shiftKey: boolean = false) => {
-    if (!isResizing || !resizeHandle || !resizeStartPos || !resizeObjectId || !resizeObjectRef.current) return;
+    if (!isResizingRef.current || !resizeHandleRef.current || !resizeStartPosRef.current || !resizeObjectIdRef.current || !resizeObjectRef.current) return;
 
-    const deltaX = x - resizeStartPos.x;
-    const deltaY = y - resizeStartPos.y;
+    const deltaX = x - resizeStartPosRef.current.x;
+    const deltaY = y - resizeStartPosRef.current.y;
     const preserveAspectRatio = shiftKey;
 
     const newBounds = calculateResize(
       resizeObjectRef.current,
-      resizeHandle,
+      resizeHandleRef.current,
       deltaX,
       deltaY,
       preserveAspectRatio
     );
 
-    // Update the object locally without command history during drag
-    updateObjectDirect(resizeObjectId, newBounds);
-  }, [isResizing, resizeHandle, resizeStartPos, resizeObjectId, updateObjectDirect]);
+    // Throttle DOM updates to animation frames to avoid layout thrashing
+    if (resizeRafRef.current !== null) cancelAnimationFrame(resizeRafRef.current);
+    const objectId = resizeObjectIdRef.current;
+    resizeRafRef.current = requestAnimationFrame(() => {
+      updateObjectDirect(objectId, newBounds);
+      resizeRafRef.current = null;
+    });
+  }, [updateObjectDirect]);
 
   const handleImageResizeEnd = useCallback(() => {
-    if (!isResizing || !resizeHandle || !resizeStartPos || !resizeObjectId || !resizeObjectRef.current || !resizeOriginalRef.current) {
+    // Use refs instead of state — state may be stale in fast pointer sequences
+    if (!isResizingRef.current || !resizeHandleRef.current || !resizeStartPosRef.current || !resizeObjectIdRef.current || !resizeObjectRef.current || !resizeOriginalRef.current) {
       setIsResizing(false);
       setResizeHandle(null);
-      setResizeStartPos(null);
+      resizeStartPosRef.current = null;
       setResizeObjectId(null);
       resizeObjectRef.current = null;
       resizeOriginalRef.current = null;
+      isResizingRef.current = false;
+      resizeHandleRef.current = null;
+      resizeObjectIdRef.current = null;
       return;
     }
+
+    const objectId = resizeObjectIdRef.current;
 
     // Create a ResizeObjectCommand with original and current (final) bounds
     // The object is already at final state via updateObjectDirect
     // execute(): apply final bounds (no-op since already done)
     // undo(): restore to original bounds
-    const finalObj = objects.find(o => o.id === resizeObjectId);
+    const finalObj = objects.find(o => o.id === objectId);
     if (finalObj) {
+      // For text objects: scale fontSize proportionally to height change
+      if (finalObj.type === 'text' && resizeOriginalRef.current) {
+        const oldHeight = resizeOriginalRef.current.height;
+        const newHeight = finalObj.height;
+        if (oldHeight > 0 && newHeight !== oldHeight) {
+          const textData = finalObj.data as { fontSize?: number };
+          const oldFontSize = textData.fontSize ?? 16;
+          const scaleY = newHeight / oldHeight;
+          const newFontSize = Math.max(8, Math.round(oldFontSize * scaleY));
+          updateObjectDirect(objectId, { data: { ...finalObj.data, fontSize: newFontSize } });
+        }
+      }
+
       const command = new ResizeObjectCommand(
         objects,
-        resizeObjectId,
+        objectId,
         { x: finalObj.x, y: finalObj.y, width: finalObj.width, height: finalObj.height },
         setObjectsFn()
       );
@@ -390,16 +467,22 @@ export const Canvas: React.FC = () => {
       executeCommand(command);
     }
 
+    // Flush any pending rAF before committing final state
+    if (resizeRafRef.current !== null) { cancelAnimationFrame(resizeRafRef.current); resizeRafRef.current = null; }
+
     setIsResizing(false);
     setResizeHandle(null);
-    setResizeStartPos(null);
+    resizeStartPosRef.current = null;
     setResizeObjectId(null);
     resizeObjectRef.current = null;
     resizeOriginalRef.current = null;
+    isResizingRef.current = false;
+    resizeHandleRef.current = null;
+    resizeObjectIdRef.current = null;
 
     // Publish to collaboration
     publishState();
-  }, [isResizing, resizeHandle, resizeStartPos, resizeObjectId, objects, setObjectsFn, executeCommand, publishState]);
+  }, [objects, setObjectsFn, executeCommand, publishState, updateObjectDirect]);
 
   const handleTextDoubleClick = (e: React.MouseEvent, objectId: string) => {
     if (!canEdit) return;
@@ -484,7 +567,7 @@ export const Canvas: React.FC = () => {
       const snap = getSnapPoint(objects, x, y, SNAP_RADIUS);
       if (snap.snapped && snap.targetId) { onSelectObject(snap.targetId); e.stopPropagation(); return; }
       const R = 5;
-      const newPoint: AnyCanvasObject = { id: `obj_${Date.now()}`, type: 'geopoint', x: snap.x - R, y: snap.y - R, width: R * 2, height: R * 2, rotation: 0, opacity: 1, visible: true, locked: false, data: { color: '#1D4ED8', radius: R, label: nextPointLabel() } };
+      const newPoint: AnyCanvasObject = { id: generateId(), type: 'geopoint', x: snap.x - R, y: snap.y - R, width: R * 2, height: R * 2, rotation: 0, opacity: 1, visible: true, locked: false, data: { color: '#1D4ED8', radius: R, label: nextPointLabel() } };
       onAddObject(newPoint);
       e.stopPropagation(); setSnapTarget(null);
       publishState();
@@ -493,6 +576,7 @@ export const Canvas: React.FC = () => {
     if (mode === 'geoangle') { handleAngleClick(x, y); e.stopPropagation(); }
     if (mode === 'freehand') { freehand.onMouseDown(x, y); e.stopPropagation(); }
     if (mode === 'highlighter') { highlighter.onMouseDown(x, y); e.stopPropagation(); }
+    if (mode === 'smart-pencil') { smartPencil.onMouseDown(x, y); e.stopPropagation(); }
     if (mode === 'shape') { setIsDrawingShape(true); setShapeDrawStart({ x, y }); setShapeDrawEnd({ x, y }); e.stopPropagation(); }
   };
 
@@ -525,7 +609,7 @@ export const Canvas: React.FC = () => {
     }
 
     if (isDrawingArrow && arrowStart) { setArrowEnd({ x, y }); return; }
-    if (isDrawingLine && lineStart) { setArrowEnd({ x, y }); return; }
+    if (isDrawingLine && lineStart) { setLineEnd({ x, y }); return; }
     if (isErasing) { handleEraserDelete(x, y); return; }
     if (isMarqueeSelecting) { setMarqueeEnd({ x, y }); return; }
     if (isDragging && dragStart && dragObjectId) { const dx = x - dragStart.x, dy = y - dragStart.y; setDragDelta({ dx, dy }); return; }
@@ -547,6 +631,7 @@ export const Canvas: React.FC = () => {
     // Use isDrawingRef (never stale) instead of isDrawing state
     if (mode === 'freehand' && freehand.isDrawingRef.current) { freehand.onMouseMove(x, y); }
     if (mode === 'highlighter' && highlighter.isDrawingRef.current) { highlighter.onMouseMove(x, y); }
+    if (mode === 'smart-pencil' && smartPencil.isDrawingRef.current) { smartPencil.onMouseMove(x, y); }
   };
 
   const handleCanvasPointerCancel = (e: React.PointerEvent) => {
@@ -555,6 +640,7 @@ export const Canvas: React.FC = () => {
     // Use onCancel (abort without committing object) — isDrawingRef guards against double-call
     freehand.onCancel();
     highlighter.onCancel();
+    smartPencil.onCancel();
     setIsPanning(false); setPanStart(null);
     setIsDrawingArrow(false); setArrowStart(null); setArrowEnd(null);
     setIsDrawingLine(false); setLineStart(null); setLineEnd(null);
@@ -562,7 +648,7 @@ export const Canvas: React.FC = () => {
     setIsErasing(false);
     setIsMarqueeSelecting(false); setMarqueeStart(null); setMarqueeEnd(null);
     setIsDragging(false); setDragStart(null); setDragObjectId(null);
-    setIsResizing(false); setResizeHandle(null); setResizeStartPos(null); setResizeObjectId(null);
+    setIsResizing(false); setResizeHandle(null); resizeStartPosRef.current = null; setResizeObjectId(null);
   };
 
   const handleCanvasPointerUp = (e: React.PointerEvent) => {
@@ -580,7 +666,7 @@ export const Canvas: React.FC = () => {
 
     if (isDrawingArrow && arrowStart && arrowEnd) {
       if (calculateDistance(arrowStart.x, arrowStart.y, x, y) > 5) {
-        const newArrow: AnyCanvasObject = { id: `obj_${Date.now()}`, type: 'arrow', x: arrowStart.x, y: arrowStart.y, width: x - arrowStart.x, height: y - arrowStart.y, rotation: 0, opacity: 1, visible: true, locked: false, data: { stroke: '#374151', strokeWidth: 2, arrowHead: 'end' } };
+        const newArrow: AnyCanvasObject = { id: generateId(), type: 'arrow', x: arrowStart.x, y: arrowStart.y, width: x - arrowStart.x, height: y - arrowStart.y, rotation: 0, opacity: 1, visible: true, locked: false, data: { stroke: '#374151', strokeWidth: 2, arrowHead: 'end' } };
         onAddObject(newArrow);
       }
       setIsDrawingArrow(false); setArrowStart(null); setArrowEnd(null);
@@ -588,7 +674,7 @@ export const Canvas: React.FC = () => {
     }
     if (isDrawingLine && lineStart && lineEnd) {
       if (calculateDistance(lineStart.x, lineStart.y, x, y) > 5) {
-        const newLine: AnyCanvasObject = { id: `obj_${Date.now()}`, type: 'line', x: Math.min(lineStart.x, x), y: Math.min(lineStart.y, y), width: Math.abs(x - lineStart.x), height: Math.abs(y - lineStart.y), rotation: 0, opacity: 1, visible: true, locked: false, data: { x1: lineStart.x, y1: lineStart.y, x2: x, y2: y, color: '#374151', strokeWidth: 2 } };
+        const newLine: AnyCanvasObject = { id: generateId(), type: 'line', x: Math.min(lineStart.x, x), y: Math.min(lineStart.y, y), width: Math.abs(x - lineStart.x), height: Math.abs(y - lineStart.y), rotation: 0, opacity: 1, visible: true, locked: false, data: { x1: lineStart.x, y1: lineStart.y, x2: x, y2: y, color: '#374151', strokeWidth: 2 } };
         onAddObject(newLine);
       }
       setIsDrawingLine(false); setLineStart(null); setLineEnd(null);
@@ -620,6 +706,10 @@ export const Canvas: React.FC = () => {
       highlighter.onMouseUp();
       return;
     }
+    if (smartPencil.isDrawingRef.current) {
+      smartPencil.onMouseUp();
+      return;
+    }
     if (isDragging) {
       if (dragDelta && dragStartObjectsRef.current.length > 0) {
         const { dx, dy } = dragDelta;
@@ -640,10 +730,39 @@ export const Canvas: React.FC = () => {
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
     const target = e.target as SVGElement | HTMLElement;
     const isEmptyCanvas = target.tagName === 'svg' || target === e.currentTarget;
-    if (isEmptyCanvas && mode === 'text') { /* fall through */ } else if (isEmptyCanvas) { setPanOffset({ x: 0, y: 0 }); return; }
-    if (!canEdit || !['shape', 'draw', 'fraction', 'chart', 'arrow', 'text'].includes(mode)) return;
-    const svgRect = canvasRef.current?.getBoundingClientRect(); if (!svgRect) return;
+
+    // Double-click on empty canvas: reset pan (or create text in text mode)
+    if (isEmptyCanvas) {
+      if (mode === 'text') { /* fall through to create text */ }
+      else { setPanOffset({ x: 0, y: 0 }); return; }
+    }
+
+    if (!canEdit) return;
+
+    const svgRect = canvasRef.current?.getBoundingClientRect();
+    if (!svgRect) return;
     const { x, y } = screenToCanvas(e.clientX, e.clientY, svgRect, canvasSize.width, canvasSize.height, zoom, panOffset.x, panOffset.y);
+
+    // If clicking on a selected object — duplicate it (works in any mode)
+    if (!isEmptyCanvas && selectedObjectIds.length === 1) {
+      const src = objects.find(o => o.id === selectedObjectIds[0]);
+      if (src) {
+        const duplicate: AnyCanvasObject = {
+          ...src,
+          id: generateId(),
+          x: src.x + 20,
+          y: src.y + 20,
+          data: { ...(src.data as object) },
+        };
+        onAddObject(duplicate);
+        publishState();
+        return;
+      }
+    }
+
+    // Empty canvas clicks — only in specific modes
+    if (!['shape', 'draw', 'fraction', 'chart', 'arrow', 'text'].includes(mode)) return;
+
     let newObject: Partial<AnyCanvasObject> = {};
     switch (mode) {
       case 'text': newObject = { type: 'text', x: x - 100, y: y - 20, width: 200, height: 40, data: { text: 'Текст', fontSize: 24, fontFamily: 'sans-serif', fontWeight: 'normal', fill: '#1F2937', textAlign: 'left' } }; break;
@@ -652,7 +771,7 @@ export const Canvas: React.FC = () => {
       case 'arrow': newObject = { type: 'arrow', x: x - 75, y: y - 10, width: 150, height: 20, data: { stroke: '#374151', strokeWidth: 2, arrowHead: 'end' } }; break;
       default: newObject = { type: 'rectangle', x: x - 50, y: y - 30, width: 100, height: 60, data: { fill: 'transparent', stroke: '#374151', strokeWidth: 2, cornerRadius: 0 } };
     }
-    onAddObject({ id: `obj_${Date.now()}`, rotation: 0, opacity: 1, visible: true, locked: false, ...newObject } as AnyCanvasObject);
+    onAddObject({ id: generateId(), rotation: 0, opacity: 1, visible: true, locked: false, ...newObject } as AnyCanvasObject);
     publishState();
   };
 
@@ -687,8 +806,8 @@ export const Canvas: React.FC = () => {
         onPointerUp={handleCanvasPointerUp}
         onPointerCancel={handleCanvasPointerCancel}
         onWheel={handleWheel}
-        onPointerLeave={() => { updateCursor(null); setSnapTarget(null); if (isPanning) { setIsPanning(false); setPanStart(null); } else if (isResizing) { handleImageResizeEnd(); } else if (isDrawingArrow) { setIsDrawingArrow(false); setArrowStart(null); setArrowEnd(null); } else if (isDrawingLine) { setIsDrawingLine(false); setLineStart(null); setLineEnd(null); } else if (isErasing) { setIsErasing(false); } else if (freehand.isDrawingRef.current) { /* pointer capture keeps events flowing — leave is safe to ignore */ } else if (highlighter.isDrawingRef.current) { /* same */ } else if (isMarqueeSelecting) { setIsMarqueeSelecting(false); setMarqueeStart(null); setMarqueeEnd(null); } else handleMouseUp(); }}
-        style={{ touchAction: 'none', cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : isResizing && resizeHandle ? getHandleCursor(resizeHandle) : ['arrow', 'line', 'eraser', 'draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle', 'freehand', 'highlighter', 'shape'].includes(mode) ? 'crosshair' : 'default' }}>
+        onPointerLeave={() => { updateCursor(null); setSnapTarget(null); if (isPanning) { setIsPanning(false); setPanStart(null); } else if (isResizing) { handleImageResizeEnd(); } else if (isDrawingArrow) { setIsDrawingArrow(false); setArrowStart(null); setArrowEnd(null); } else if (isDrawingLine) { setIsDrawingLine(false); setLineStart(null); setLineEnd(null); } else if (isErasing) { setIsErasing(false); } else if (freehand.isDrawingRef.current) { /* pointer capture keeps events flowing — leave is safe to ignore */ } else if (highlighter.isDrawingRef.current) { /* same */ } else if (smartPencil.isDrawingRef.current) { /* same */ } else if (isMarqueeSelecting) { setIsMarqueeSelecting(false); setMarqueeStart(null); setMarqueeEnd(null); } else handleMouseUp(); }}
+        style={{ touchAction: 'none', cursor: isPanning ? 'grabbing' : isSpacePressed ? 'grab' : isResizing && resizeHandle ? getHandleCursor(resizeHandle) : ['arrow', 'line', 'eraser', 'draw', 'fraction', 'chart', 'geopoint', 'geosegment', 'geoangle', 'freehand', 'highlighter', 'smart-pencil', 'shape'].includes(mode) ? 'crosshair' : 'default' }}>
 
         <div
           className="canvas-world"
@@ -714,6 +833,7 @@ export const Canvas: React.FC = () => {
             {canEdit && snapTarget && ['geosegment', 'geoangle', 'geopoint'].includes(mode) && <circle cx={snapTarget.x} cy={snapTarget.y} r={snapTarget.snapped ? 11 : 5} fill={snapTarget.snapped ? 'rgba(16,185,129,0.12)' : 'none'} stroke={snapTarget.snapped ? '#10B981' : '#7C3AED'} strokeWidth={snapTarget.snapped ? 3 : 1.5} strokeDasharray={snapTarget.snapped ? undefined : '3,3'} opacity={snapTarget.snapped ? 1 : 0.7} style={{ pointerEvents: 'none' }} />}
             {canEdit && freehand.overlay && freehand.overlay.points.length >= 1 && <path d={buildSmoothPath(freehand.overlay.points)} stroke={freehand.overlay.color} strokeWidth={freehand.overlay.width} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.7} style={{ pointerEvents: 'none' }} />}
             {canEdit && highlighter.overlay && highlighter.overlay.points.length >= 1 && <path d={buildSmoothPath(highlighter.overlay.points)} stroke={highlighter.overlay.color} strokeWidth={highlighter.overlay.width} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.4} style={{ pointerEvents: 'none', mixBlendMode: 'multiply' }} />}
+            {canEdit && smartPencil.overlay && smartPencil.overlay.points.length >= 1 && <path d={buildSmoothPath(smartPencil.overlay.points)} stroke={smartPencil.overlay.color} strokeWidth={smartPencil.overlay.width} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.7} style={{ pointerEvents: 'none' }} />}
           </svg>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { evaluate } from 'mathjs';
+import { isValidMathExpression } from '../../lib/math/mathJsAdapter';
 import { toMathJSExpression } from '../../lib/math/normalization';
 
 
@@ -187,21 +187,8 @@ export function smartBackspace(value: string, cursor: number): { value: string; 
  * Note: This will fail for intervals or pure inequalities.
  */
 export const validateExpression = (text: string): boolean => {
-  try {
-    const cleaned = toMathJSExpression(text);
-    if (!cleaned) return true; // Allow empty
-
-    // Don't try to evaluate expressions with inequalities or intervals
-    if (/[<>=;]/.test(cleaned)) {
-      return true;
-    }
-
-    evaluate(cleaned);
-    return true;
-  } catch (e) {
-    // If it's not a valid mathjs expression, it might still be a valid input (e.g. interval)
-    return true;
-  }
+  const cleaned = toMathJSExpression(text);
+  return isValidMathExpression(cleaned);
 };
 
 

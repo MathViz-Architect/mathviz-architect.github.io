@@ -13,6 +13,7 @@ const AnswerTypeSchema = z.enum([
   'text',
   'expression',
   'interval',
+  'comparison',
   'set',
 ]);
 

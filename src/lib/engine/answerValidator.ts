@@ -6,6 +6,7 @@
 
 import { GeneratedProblem, AnswerType } from '../types';
 import { toMathJSExpression } from '../math/normalization';
+import { evaluateMath } from '../math/mathJsAdapter';
 import { checkEquivalence, compareExpressions, extractVariables } from './equivalence';
 import { parseIntervalSet, intervalSetsEqual } from './intervals';
 
@@ -169,11 +170,27 @@ export function validateAnswer(
             // Strict regex rejects "4abc", "4x", "1/2" — anything parseFloat would silently truncate.
             // Comma is accepted as decimal separator ("3,14" → 3.14).
             const normalized = safeUserAnswer.replace(',', '.').trim();
+
+            // Fallback: if the stored answer is a sqrt expression (e.g. "sqrt(58)"),
+            // compare numerically via math.evaluate — handles UI passing answerType='number'
+            // for expression-type problems (e.g. irrational hypotenuse).
+            if (typeof answer === 'string' && /sqrt\(/.test(answer)) {
+                const processedUser = toMathJSExpression(normalized);
+                const processedExpected = toMathJSExpression(answer);
+                try {
+                    const userVal = Number(evaluateMath(processedUser));
+                    const expVal = Number(evaluateMath(processedExpected));
+                    if (isFinite(userVal) && isFinite(expVal)) {
+                        return Math.abs(userVal - expVal) < 1e-9;
+                    }
+                } catch { /* fall through */ }
+                return false;
+            }
+
             // Allow: optional minus, digits, optional decimal point + digits
             // Also allow: ".5" and "5." (parseFloat-compatible edge cases)
             if (!/^-?(\d+\.?\d*|\.\d+)$/.test(normalized)) {
-                // Not a valid number literal — fall back to text comparison only
-                return normalized.toLowerCase() === String(answer).trim().toLowerCase();
+                return false;
             }
             const parsed = Number(normalized);
             const expected = parseFloat(String(answer));
@@ -253,12 +270,22 @@ export function validateAnswer(
 
         case 'expression': {
             const expectedStr = String(answer);
-            const processedUserAnswer = toMathJSExpression(safeUserAnswer);
-            const processedExpectedAnswer = toMathJSExpression(expectedStr);
-            // Extract variables dynamically from both expressions instead of using
-            // a hardcoded list — handles templates with t, n, k, m, etc.
-            const vars = extractVariables(processedUserAnswer + ' ' + processedExpectedAnswer);
-            const result = checkEquivalence(processedUserAnswer, processedExpectedAnswer, vars);
+            const processedUser = toMathJSExpression(safeUserAnswer);
+            const processedExpected = toMathJSExpression(expectedStr);
+            const vars = extractVariables(processedUser + ' ' + processedExpected);
+
+            // If no variables — compare numerically (handles sqrt(N) vs Math.sqrt(N))
+            if (vars.length === 0) {
+                try {
+                    const userVal = Number(evaluateMath(processedUser));
+                    const expVal = Number(evaluateMath(processedExpected));
+                    if (isFinite(userVal) && isFinite(expVal)) {
+                        return Math.abs(userVal - expVal) < 1e-9;
+                    }
+                } catch { /* fall through to symbolic */ }
+            }
+
+            const result = checkEquivalence(processedUser, processedExpected, vars);
             return result.isEquivalent && result.confidence >= 0.99;
         }
 
@@ -276,18 +303,21 @@ export function validateAnswer(
                 return false;
             }
         }
+
+        case 'text': {
+            // Case-insensitive, whitespace-trimmed string comparison.
+            return safeUserAnswer.trim().toLowerCase() === String(answer).trim().toLowerCase();
+        }
+
+        case 'comparison': {
+            // Exact match for comparison signs: "<", ">", "="
+            return safeUserAnswer.trim() === String(answer).trim();
+        }
+
         case 'set':
             throw new Error('AnswerType "set" is not yet implemented');
 
         default:
-            // Fallback to number validation (mirrors 'number' case)
-            const parsed = parseFloat(safeUserAnswer.replace(',', '.').trim());
-            const expected = parseFloat(String(answer));
-
-            if (!isNaN(parsed) && !isNaN(expected) && isFinite(parsed) && isFinite(expected)) {
-                return Math.abs(parsed - expected) < tolerance;
-            }
-
-            return safeUserAnswer.trim().toLowerCase() === String(answer).trim().toLowerCase();
+            return false;
     }
 }

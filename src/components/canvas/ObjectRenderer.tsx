@@ -117,6 +117,9 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
             transform={`rotate(${obj.rotation} ${x + obj.width / 2} ${y + obj.height / 2})`}
           />
           {isSelected && <rect x={x - 2} y={y - 2} width={obj.width + 4} height={obj.height + 4} {...SEL} />}
+          {isSelected && onImageResizeStart && (
+            <ImageResizeHandles x={x} y={y} width={obj.width} height={obj.height} zoom={zoom} onResizeStart={onImageResizeStart} />
+          )}
         </g>
       );
     }
@@ -133,6 +136,9 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
             fill={d?.fill || '#10B981'} stroke={d?.stroke || '#047857'}
             strokeWidth={d?.strokeWidth || 2} opacity={opacity} />
           {isSelected && <ellipse cx={cx} cy={cy} rx={rx + 4} ry={ry + 4} {...SEL} />}
+          {isSelected && onImageResizeStart && (
+            <ImageResizeHandles x={obj.x + dx} y={obj.y + dy} width={obj.width} height={obj.height} zoom={zoom} onResizeStart={onImageResizeStart} />
+          )}
         </g>
       );
     }
@@ -150,6 +156,9 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
             strokeWidth={d?.strokeWidth || 2} opacity={opacity}
             transform={`rotate(${obj.rotation} ${cx} ${cy})`} />
           {isSelected && <rect x={x - 2} y={y - 2} width={obj.width + 4} height={obj.height + 4} {...SEL} />}
+          {isSelected && onImageResizeStart && (
+            <ImageResizeHandles x={x} y={y} width={obj.width} height={obj.height} zoom={zoom} onResizeStart={onImageResizeStart} />
+          )}
         </g>
       );
     }
@@ -165,6 +174,9 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
             fill={d?.fill || '#F59E0B'} stroke={d?.stroke || '#D97706'}
             strokeWidth={d?.strokeWidth || 2} opacity={opacity} />
           {isSelected && <rect x={x - 2} y={y - 2} width={obj.width + 4} height={obj.height + 4} {...SEL} />}
+          {isSelected && onImageResizeStart && (
+            <ImageResizeHandles x={x} y={y} width={obj.width} height={obj.height} zoom={zoom} onResizeStart={onImageResizeStart} />
+          )}
         </g>
       );
     }
@@ -331,6 +343,9 @@ const ObjectRendererComponent: React.FC<ObjectRendererProps> = ({
             )}
           </foreignObject>
           {isSelected && !isEditing && <rect x={ox - 2} y={oy - 2} width={foWidth + 4} height={foHeight + 4} {...SEL} />}
+          {isSelected && !isEditing && onImageResizeStart && (
+            <ImageResizeHandles x={ox} y={oy} width={foWidth} height={foHeight} zoom={zoom} onResizeStart={onImageResizeStart} />
+          )}
         </g>
       );
     }

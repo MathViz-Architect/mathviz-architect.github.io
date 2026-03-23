@@ -60,7 +60,7 @@ export const PropertiesPanel: React.FC = () => {
     };
   }, [onUpdateObject]);
 
-  if (mode === 'freehand') {
+  if (mode === 'freehand' || mode === 'smart-pencil') {
     return <PenSettingsPanel penSettings={penSettings} setPenSettings={setPenSettings} />;
   }
 

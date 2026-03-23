@@ -1,6 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import katex from 'katex';
-import { normalizeMathExpression } from './hooks/useMathInputLogic';
+import { renderKatex } from '../../lib/math/katexAdapter';
 
 interface PreviewDisplayProps {
   value: string;
@@ -8,15 +7,9 @@ interface PreviewDisplayProps {
 
 export const PreviewDisplay: React.FC<PreviewDisplayProps> = memo(({ value }) => {
   const html = useMemo(() => {
-    const normalized = normalizeMathExpression(value);
-    if (!normalized) return '';
-    
+    if (!value) return '';
     try {
-      return katex.renderToString(normalized, {
-        throwOnError: false,
-        strict: false,
-        displayMode: false,
-      });
+      return renderKatex(value, { displayMode: false });
     } catch {
       return '';
     }

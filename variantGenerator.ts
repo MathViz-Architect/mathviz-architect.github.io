@@ -5,7 +5,7 @@
 
 import { ProblemTemplate, GeneratedProblem, SolutionStep, DifficultyConfig } from '../types';
 import { evaluateFormula } from './expressionParser';
-import { normalizeMathExpression, stripMarker } from '../math/normalization';
+import { normalizeMathExpression } from '../math/normalization';
 
 /**
  * Normalize only the math fragments ($...$ and $$...$$) inside a string.
@@ -26,7 +26,7 @@ export function normalizeMathFragments(text: string): string {
             const isDisplay = match.startsWith('$$');
             const delim = isDisplay ? '$$' : '$';
             const inner = match.slice(delim.length, match.length - delim.length);
-            const normalized = stripMarker(normalizeMathExpression(inner));
+            const normalized = normalizeMathExpression(inner);
             return `${delim}${normalized}${delim}`;
         }
     );
@@ -154,7 +154,7 @@ function assertNoRawMath(text: string, context: string): void {
     if (!text || typeof text !== 'string') return;
     // Strip LaTeX blocks before checking — operators inside $...$ are intentional
     const stripped = text.replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*?\$/g, '');
-    if (/\*|\bMath\./.test(stripped)) {
+    if (/[*+]|\bMath\./.test(stripped)) {
         console.warn(
             `[variantGenerator] Raw math operator detected in ${context}: "${text}". ` +
             `Add a computed parameter instead of an inline expression.`

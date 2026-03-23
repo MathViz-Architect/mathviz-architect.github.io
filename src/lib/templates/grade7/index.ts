@@ -3326,68 +3326,6 @@ export const grade7Templates: ProblemTemplate[] = [
         },
     },
 
-    // ===== GRADE 8 - GEOMETRY: Теорема Пифагора =====
-    {
-        id: 'grade8-pythagoreanTheorem-1',
-        class: 8,
-        subject: 'geometry',
-        section: 'Теорема Пифагора',
-        topic: 'pythagoreanTheorem',
-        topic_title: 'Теорема Пифагора',
-        problemType: 'numeric',
-        skills: ['pythagorean', 'squareRoot'],
-        difficulties: {
-            1: {
-                template: 'Катеты прямоугольного треугольника равны {a} и {b}. Найдите гипотенузу.',
-                parameters: {
-                    a: { type: 'int', min: 3, max: 8 },
-                    b: { type: 'int', min: 3, max: 8 },
-                    c: { type: 'expression', value: 'Math.round(Math.sqrt(a*a + b*b) * 100) / 100' },
-                },
-                answer_formula: 'Math.round(Math.sqrt(a*a + b*b) * 100) / 100',
-                hint: 'c = \\sqrt{a^2 + b^2} = \\sqrt{{a*a} + {b*b}}',
-                solution: [
-                    { explanation: 'По теореме Пифагора: c² = a² + b²' },
-                    { explanation: 'c² = {a}² + {b}² = {a*a+b*b}' },
-                    { explanation: 'c = \\sqrt{a*a+b*b} =', result: '{answer}' },
-                ],
-                common_mistakes: [
-                    { pattern: 'a + b', feedback: 'Это сумма катетов, не гипотенуза. Нужно: \\sqrt{a^2+b^2}' },
-                ],
-            },
-            2: {
-                template: 'Гипотенуза прямоугольного треугольника равна {c}, один катет равен {a}. Найдите другой катет.',
-                parameters: {
-                    a: { type: 'int', min: 3, max: 9 },
-                    b: { type: 'int', min: 3, max: 9 },
-                    c: { type: 'expression', value: 'Math.round(Math.sqrt(a*a + b*b))' },
-                },
-                constraints: ['a*a + b*b === c*c'],
-                answer_formula: 'b',
-                hint: 'b = \\sqrt{c^2 - a^2} = \\sqrt{{c*c} - {a*a}}',
-                solution: [
-                    { explanation: 'b² = c² − a² = {c*c} − {a*a} = {c*c-a*a}' },
-                    { explanation: 'b = \\sqrt{c*c-a*a} =', result: '{b}' },
-                ],
-            },
-            3: {
-                template: 'Диагональ прямоугольника равна {d}, одна сторона равна {a}. Найдите площадь прямоугольника.',
-                parameters: {
-                    a: { type: 'int', min: 3, max: 8 },
-                    b: { type: 'int', min: 3, max: 8 },
-                    d: { type: 'expression', value: 'Math.round(Math.sqrt(a*a + b*b))' },
-                },
-                constraints: ['a*a + b*b === d*d'],
-                answer_formula: 'a * b',
-                hint: 'Из теоремы Пифагора: b = \\sqrt{d^2-a^2}. Площадь = a·b',
-                solution: [
-                    { explanation: 'b = \\sqrt{{d*d}-{a*a}} = {b}' },
-                    { explanation: 'Площадь = {a} · {b} =', result: '{answer} см²' },
-                ],
-            },
-        },
-    },
-
     // ===== GRADE 8 - GEOMETRY: Подобие треугольников =====
     {
         id: 'grade8-triangleSimilarityAA-1',

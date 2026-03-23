@@ -1,8 +1,7 @@
 import React, { useDeferredValue, useMemo } from 'react';
-import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { useMathInputLogic } from './useMathInputLogic';
-import { normalizeMathExpression } from '../../lib/math/normalization';
+import { renderKatex } from '../../lib/math/katexAdapter';
 import { MathKeyboard } from './MathKeyboard';
 
 // --- KaTeX Preview Component ---
@@ -19,12 +18,7 @@ const KatexPreview: React.FC<KatexPreviewProps> = React.memo(({ expression, plac
     if (!deferredExpression) {
       return `<span class="text-gray-400">${placeholder}</span>`;
     }
-    const normalized = normalizeMathExpression(deferredExpression);
-    return katex.renderToString(normalized, {
-      displayMode: true,
-      throwOnError: false,
-      strict: false,
-    });
+    return renderKatex(deferredExpression, { displayMode: true });
   }, [deferredExpression, placeholder]);
 
   return (

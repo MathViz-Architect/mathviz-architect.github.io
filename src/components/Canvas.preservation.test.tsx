@@ -214,7 +214,8 @@ describe('Canvas Preservation Tests (MUST PASS on unfixed code)', () => {
         });
 
         expect(mockAddObject).toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'freehand' })
+            expect.objectContaining({ type: 'freehand' }),
+            true
         );
     });
 
@@ -331,7 +332,8 @@ describe('Canvas Preservation Tests (MUST PASS on unfixed code)', () => {
 
         // Stroke should be finalised: freehand object added and state published
         expect(mockAddObject).toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'freehand' })
+            expect.objectContaining({ type: 'freehand' }),
+            true
         );
         expect(mockPublishLocalChange).toHaveBeenCalled();
     });

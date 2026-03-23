@@ -8,6 +8,12 @@ interface ShapePropertiesProps {
   onUpdate: (updates: Partial<AnyCanvasObject>) => void;
 }
 
+// ── Units ─────────────────────────────────────────────────────────────────────
+// Grid cell = 20px, 2 cells = 1 cm → 1 cm = 40px
+const PX_PER_CM = 40;
+function toCm(px: number): string { return (px / PX_PER_CM).toFixed(2); }
+function toCm2(px2: number): string { return (px2 / (PX_PER_CM * PX_PER_CM)).toFixed(2); }
+
 // ── Math helpers ─────────────────────────────────────────────────────────────
 function triType(a: number, b: number, c: number): string {
   const [s1, s2, s3] = [a, b, c].sort((x, y) => x - y);
@@ -58,11 +64,11 @@ const GeometryBlock: React.FC<{ object: AnyCanvasObject }> = ({ object }) => {
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Геометрия</span>
           {isSquare && <Badge>Квадрат</Badge>}
         </div>
-        <Row label="a (ширина)" value={`${Math.round(a)}`} sub="px" />
-        <Row label="b (высота)" value={`${Math.round(b)}`} sub="px" />
+        <Row label="a (ширина)" value={toCm(a)} sub="см" />
+        <Row label="b (высота)" value={toCm(b)} sub="см" />
         <div className="border-t border-gray-200 mt-1 pt-1 space-y-1">
-          <Row label="P = 2(a + b)" value={`${Math.round(P)}`} sub="px" />
-          <Row label="S = a × b" value={`${Math.round(S)}`} sub="px²" />
+          <Row label="P = 2(a + b)" value={toCm(P)} sub="см" />
+          <Row label="S = a × b" value={toCm2(S)} sub="см²" />
         </div>
       </div>
     );
@@ -75,11 +81,11 @@ const GeometryBlock: React.FC<{ object: AnyCanvasObject }> = ({ object }) => {
     return (
       <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1">
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Геометрия</span>
-        <Row label="r (радиус)" value={`${Math.round(r)}`} sub="px" />
-        <Row label="d (диаметр)" value={`${Math.round(r * 2)}`} sub="px" />
+        <Row label="r (радиус)" value={toCm(r)} sub="см" />
+        <Row label="d (диаметр)" value={toCm(r * 2)} sub="см" />
         <div className="border-t border-gray-200 mt-1 pt-1 space-y-1">
-          <Row label="C = 2πr" value={C.toFixed(1)} sub="px" />
-          <Row label="S = πr²" value={`${Math.round(S)}`} sub="px²" />
+          <Row label="C = 2πr" value={toCm(C)} sub="см" />
+          <Row label="S = πr²" value={toCm2(S)} sub="см²" />
         </div>
       </div>
     );
@@ -89,9 +95,9 @@ const GeometryBlock: React.FC<{ object: AnyCanvasObject }> = ({ object }) => {
   if (object.type === 'triangle') {
     const base = object.width, h = object.height;
     const leg = Math.sqrt((base / 2) ** 2 + h ** 2);
-    const a = Math.round(base), b = Math.round(leg);
-    const type = triType(a, b, b);
-    const S = Math.round(0.5 * base * h);
+    const a = base, b = leg;
+    const type = triType(Math.round(a), Math.round(b), Math.round(b));
+    const S = 0.5 * base * h;
     const P = a + b + b;
     return (
       <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1">
@@ -99,12 +105,12 @@ const GeometryBlock: React.FC<{ object: AnyCanvasObject }> = ({ object }) => {
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Геометрия</span>
           <Badge>{type}</Badge>
         </div>
-        <Row label="основание (a)" value={`${a}`} sub="px" />
-        <Row label="боковые (b)" value={`${b}`} sub="px" />
-        <Row label="высота (h)" value={`${Math.round(h)}`} sub="px" />
+        <Row label="основание (a)" value={toCm(a)} sub="см" />
+        <Row label="боковые (b)" value={toCm(b)} sub="см" />
+        <Row label="высота (h)" value={toCm(h)} sub="см" />
         <div className="border-t border-gray-200 mt-1 pt-1 space-y-1">
-          <Row label="P = a + 2b" value={`${P}`} sub="px" />
-          <Row label="S = ½ · a · h" value={`${S}`} sub="px²" />
+          <Row label="P = a + 2b" value={toCm(P)} sub="см" />
+          <Row label="S = ½ · a · h" value={toCm2(S)} sub="см²" />
         </div>
       </div>
     );
@@ -117,26 +123,23 @@ const GeometryBlock: React.FC<{ object: AnyCanvasObject }> = ({ object }) => {
     const { area, perimeter } = shoelace(pts, object.width, object.height);
     const n = pts.length;
 
-    // Detect subtype by vertices pattern
     const shapeLabel =
       n === 4 && Math.abs(pts[0].x - 0.2) < 0.05 ? 'Трапеция' :
         n === 4 && Math.abs(pts[0].x - 0.5) < 0.05 ? 'Ромб' :
           n === 4 && Math.abs(pts[0].x - 0.25) < 0.05 ? 'Параллелограмм' :
             n === 5 ? 'Пятиугольник' : `${n}-угольник`;
 
-    // Extra formulas per subtype
     const extras: React.ReactNode[] = [];
     if (shapeLabel === 'Ромб') {
       const d1 = object.width, d2 = object.height;
-      extras.push(<Row key="d" label="S = d₁ × d₂ / 2" value={`${Math.round(d1 * d2 / 2)}`} sub="px²" />);
+      extras.push(<Row key="d" label="S = d₁ × d₂ / 2" value={toCm2(d1 * d2 / 2)} sub="см²" />);
     }
     if (shapeLabel === 'Трапеция') {
-      // a = top width * proportion, b = full width, h = height
-      const topRatio = 1 - 2 * pts[0].x; // e.g. 0.2 → top = 60%
-      const a = Math.round(object.width * topRatio);
-      const b = Math.round(object.width);
-      const h = Math.round(object.height);
-      extras.push(<Row key="trap" label="S = (a+b)/2 · h" value={`${Math.round((a + b) / 2 * h)}`} sub="px²" />);
+      const topRatio = 1 - 2 * pts[0].x;
+      const a = object.width * topRatio;
+      const b = object.width;
+      const h = object.height;
+      extras.push(<Row key="trap" label="S = (a+b)/2 · h" value={toCm2((a + b) / 2 * h)} sub="см²" />);
     }
 
     return (
@@ -145,11 +148,11 @@ const GeometryBlock: React.FC<{ object: AnyCanvasObject }> = ({ object }) => {
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Геометрия</span>
           <Badge>{shapeLabel}</Badge>
         </div>
-        <Row label="ширина" value={`${Math.round(object.width)}`} sub="px" />
-        <Row label="высота" value={`${Math.round(object.height)}`} sub="px" />
+        <Row label="ширина" value={toCm(object.width)} sub="см" />
+        <Row label="высота" value={toCm(object.height)} sub="см" />
         <div className="border-t border-gray-200 mt-1 pt-1 space-y-1">
-          <Row label="P" value={`${Math.round(perimeter)}`} sub="px" />
-          <Row label="S" value={`${Math.round(area)}`} sub="px²" />
+          <Row label="P" value={toCm(perimeter)} sub="см" />
+          <Row label="S" value={toCm2(area)} sub="см²" />
           {extras}
         </div>
       </div>

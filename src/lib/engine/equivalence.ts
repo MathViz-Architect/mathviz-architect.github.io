@@ -1,6 +1,6 @@
-import * as math from 'mathjs';
 import { DEFAULT_EQUIVALENCE_VARS } from '../math/constants';
 import { normalizeNumbers } from '../math/normalization';
+import { evaluateMath } from '../math/mathJsAdapter';
 
 /**
  * Результат сравнения двух математических выражений на эквивалентность.
@@ -111,8 +111,8 @@ export function checkEquivalence(
     vars.forEach(v => { scope[v] = value; });
 
     try {
-      const val1 = math.evaluate(expr1, scope);
-      const val2 = math.evaluate(expr2, scope);
+      const val1 = evaluateMath(expr1, scope);
+      const val2 = evaluateMath(expr2, scope);
 
       if (
         typeof val1 === 'number' && typeof val2 === 'number' &&

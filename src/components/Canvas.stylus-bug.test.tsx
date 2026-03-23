@@ -221,7 +221,8 @@ describe('Canvas Stylus Bug — Exploration Tests (EXPECTED TO FAIL on unfixed c
     // EXPECTED (fixed): freehand object added — drawing was initiated
     // ACTUAL (unfixed): guard blocks mouse+button=-1 → mockAddObject NOT called
     expect(mockAddObject).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'freehand' })
+      expect.objectContaining({ type: 'freehand' }),
+      true
     );
   });
 

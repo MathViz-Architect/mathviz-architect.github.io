@@ -7,6 +7,8 @@ import {
     calculateDistance,
     calculateArrowAngle,
     calculateArrowHeadPoints,
+    getPointSegmentProjection,
+    getSegmentIntersection,
 } from './geometry';
 import { AnyCanvasObject } from '@/lib/types';
 
@@ -249,14 +251,14 @@ describe('geometry bounds and edge cases', () => {
 
     const isInViewBox = (x: number, y: number): boolean => {
         return x >= PADDING && x <= VIEWBOX_WIDTH - PADDING &&
-               y >= PADDING && y <= VIEWBOX_HEIGHT - PADDING;
+            y >= PADDING && y <= VIEWBOX_HEIGHT - PADDING;
     };
 
     it('should clamp points to viewBox bounds', () => {
         // Very large values should be clamped
         expect(clampToViewBox(1000, 1000)).toEqual({ x: 780, y: 580 });
         expect(clampToViewBox(-100, -100)).toEqual({ x: 20, y: 20 });
-        
+
         // Values within bounds should remain unchanged
         expect(clampToViewBox(400, 300)).toEqual({ x: 400, y: 300 });
     });
@@ -266,14 +268,14 @@ describe('geometry bounds and edge cases', () => {
         const a = 3 * 40;  // 120
         const b = 4 * 40;  // 160
         const c = 5 * 40;  // 200
-        
+
         // Right triangle vertices
         const vertices = [
             { x: PADDING + 50, y: VIEWBOX_HEIGHT - PADDING - 50 },  // Right angle
             { x: PADDING + 50, y: VIEWBOX_HEIGHT - PADDING - 50 - a },  // Top
             { x: PADDING + 50 + b, y: VIEWBOX_HEIGHT - PADDING - 50 },  // Right
         ];
-        
+
         for (const v of vertices) {
             expect(isInViewBox(v.x, v.y)).toBe(true);
         }
@@ -286,11 +288,11 @@ describe('geometry bounds and edge cases', () => {
             { x: 200, y: 200 },
             { x: 300, y: 300 },
         ];
-        
+
         for (const p of points) {
             expect(isInViewBox(p.x, p.y)).toBe(true);
         }
-        
+
         // All points outside should still be detected
         expect(isInViewBox(1000, 1000)).toBe(false);
         expect(isInViewBox(-100, -100)).toBe(false);
@@ -310,7 +312,7 @@ describe('geometry bounds and edge cases', () => {
             locked: false,
             data: { points: [] },
         };
-        
+
         const bbox = getBoundingBox(degeneratePolygon);
         expect(bbox.minX).toBe(0);
         expect(bbox.minY).toBe(0);
@@ -324,7 +326,7 @@ describe('geometry bounds and edge cases', () => {
             { x: 400, y: 100 },
             { x: 700, y: 500 },
         ];
-        
+
         for (const p of largeTriangle) {
             const clamped = clampToViewBox(p.x, p.y);
             expect(clamped.x).toBeGreaterThanOrEqual(PADDING);
@@ -353,7 +355,7 @@ describe('geometry bounds and edge cases', () => {
                 strokeWidth: 2,
             },
         };
-        
+
         const bbox = getBoundingBox(extremeLine);
         // Should handle extreme values without crashing
         expect(bbox.minX).toBeLessThan(bbox.maxX);
@@ -374,7 +376,7 @@ describe('geometry bounds and edge cases', () => {
             locked: false,
             data: { fill: '#f00', stroke: '#000', strokeWidth: 1 },
         };
-        
+
         const bbox = getBoundingBox(largeCircle);
         expect(bbox.maxX - bbox.minX).toBe(1000);
         expect(bbox.maxY - bbox.minY).toBe(1000);
@@ -384,20 +386,20 @@ describe('geometry bounds and edge cases', () => {
         it('should calculate arrow angle correctly', () => {
             // 0 degrees (pointing right)
             expect(calculateArrowAngle(0, 0, 1, 0)).toBeCloseTo(0, 5);
-            
+
             // 90 degrees (pointing down)
             expect(calculateArrowAngle(0, 0, 0, 1)).toBeCloseTo(Math.PI / 2, 5);
-            
+
             // 180 degrees (pointing left)
             expect(calculateArrowAngle(0, 0, -1, 0)).toBeCloseTo(Math.PI, 5);
-            
+
             // -90 degrees (pointing up)
             expect(calculateArrowAngle(0, 0, 0, -1)).toBeCloseTo(-Math.PI / 2, 5);
         });
 
         it('should calculate arrow head points for forward direction', () => {
             const result = calculateArrowHeadPoints(0, 0, 0, 10, 'forward');
-            
+
             expect(result.point1X).not.toBeNaN();
             expect(result.point1Y).not.toBeNaN();
             expect(result.point2X).not.toBeNaN();
@@ -406,7 +408,7 @@ describe('geometry bounds and edge cases', () => {
 
         it('should calculate arrow head points for backward direction', () => {
             const result = calculateArrowHeadPoints(0, 0, 0, 10, 'backward');
-            
+
             expect(result.point1X).not.toBeNaN();
             expect(result.point1Y).not.toBeNaN();
             expect(result.point2X).not.toBeNaN();
@@ -415,7 +417,7 @@ describe('geometry bounds and edge cases', () => {
 
         it('should handle zero length arrow', () => {
             const result = calculateArrowHeadPoints(0, 0, 0, 0, 'forward');
-            
+
             expect(result.point1X).toBe(0);
             expect(result.point1Y).toBe(0);
         });
@@ -443,7 +445,7 @@ describe('geometry bounds and edge cases', () => {
                     ],
                 },
             };
-            
+
             expect(isPointInObject(50, 50, polygon)).toBe(true);
             // Note: Point outside the bounding box of the normalized points might still be detected
             expect(isPointInObject(-50, -50, polygon)).toBe(false);
@@ -470,7 +472,7 @@ describe('geometry bounds and edge cases', () => {
                     strokeWidth: 2,
                 },
             };
-            
+
             // Point at the endpoint should be within tolerance
             expect(isPointInObject(50, 50, zeroLine)).toBe(true);
             // Points outside tolerance should return false
@@ -493,7 +495,7 @@ describe('geometry bounds and edge cases', () => {
                 locked: false,
                 data: {},
             };
-            
+
             expect(objectsIntersectRect(obj, -100, -100, 0, 0)).toBe(true);
             expect(objectsIntersectRect(obj, 100, 100, 200, 200)).toBe(false);
         });
@@ -519,9 +521,88 @@ describe('geometry bounds and edge cases', () => {
                     strokeWidth: 2,
                 },
             };
-            
+
             expect(objectsIntersectRect(line, 0, 0, 50, 50)).toBe(true);
             expect(objectsIntersectRect(line, 200, 200, 300, 300)).toBe(false);
         });
+    });
+});
+
+describe('getPointSegmentProjection', () => {
+    it('projects onto midpoint of horizontal segment', () => {
+        const p = getPointSegmentProjection(5, 3, 0, 0, 10, 0);
+        expect(p.x).toBeCloseTo(5);
+        expect(p.y).toBeCloseTo(0);
+        expect(p.t).toBeCloseTo(0.5);
+    });
+
+    it('clamps to start when point is before segment', () => {
+        const p = getPointSegmentProjection(-5, 0, 0, 0, 10, 0);
+        expect(p.x).toBeCloseTo(0);
+        expect(p.y).toBeCloseTo(0);
+        expect(p.t).toBeCloseTo(0);
+    });
+
+    it('clamps to end when point is past segment', () => {
+        const p = getPointSegmentProjection(15, 0, 0, 0, 10, 0);
+        expect(p.x).toBeCloseTo(10);
+        expect(p.y).toBeCloseTo(0);
+        expect(p.t).toBeCloseTo(1);
+    });
+
+    it('projects onto diagonal segment', () => {
+        // Segment (0,0)→(4,4), point (0,4) — projects to (2,2)
+        const p = getPointSegmentProjection(0, 4, 0, 0, 4, 4);
+        expect(p.x).toBeCloseTo(2);
+        expect(p.y).toBeCloseTo(2);
+        expect(p.t).toBeCloseTo(0.5);
+    });
+
+    it('handles degenerate segment (A === B)', () => {
+        const p = getPointSegmentProjection(5, 5, 3, 3, 3, 3);
+        expect(p.x).toBeCloseTo(3);
+        expect(p.y).toBeCloseTo(3);
+        expect(p.t).toBe(0);
+    });
+});
+
+describe('getSegmentIntersection', () => {
+    it('finds intersection of two crossing segments', () => {
+        // (+) cross: (0,1)→(2,1) and (1,0)→(1,2)
+        const pt = getSegmentIntersection(0, 1, 2, 1, 1, 0, 1, 2);
+        expect(pt).not.toBeNull();
+        expect(pt!.x).toBeCloseTo(1);
+        expect(pt!.y).toBeCloseTo(1);
+    });
+
+    it('returns null for parallel segments', () => {
+        const pt = getSegmentIntersection(0, 0, 4, 0, 0, 1, 4, 1);
+        expect(pt).toBeNull();
+    });
+
+    it('returns null for collinear segments', () => {
+        const pt = getSegmentIntersection(0, 0, 4, 0, 2, 0, 6, 0);
+        expect(pt).toBeNull();
+    });
+
+    it('returns null when segments do not reach each other (T-shape miss)', () => {
+        // AB goes (0,0)→(2,0), CD goes (3,−1)→(3,1) — no overlap on x
+        const pt = getSegmentIntersection(0, 0, 2, 0, 3, -1, 3, 1);
+        expect(pt).toBeNull();
+    });
+
+    it('finds intersection at segment endpoints', () => {
+        // Segments share endpoint (2,2)
+        const pt = getSegmentIntersection(0, 0, 2, 2, 2, 2, 4, 0);
+        expect(pt).not.toBeNull();
+        expect(pt!.x).toBeCloseTo(2);
+        expect(pt!.y).toBeCloseTo(2);
+    });
+
+    it('handles perpendicular segments at origin', () => {
+        const pt = getSegmentIntersection(-1, 0, 1, 0, 0, -1, 0, 1);
+        expect(pt).not.toBeNull();
+        expect(pt!.x).toBeCloseTo(0);
+        expect(pt!.y).toBeCloseTo(0);
     });
 });

@@ -162,3 +162,49 @@ export const calculateDistance = (x1: number, y1: number, x2: number, y2: number
     const dy = y2 - y1;
     return Math.sqrt(dx * dx + dy * dy);
 };
+
+/**
+ * Project point P onto segment AB.
+ * Returns the closest point on the segment and the parameter t ∈ [0, 1].
+ * t=0 → point A, t=1 → point B, t=0.5 → midpoint.
+ */
+export const getPointSegmentProjection = (
+    px: number, py: number,
+    ax: number, ay: number,
+    bx: number, by: number,
+): { x: number; y: number; t: number } => {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return { x: ax, y: ay, t: 0 }; // degenerate segment
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+    return { x: ax + t * dx, y: ay + t * dy, t };
+};
+
+/**
+ * Find the intersection point of two line segments AB and CD.
+ * Returns null if segments are parallel, collinear, or don't intersect.
+ * Uses Cramer's rule on the parametric form.
+ */
+export const getSegmentIntersection = (
+    ax: number, ay: number,
+    bx: number, by: number,
+    cx: number, cy: number,
+    dx: number, dy: number,
+): { x: number; y: number } | null => {
+    const r_x = bx - ax, r_y = by - ay; // direction of AB
+    const s_x = dx - cx, s_y = dy - cy; // direction of CD
+
+    // det = r × s (2D cross product)
+    const det = r_x * s_y - r_y * s_x;
+    if (Math.abs(det) < 1e-10) return null; // parallel or collinear
+
+    // t = (C - A) × s / det
+    const t = ((cx - ax) * s_y - (cy - ay) * s_x) / det;
+    // u = (C - A) × r / det
+    const u = ((cx - ax) * r_y - (cy - ay) * r_x) / det;
+
+    if (t < 0 || t > 1 || u < 0 || u > 1) return null; // outside segment bounds
+
+    return { x: ax + t * r_x, y: ay + t * r_y };
+};
